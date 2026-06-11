@@ -1,0 +1,272 @@
+.aiAgentInput {
+  position: relative;
+  display: flex;
+  gap: var(--ds-general-gap-lg);
+  align-items: stretch;
+  width: min(100%, 1000px);
+}
+
+.aiAgentInput__main {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.aiAgentInput__sourcesRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.aiAgentInput__attachments {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-md);
+}
+
+.aiAgentInput__addSourceWrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.aiAgentInput__addSourceButton {
+  min-height: 32px;
+}
+
+.aiAgentInput__dropdown {
+  position: absolute;
+  top: calc(100% + var(--ds-general-gap-xs));
+  left: 0;
+  z-index: 4;
+  width: 220px;
+}
+
+.aiAgentInput__inputShell {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  padding: var(--ds-general-gap-3xl) var(--ds-general-gap-4xl);
+  box-sizing: border-box;
+}
+
+.aiAgentInput__textareaWrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.aiAgentInput__textareaFade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 28px;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.aiAgentInput__textareaFade--top {
+  top: 0;
+  background: linear-gradient(
+    to bottom,
+    var(--ds-general-color-canvas) 0%,
+    rgb(0 0 0 / 0) 100%
+  );
+}
+
+.aiAgentInput__textareaFade--bottom {
+  bottom: 0;
+  background: linear-gradient(
+    to top,
+    var(--ds-general-color-canvas) 0%,
+    rgb(0 0 0 / 0) 100%
+  );
+}
+
+.aiAgentInput__textareaWrap[data-fade-top='true'] .aiAgentInput__textareaFade--top {
+  opacity: 1;
+}
+
+.aiAgentInput__textareaWrap[data-fade-bottom='true'] .aiAgentInput__textareaFade--bottom {
+  opacity: 1;
+}
+
+.aiAgentInput__textarea {
+  width: 100%;
+  border: none;
+  background: transparent;
+  /* Height grows with content in `AiAgentInput.tsx` (capped at 500px for now). */
+  resize: none;
+  min-height: 44px;
+  max-height: 500px;
+  position: relative;
+  z-index: 0;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-heading-4-font-size);
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--ds-general-typography-heading-4-line-height);
+}
+
+.aiAgentInput__textarea::placeholder {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiAgentInput__textarea:focus {
+  outline: none;
+}
+
+.aiAgentInput__sendCol {
+  display: flex;
+  align-items: flex-end;
+  padding: var(--ds-general-gap-2xs) 0;
+}
+
+.aiAgentInput__modalRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+}
+
+.aiAgentInput__modalBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: rgb(0 0 0 / 34%);
+}
+
+.aiAgentInput__modal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(540px, calc(100vw - var(--ds-general-gap-4xl)));
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  padding: var(--ds-general-gap-2xl);
+  box-shadow: 0 12px 24px rgb(0 0 0 / 16%);
+}
+
+.aiAgentInput__modalTitle {
+  margin: 0 0 var(--ds-general-gap-lg);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-headings);
+  font-size: var(--ds-general-typography-heading-3-font-size);
+  font-style: normal;
+  font-weight: 600;
+  line-height: var(--ds-general-typography-heading-3-line-height);
+}
+
+.aiAgentInput__modalFields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.aiAgentInput__modalLinkField {
+  width: 100%;
+}
+
+.aiAgentInput__contextField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+}
+
+.aiAgentInput__contextLabel {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+}
+
+.aiAgentInput__contextInput {
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  padding: var(--ds-general-gap-md);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-heading-4-font-size);
+  font-style: normal;
+  font-weight: 400;
+  line-height: var(--ds-general-typography-heading-4-line-height);
+  resize: vertical;
+}
+
+.aiAgentInput__contextInput:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.aiAgentInput__modalActions {
+  margin-top: var(--ds-general-gap-2xl);
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-md);
+}
+
+.aiAgentInput__modalFields .vdsTextField {
+  width: 100%;
+}
+
+.aiAgentInput__componentResults {
+  max-height: 200px;
+  overflow-y: auto;
+  display: grid;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-gap-xs);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+}
+
+.aiAgentInput__componentOption {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  border: 1px solid transparent;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  padding: 8px 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.aiAgentInput__componentOption:hover {
+  background: var(--ds-general-color-background);
+}
+
+.aiAgentInput__componentOption--selected {
+  border-color: var(--ds-general-color-accent-muted-alt);
+  background: color-mix(
+    in srgb,
+    var(--ds-general-color-accent) 14%,
+    var(--ds-general-color-canvas) 86%
+  );
+}
+
+.aiAgentInput__componentOptionTitle {
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-weight: 600;
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+}
+
+.aiAgentInput__componentOptionId {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+}

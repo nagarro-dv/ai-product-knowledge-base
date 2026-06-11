@@ -1,0 +1,95 @@
+.link-button-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.link-button-showcase-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  max-width: 44rem;
+  line-height: 1.45;
+}
+
+.link-button-showcase-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.link-button-showcase-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.link-button-showcase-row {
+  display: grid;
+  grid-template-columns: 5.5rem repeat(2, minmax(6rem, 1fr));
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.link-button-showcase-row--head {
+  margin-bottom: 0.15rem;
+}
+
+.link-button-showcase-corner {
+  min-width: 0;
+}
+
+.link-button-showcase-head {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ds-general-color-muted-foreground);
+  text-align: center;
+}
+
+.link-button-showcase-rail {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.link-button-showcase-cell {
+  display: flex;
+  justify-content: center;
+}
+
+.link-button-showcase-section {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.link-button-showcase-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.link-button-showcase-section-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.link-button-showcase-row-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .link-button-showcase-row {
+    grid-template-columns: 5rem repeat(2, minmax(5.5rem, auto));
+  }
+}

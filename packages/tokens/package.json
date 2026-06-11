@@ -1,0 +1,13 @@
+{
+  "name": "@ds-starter/tokens",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "description": "Design tokens (JSON) + runtime resolver; emits CSS variables for the web playground.",
+  "scripts": {
+    "build:css": "tsx scripts/build-css-vars.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2"
+  }
+}

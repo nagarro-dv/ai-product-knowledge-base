@@ -1,0 +1,104 @@
+/**
+ * Progress Linear — Figma 2053:3292; tokens: progress-linear/* + paragraph styles.
+ */
+
+.ds-progress-linear {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-progress-linear-dimension-gap);
+}
+
+.ds-progress-linear[data-variant="primary"] {
+  --pl-track: var(--ds-progress-linear-color-primary-background);
+  --pl-fill: var(--ds-progress-linear-color-primary-foreground);
+}
+
+.ds-progress-linear[data-variant="warning"] {
+  --pl-track: var(
+    --ds-progress-linear-color-warning-background,
+    var(--ds-progress-linear-color-primary-background)
+  );
+  --pl-fill: var(--ds-progress-linear-color-warning-foreground);
+}
+
+.ds-progress-linear[data-variant="error"] {
+  --pl-track: var(
+    --ds-progress-linear-color-error-background,
+    var(--ds-progress-linear-color-primary-background)
+  );
+  --pl-fill: var(--ds-progress-linear-color-error-foreground);
+}
+
+.ds-progress-linear[data-variant="success"] {
+  --pl-track: var(
+    --ds-progress-linear-color-success-background,
+    var(--ds-progress-linear-color-primary-background)
+  );
+  --pl-fill: var(--ds-progress-linear-color-success-foreground);
+}
+
+.ds-progress-linear[data-variant="accent"] {
+  --pl-track: var(--ds-progress-linear-color-accent-background);
+  --pl-fill: var(--ds-progress-linear-color-accent-foreground);
+}
+
+.ds-progress-linear[data-variant="neutral"] {
+  --pl-track: var(--ds-progress-linear-color-neutral-background);
+  --pl-fill: var(--ds-progress-linear-color-neutral-foreground);
+}
+
+.ds-progress-linear__meta {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+}
+
+.ds-progress-linear__meta-start,
+.ds-progress-linear__meta-end {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 0;
+  align-items: center;
+}
+
+.ds-progress-linear__meta-end {
+  height: 20px;
+  justify-content: flex-end;
+}
+
+.ds-progress-linear__title {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+  white-space: nowrap;
+}
+
+.ds-progress-linear__value {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+  white-space: nowrap;
+}
+
+.ds-progress-linear__track {
+  position: relative;
+  width: 100%;
+  height: var(--ds-progress-linear-dimension-height);
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: var(--ds-progress-linear-dimension-radius);
+  background: var(--pl-track);
+}
+
+.ds-progress-linear__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  max-width: 100%;
+  border-radius: inherit;
+  background: var(--pl-fill);
+}

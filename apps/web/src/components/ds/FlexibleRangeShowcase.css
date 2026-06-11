@@ -1,0 +1,58 @@
+/**
+ * FlexibleRangeShowcase — layout wrapper for the DS playground panel.
+ */
+
+.flex-range-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-3xl, 20px);
+  width: 100%;
+  background: var(--ds-general-color-background);
+}
+
+.flex-range-showcase__hint {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.flex-range-showcase__mono {
+  font-family: var(--ds-general-typography-font-family-mono, monospace);
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 6%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.flex-range-showcase__grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-4xl, 28px);
+  align-items: flex-start;
+}
+
+.flex-range-showcase__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xl, 16px);
+  width: 100%;
+  max-width: 380px;
+}
+
+.flex-range-showcase__section-title {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-foreground);
+}
+
+.flex-range-showcase__applied {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+  line-height: var(--ds-general-typography-paragraph-mini-line-height);
+  color: var(--ds-general-color-muted-foreground);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,0 +1,223 @@
+/**
+ * DS Credit Score — Figma node 2033:70750
+ * 1px gradient/intelligence border; 278×139 gauge with absolute text overlays.
+ *
+ * Arc geometry: CX=139 CY=139 R=130 stroke=16 — endpoints at (9,139) and (269,139).
+ * Trend overlay: left 85/278 = 30.58%, top 40/139 = 28.78%  (Figma 2033:70724)
+ * Balance overlay: top 64/139 = 46.04%, left 0, width 100%  (Figma 2033:70726)
+ */
+
+/* ── Card shell ── */
+
+.ds-credit-score {
+  position: relative;
+  box-sizing: border-box;
+  border-radius: var(--ds-general-radius-rounded-2xl);
+  overflow: clip;
+  background: var(--ds-general-color-background);
+  padding: var(--ds-general-padding-3xl);
+  width: 100%;
+}
+
+/* Gradient/intelligence border — 1px via pseudo-element + mask.
+   Colors from Figma gradient/intelligence: #f86368 (red-pink) → #fbbf24 (orange-yellow) → #c5ebe4 (teal). */
+.ds-credit-score::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--ds-general-stroke-default, 1px);
+  background: linear-gradient(90deg, #f86368, #fbbf24, #c5ebe4);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+/* ── Main Container 2033:70712 ── */
+
+.ds-credit-score__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-3xl);
+  width: 100%;
+}
+
+/* ── Header 2033:70713 — flex col, gap-md (8px), items-start ── */
+
+.ds-credit-score__header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+}
+
+/* InsightsBalance rows 2033:70714 / 2033:70718
+   Figma: h-[20px] items-center — fixed 20px layout height, content visually overflows. */
+
+.ds-credit-score__header-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  height: 20px;
+  overflow: visible;
+}
+
+/* Frame 2033:70715 — flex, gap-sm, items-center, justify-center */
+
+.ds-credit-score__header-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.ds-credit-score__label {
+  color: var(--ds-general-color-muted-foreground);
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Provider badge 2033:70719 — Button / Secondary */
+
+.ds-credit-score__provider {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--ds-general-gap-md);
+  border-radius: var(--ds-general-radius-full, 9999px);
+  background: var(--ds-badge-color-secondary-background);
+  color: var(--ds-badge-color-secondary-foreground);
+  white-space: nowrap;
+}
+
+/* Arc container — aspect-ratio 278:139; overlays absolutely positioned within */
+
+.ds-credit-score__gauge {
+  position: relative;
+  width: 100%;
+  max-width: 278px;
+  aspect-ratio: 278 / 155;
+  margin-inline: auto;
+  overflow: visible;
+}
+
+.ds-credit-score__progress-arc {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Trend 2033:70724 — absolute left:85px top:40px (in 278×139 arc space) */
+
+.ds-credit-score__trend-wrap {
+  position: absolute;
+  left: 50%;
+  top: 40px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.ds-credit-score__trend {
+  color: var(--ds-general-color-success-foreground, #1d7f4b);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+/* Balance Container 2033:70726 — absolute top:64px left:0 w:278px */
+
+.ds-credit-score__balance {
+  position: absolute;
+  top: 46.04%;    /* 64 / 139 */
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  pointer-events: none;
+}
+
+/* Primary Currency Container 2033:70727 */
+
+.ds-credit-score__score-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.ds-credit-score__number {
+  color: var(--ds-general-color-foreground);
+  font-size: 44px;
+  line-height: 1;
+}
+
+/* Secondary Currency Container 2033:70730 */
+
+.ds-credit-score__badge-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+/* Score badge 2033:70731 — Button / Success */
+
+.ds-credit-score__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--ds-general-gap-md);
+  border-radius: var(--ds-general-radius-full, 9999px);
+  white-space: nowrap;
+}
+
+.ds-credit-score__badge--success {
+  background: var(--ds-badge-color-success-background);
+  color: var(--ds-badge-color-success-foreground);
+}
+
+.ds-credit-score__badge--warning {
+  background: var(--ds-badge-color-warning-background);
+  color: var(--ds-badge-color-warning-foreground);
+}
+
+.ds-credit-score__badge--destructive {
+  background: var(--ds-badge-color-destructive-background);
+  color: var(--ds-badge-color-destructive-foreground);
+}
+
+/* Range labels — absolute, below gauge boundary, aligned to arc endpoints */
+
+.ds-credit-score__range-min,
+.ds-credit-score__range-max {
+  position: absolute;
+  top: calc(100% + 4px);  /* 4px below gauge, clears 4px stroke-cap bleed */
+  color: var(--ds-general-color-muted-foreground);
+  line-height: 1;
+}
+
+.ds-credit-score__range-min {
+  left: 3.24%;   /* arc left endpoint x=9 → 9/278 */
+}
+
+.ds-credit-score__range-max {
+  right: 3.24%;  /* arc right endpoint x=269 → (278-269)/278 */
+}
+
+/* ── Footer 2033:70734 — flex, justify-center ── */
+
+.ds-credit-score__updated {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  color: var(--ds-general-color-muted-foreground);
+}

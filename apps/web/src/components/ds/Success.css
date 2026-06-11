@@ -1,0 +1,50 @@
+/**
+ * DS Success — Figma node 1272:15339
+ * Centered flex column: check circle → title → description.
+ * Gap: --ds-general-gap-xl (16px at Standard density).
+ * Circle: 58×58 with 1.5px foreground border; icon centered at 15.5px inset.
+ */
+
+.ds-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-xl);
+  width: 100%;
+}
+
+/* ── Icon circle — Figma 4091:26539 ── */
+
+.ds-success__icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 58px;
+  height: 58px;
+  border-radius: var(--ds-general-radius-full, 9999px);
+  border: 1.5px solid var(--ds-general-color-foreground);
+  overflow: clip;
+}
+
+.ds-success__icon {
+  color: var(--ds-general-color-foreground);
+}
+
+/* ── Title — Figma 1272:15325: heading-3, foreground, center ── */
+
+.ds-success__title {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  color: var(--ds-general-color-foreground);
+}
+
+/* ── Description — Figma 1272:15326: paragraph/regular, muted-foreground, center ── */
+
+.ds-success__description {
+  margin: 0;
+  width: 100%;
+  text-align: center;
+  color: var(--ds-general-color-muted-foreground);
+}

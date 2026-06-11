@@ -1,0 +1,54 @@
+.accordion-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  padding: 1.5rem;
+  background: var(--ds-general-color-background);
+}
+
+.accordion-showcase-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  line-height: 1.5;
+}
+
+.accordion-showcase-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.accordion-showcase-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.accordion-showcase-section-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.accordion-showcase-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-width: 480px;
+}
+
+.accordion-showcase-stack--ghost {
+  gap: 0;
+}
+
+.accordion-showcase-body {
+  margin: 0;
+  font-family: var(--ds-general-typography-font-family-body, inherit);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-foreground);
+}

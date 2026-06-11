@@ -1,0 +1,68 @@
+.icon-button-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.icon-button-showcase-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  max-width: 40rem;
+  line-height: 1.45;
+}
+
+.icon-button-showcase-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.icon-button-showcase-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.icon-button-showcase-row {
+  display: grid;
+  grid-template-columns: 5rem repeat(6, minmax(5.5rem, 1fr));
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.icon-button-showcase-row--head {
+  margin-bottom: 0.15rem;
+}
+
+.icon-button-showcase-corner {
+  min-width: 0;
+}
+
+.icon-button-showcase-head {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ds-general-color-muted-foreground);
+  text-align: center;
+}
+
+.icon-button-showcase-rail {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.icon-button-showcase-cell {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .icon-button-showcase-row {
+    grid-template-columns: 4.5rem repeat(6, minmax(4.75rem, auto));
+  }
+}

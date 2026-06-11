@@ -1,0 +1,20 @@
+.ds-view {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.ds-view__main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.ds-view__lazy-fallback {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 0.875rem;
+}

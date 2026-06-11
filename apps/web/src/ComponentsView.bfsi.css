@@ -1,0 +1,95 @@
+.components-section-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  background: color-mix(in srgb, var(--ds-general-color-primary) 16%, transparent);
+  color: var(--ds-general-color-foreground);
+  border: 1px solid color-mix(in srgb, var(--ds-general-color-primary) 28%, var(--ds-general-color-border));
+}
+
+.components-main {
+  flex: 1;
+  min-height: 0;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.components-landing-lead {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.components-landing-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: 28rem;
+}
+
+.components-landing-link {
+  text-align: left;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.components-landing-link:hover {
+  border-color: var(--ds-general-color-primary);
+  background: color-mix(in srgb, var(--ds-general-color-primary) 10%, var(--ds-general-color-canvas));
+}
+
+.components-preview-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.components-preview-desc {
+  margin: 0 0 1rem;
+  font-size: 0.875rem;
+  color: var(--ds-general-color-muted-foreground);
+  max-width: 42rem;
+}
+
+.components-preview-panel {
+  flex: 1;
+  min-height: 12rem;
+  border-radius: 10px;
+  border: 1px dashed var(--ds-general-color-border);
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 80%, var(--ds-general-color-background));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.components-preview-panel--live {
+  align-items: flex-start;
+  justify-content: flex-start;
+  border-style: solid;
+  border-color: var(--ds-general-color-border);
+  background: var(--ds-general-color-muted);
+}
+
+.components-preview-placeholder {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--ds-general-color-muted-foreground);
+}

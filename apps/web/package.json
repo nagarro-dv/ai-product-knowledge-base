@@ -1,0 +1,28 @@
+{
+  "name": "@ds-starter/web",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "predev": "npm run build:css -w @ds-starter/tokens",
+    "dev": "vite",
+    "prebuild": "npm run build:css -w @ds-starter/tokens",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@ds-starter/tokens": "*",
+    "@fontsource/geist-sans": "^5.2.5",
+    "@tanstack/react-virtual": "^3.13.12",
+    "lucide-react": "^0.544.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.9.2",
+    "vite": "^6.0.3"
+  }
+}

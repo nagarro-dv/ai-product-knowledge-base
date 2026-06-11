@@ -1,0 +1,93 @@
+/**
+ * Widget — BFSI DS Starter Kit, node 2771:6507 (component set).
+ * All values from @bfsi/tokens → tokens.generated.css (widget.* aliases general shadows).
+ */
+
+.ds-widget {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  width: 100%;
+  max-width: 342px;
+  overflow: hidden;
+  border-radius: var(--ds-widget-dimension-radius);
+  padding: var(--ds-widget-dimension-padding);
+}
+
+/* Flat + Floating: single surface fill on root */
+.ds-widget--flat.ds-widget--bg-default,
+.ds-widget--floating.ds-widget--bg-default {
+  background: var(--ds-widget-color-default);
+}
+
+.ds-widget--flat.ds-widget--bg-background,
+.ds-widget--floating.ds-widget--bg-background {
+  background: var(--ds-widget-color-background);
+}
+
+.ds-widget--flat.ds-widget--bg-muted,
+.ds-widget--floating.ds-widget--bg-muted {
+  background: var(--ds-widget-color-muted);
+}
+
+/* Floating: dual drop shadow — widget.effects.floating → general.shadows.xl */
+.ds-widget--floating {
+  box-shadow:
+    var(--ds-widget-effects-floating-shadow-2-x) var(--ds-widget-effects-floating-shadow-2-y) var(--ds-widget-effects-floating-shadow-2-blur)
+      var(--ds-widget-effects-floating-shadow-2-spread) var(--ds-widget-effects-floating-color),
+    var(--ds-widget-effects-floating-shadow-1-x) var(--ds-widget-effects-floating-shadow-1-y) var(--ds-widget-effects-floating-shadow-1-blur)
+      var(--ds-widget-effects-floating-shadow-1-spread) var(--ds-widget-effects-floating-color);
+}
+
+/* Raised: outer stack — widget.effects.raised.md → general.shadows.raised.md */
+.ds-widget--raised {
+  background: transparent;
+  box-shadow:
+    var(--ds-widget-effects-raised-md-shadow-3-x) var(--ds-widget-effects-raised-md-shadow-3-y) var(--ds-widget-effects-raised-md-shadow-3-blur)
+      var(--ds-widget-effects-raised-md-shadow-3-spread) var(--ds-widget-effects-raised-md-shadow-3-color),
+    var(--ds-widget-effects-raised-md-shadow-2-x) var(--ds-widget-effects-raised-md-shadow-2-y) var(--ds-widget-effects-raised-md-shadow-2-blur)
+      var(--ds-widget-effects-raised-md-shadow-2-spread) var(--ds-widget-effects-raised-md-shadow-2-color),
+    var(--ds-widget-effects-raised-md-shadow-1-x) var(--ds-widget-effects-raised-md-shadow-1-y) var(--ds-widget-effects-raised-md-shadow-1-blur)
+      var(--ds-widget-effects-raised-md-shadow-1-spread) var(--ds-widget-effects-raised-md-shadow-1-color);
+}
+
+.ds-widget__underlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.ds-widget__underlay--default {
+  background: var(--ds-widget-color-default);
+}
+
+.ds-widget__underlay--background {
+  background: var(--ds-widget-color-background);
+}
+
+.ds-widget__underlay--muted {
+  background: var(--ds-widget-color-muted);
+}
+
+/* Inner shadow overlay (Raised only) */
+.ds-widget__inner-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  box-shadow: inset var(--ds-widget-effects-raised-md-inner-shadow-x) var(--ds-widget-effects-raised-md-inner-shadow-y)
+    var(--ds-widget-effects-raised-md-inner-shadow-blur) var(--ds-widget-effects-raised-md-inner-shadow-spread)
+    var(--ds-widget-effects-raised-md-inner-shadow-color);
+}
+
+.ds-widget__slot {
+  position: relative;
+  z-index: 1;
+  flex-shrink: 0;
+  width: 100%;
+  min-height: var(--ds-widget-dimension-content-min-height);
+}

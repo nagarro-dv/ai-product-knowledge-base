@@ -1,0 +1,47 @@
+/**
+ * Spinner — Figma **Spinner** **2747:12962** (24 prototype frames → one CSS rotation).
+ * Colors: `spinner/color/*` → `--ds-spinner-color-base`, `--ds-spinner-color-gradient-alpha-00`.
+ */
+
+@keyframes ds-spinner-rotate {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+.ds-spinner {
+  position: relative;
+  display: inline-flex;
+  box-sizing: border-box;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.ds-spinner__track {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    var(--ds-spinner-color-base) 0deg,
+    var(--ds-spinner-color-gradient-alpha-00) 105deg,
+    var(--ds-spinner-color-gradient-alpha-00) 360deg
+  );
+  -webkit-mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ds-spinner-stroke, 3px)),
+    #000 0
+  );
+  mask: radial-gradient(
+    farthest-side,
+    transparent calc(100% - var(--ds-spinner-stroke, 3px)),
+    #000 0
+  );
+  animation: ds-spinner-rotate 0.85s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-spinner__track {
+    animation-duration: 1.75s;
+  }
+}

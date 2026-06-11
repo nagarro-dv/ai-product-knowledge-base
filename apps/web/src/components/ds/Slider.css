@@ -1,0 +1,132 @@
+/**
+ * Slider Horizontal — BFSI DS Starter Kit, Figma node 322:9793.
+ * Type=Default (single thumb) | Type=Duo Range (two thumbs) | Type=Triple Range (three thumbs).
+ * .Marker sub-component: Shape=Round | Shape=Diamond; State=Regular | State=Focus.
+ *
+ * Token mapping (Figma variable → CSS custom property):
+ *   Track bg      VariableID:322:9986  → --ds-slider-color-background
+ *   Value fill    VariableID:322:9992  → --ds-slider-color-foreground
+ *   Marker fill   VariableID:322:9993  → --ds-slider-color-marker
+ *   Marker stroke VariableID:322:10013 → --ds-slider-color-marker-border
+ *   Focus ring    VariableID:36:2583   → --ds-general-shadows-focus-ring
+ *   Focus spread  VariableID:36:2585   → --ds-general-shadows-focus-spread
+ *   Title type    VariableID:slider/typography/title  → paragraph-small-medium
+ *   Helper type   VariableID:slider/typography/helper → paragraph-small-regular
+ */
+
+/* ── Field wrapper (optional — only rendered when title or helperText is provided) */
+
+.ds-slider-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-slider-dimension-gap, 6px);
+  width: 100%;
+}
+
+.ds-slider__title {
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-slider-color-foreground-label);
+}
+
+.ds-slider__helper {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-slider-color-muted-foreground);
+}
+
+/* ── Container ──────────────────────────────────────────────────────────────── */
+
+.ds-slider {
+  position: relative;
+  width: 100%;
+  /* 24px thumb + 2×3px focus ring + 2×5px breathing room = 40px */
+  height: 40px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.ds-slider--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* ── Track (Figma: "Slider — Edit padding to Change Value" frame) ─────────────
+   Centred vertically via top:50%+translateY so the 24px thumbs sit symmetrically
+   above and below the 6px rail without clipping.                               */
+
+.ds-slider__track {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  height: var(--ds-slider-dimension-height, 6px);
+  border-radius: var(--ds-slider-dimension-radius, 6px);
+  background: var(--ds-slider-color-background);
+}
+
+/* ── Fill (Figma: "Value" rectangle, foreground colour) ─────────────────────── */
+
+.ds-slider__fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: var(--ds-slider-dimension-radius, 6px);
+  background: var(--ds-slider-color-foreground);
+  pointer-events: none;
+}
+
+/* ── Thumb / .Marker — Shape=Round ───────────────────────────────────────────
+   Figma: 24×24 circle (border-radius 9999px), marker fill + 1px marker-border.
+   Positioned absolutely within the track div, centred on the track's baseline. */
+
+.ds-slider__thumb {
+  position: absolute;
+  top: 50%;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--ds-slider-dimension-marker-slider, 9999px);
+  background: var(--ds-slider-color-marker);
+  border: var(--ds-slider-dimension-marker-stroke, 1px) solid var(--ds-slider-color-marker-border);
+  transform: translate(-50%, -50%);
+  outline: none;
+  pointer-events: none;
+  cursor: pointer;
+  transition: box-shadow 100ms ease;
+}
+
+/* ── Focus state — Shape=Round, State=Focus ───────────────────────────────────
+   Figma: DROP_SHADOW spread=3px (--ds-general-shadows-focus-spread),
+   color = --ds-general-shadows-focus-ring. Applied directly on the 24px circle. */
+
+.ds-slider__thumb:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread, 3px) var(--ds-general-shadows-focus-ring);
+}
+
+/* ── Diamond marker — Shape=Diamond ──────────────────────────────────────────
+   Figma: 24×24 rounded square (border-radius 8px) rotated 45°, dark fill.
+   Visual bounding box after rotation = 24×√2 ≈ 33.94px, matching Figma node size.
+   Border same colour as fill so it is invisible against the dark background.  */
+
+.ds-slider__thumb--diamond {
+  border-radius: var(--ds-slider-dimension-radius, 8px);
+  background: var(--ds-slider-color-foreground);
+  border-color: var(--ds-slider-color-foreground);
+  transform: translate(-50%, -50%) rotate(45deg);
+  box-shadow: none;
+}
+
+/* ── Focus state — Shape=Diamond, State=Focus ─────────────────────────────── */
+
+.ds-slider__thumb--diamond:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread, 3px) var(--ds-general-shadows-focus-ring);
+}

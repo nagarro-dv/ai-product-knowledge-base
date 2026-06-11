@@ -1,0 +1,190 @@
+.components-view {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
+.components-view__body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding-top: 0.5rem;
+}
+
+.components-view__landing {
+  margin: 0;
+  padding: 0;
+}
+
+.components-view .components-view__pageHeading {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ds-general-color-foreground);
+  line-height: 1.25;
+}
+
+.components-view .components-view__pageHeading--detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.35rem 0.45rem;
+  font-weight: 700;
+}
+
+.components-view__crumbRoot {
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--ds-general-color-muted-foreground);
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.components-view__crumbRoot:hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.components-view__crumbRoot:focus-visible {
+  outline: 2px solid var(--ds-general-color-border);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+}
+
+.components-view__crumbRoot--static {
+  cursor: default;
+  pointer-events: none;
+}
+
+.components-view__crumbSep {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--ds-general-color-border);
+  user-select: none;
+}
+
+.components-view__crumbCurrent {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--ds-general-color-foreground);
+}
+
+.components-view__grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--ds-general-gap-2xl);
+  align-items: stretch;
+}
+
+.components-view__grid > li {
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+}
+
+.components-view__gridCard {
+  flex: 1;
+  align-self: stretch;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  text-align: left;
+  cursor: pointer;
+  border-radius: var(--ds-general-radius-rounded-xl);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-background);
+  overflow: hidden;
+  max-height: 280px;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.components-view__gridCard:hover {
+  border-color: var(--ds-general-color-border);
+  background: var(--ds-general-color-muted);
+  box-shadow: 0 2px 12px rgb(0 0 0 / 6%);
+}
+
+.components-view__gridCard:focus-visible {
+  outline: 2px solid var(--ds-general-color-border);
+  outline-offset: 2px;
+}
+
+.components-view__gridCardMeta {
+  padding: var(--ds-general-gap-xl) var(--ds-general-gap-2xl) var(--ds-general-gap-xl);
+}
+
+.components-view__gridCardTitleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ds-general-gap-sm);
+}
+
+.components-view__gridCardTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ds-general-color-foreground);
+  line-height: 1.35;
+}
+
+.components-view__gridCardThumb {
+  flex: 1 1 auto;
+  min-height: clamp(150px, 11vw, 210px);
+  padding: var(--ds-general-gap-md) var(--ds-general-gap-lg) var(--ds-general-gap-xl);
+  background: var(--ds-general-color-muted);
+  border-top: 1px solid var(--ds-general-color-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  pointer-events: none;
+}
+
+.components-view__gridCardThumb > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.components-view__selected {
+  min-height: 0;
+}
+
+.components-preview-panel {
+  flex: 1;
+  min-height: 12rem;
+  max-width: 72rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.components-preview-panel--live {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.components-preview-placeholder {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 0.875rem;
+}

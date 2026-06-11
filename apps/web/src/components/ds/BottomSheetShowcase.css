@@ -1,0 +1,93 @@
+.bs-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  padding: 1.5rem;
+  background: var(--ds-general-color-background);
+}
+
+.bs-showcase__hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  line-height: 1.5;
+}
+
+.bs-showcase__mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.bs-showcase__section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bs-showcase__section-title {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* Row of device frames */
+.bs-showcase__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  align-items: flex-end;
+}
+
+/* One device frame + label */
+.bs-showcase__device-figure {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.bs-showcase__device-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--ds-general-color-muted-foreground);
+  letter-spacing: 0.01em;
+}
+
+/*
+ * Device-frame container: 390 px wide, fixed height.
+ * Background = scrim area; panel sits at the bottom.
+ * Matches Figma's presentation of the component (390 × 844 canvas,
+ * dark scrim top + white panel bottom).
+ */
+.bs-showcase__device-frame {
+  width: 390px;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 2px 12px rgba(14, 15, 17, 0.12);
+}
+
+/* Gray "screen" area behind the sheet */
+.bs-showcase__device-screen {
+  flex: 1 0 80px;
+  background: var(--ds-bottom-sheet-color-overlay, rgba(14, 15, 17, 0.4));
+  min-height: 80px;
+}
+
+/* Panel container — flex-shrink:0 so panel renders at natural height */
+.bs-showcase__device-sheet {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+/* Action slot placeholder (visualises the slot region) */
+.bs-showcase__action-slot-placeholder {
+  width: 100%;
+  height: 46.5px;
+  background: var(--ds-general-color-muted, #e2e6e9);
+  border-radius: var(--ds-general-radius-md, 8px);
+}

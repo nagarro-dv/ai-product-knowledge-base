@@ -1,0 +1,95 @@
+.button-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  width: 100%;
+}
+
+.button-showcase-hint {
+  margin: 0;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  max-width: 40rem;
+  line-height: 1.45;
+}
+
+.button-showcase-mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.button-showcase-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding-bottom: 0.25rem;
+}
+
+.button-showcase-row {
+  display: grid;
+  grid-template-columns: 5rem repeat(6, minmax(5.5rem, 1fr));
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.button-showcase-row--head {
+  margin-bottom: 0.15rem;
+}
+
+.button-showcase-corner {
+  min-width: 0;
+}
+
+.button-showcase-head {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ds-general-color-muted-foreground);
+  text-align: center;
+}
+
+.button-showcase-rail {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: capitalize;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.button-showcase-cell {
+  display: flex;
+  justify-content: center;
+}
+
+.button-showcase-section {
+  margin-top: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.button-showcase-section-title {
+  margin: 0 0 0.35rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+}
+
+.button-showcase-section-lead {
+  margin: 0 0 0.75rem;
+  font-size: 0.8125rem;
+  color: var(--ds-general-color-muted-foreground);
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.button-showcase-row-icons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .button-showcase-row {
+    grid-template-columns: 4.5rem repeat(6, minmax(4.75rem, auto));
+  }
+}

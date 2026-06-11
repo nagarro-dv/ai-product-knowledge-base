@@ -1,0 +1,19 @@
+{
+  "name": "ds-starter-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Design system starter kit — tokens, basic components, and a local playground for experimenting with themes.",
+  "scripts": {
+    "tokens:build": "npm run build:css -w @ds-starter/tokens",
+    "dev:web": "npm run dev -w @ds-starter/web",
+    "dev:agent": "npm run serve -w @ds-starter/agent-orchestrator",
+    "dev:all": "npm run dev:agent & npm run dev:web",
+    "build:web": "npm run build -w @ds-starter/web"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "author": "Nuno Almeida",
+  "license": "UNLICENSED"
+}

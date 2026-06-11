@@ -1,0 +1,89 @@
+.ds-tooltip-anchor {
+  position: relative;
+  display: inline-flex;
+}
+
+.ds-tooltip {
+  position: absolute;
+  z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-tooltip-dimension-gap);
+  min-width: max-content;
+  padding-left: var(--ds-tooltip-dimension-h-padding);
+  padding-right: var(--ds-tooltip-dimension-h-padding);
+  padding-top: var(--ds-tooltip-dimension-v-padding);
+  padding-bottom: var(--ds-tooltip-dimension-v-padding);
+  border-radius: var(--ds-tooltip-dimension-radius);
+  background: var(--ds-tooltip-color-background);
+  color: var(--ds-tooltip-color-foreground);
+  white-space: nowrap;
+}
+
+.ds-tooltip__label {
+  display: inline-flex;
+}
+
+.ds-tooltip__arrow {
+  position: absolute;
+  width: var(--ds-tooltip-dimension-arrow-width);
+  height: var(--ds-tooltip-dimension-arrow-height);
+  background: var(--ds-tooltip-color-background);
+}
+
+.ds-tooltip--top {
+  left: 50%;
+  bottom: calc(100% + var(--ds-general-gap-sm));
+  transform: translateX(-50%);
+}
+
+.ds-tooltip--top .ds-tooltip__arrow {
+  top: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 100%, 0 0, 100% 0);
+}
+
+.ds-tooltip--bottom {
+  left: 50%;
+  top: calc(100% + var(--ds-general-gap-sm));
+  transform: translateX(-50%);
+}
+
+.ds-tooltip--bottom .ds-tooltip__arrow {
+  bottom: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  clip-path: polygon(50% 0, 0 100%, 100% 100%);
+}
+
+.ds-tooltip--left {
+  right: calc(100% + var(--ds-general-gap-sm));
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ds-tooltip--left .ds-tooltip__arrow {
+  width: var(--ds-tooltip-dimension-arrow-height);
+  height: var(--ds-tooltip-dimension-arrow-width);
+  left: calc(100% - 1px);
+  top: 50%;
+  transform: translateY(-50%);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+.ds-tooltip--right {
+  left: calc(100% + var(--ds-general-gap-sm));
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.ds-tooltip--right .ds-tooltip__arrow {
+  width: var(--ds-tooltip-dimension-arrow-height);
+  height: var(--ds-tooltip-dimension-arrow-width);
+  right: calc(100% - 1px);
+  top: 50%;
+  transform: translateY(-50%);
+  clip-path: polygon(0 50%, 100% 0, 100% 100%);
+}

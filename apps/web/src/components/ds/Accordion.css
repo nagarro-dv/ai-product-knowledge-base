@@ -1,0 +1,191 @@
+/**
+ * DsAccordion — Figma 8Ry9Oa2niLBGvoWPo9rLQT node 3143:15292
+ * Axes: variant (contained / ghost) × size (regular / small)
+ */
+
+/* ─── Root ─── */
+
+.ds-accordion {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+/* ─── Contained ─── */
+
+.ds-accordion--contained {
+  background: var(--ds-accordion-color-background-contained);
+  border-radius: var(--ds-accordion-dimension-regular-contained-radius);
+  padding:
+    var(--ds-accordion-dimension-regular-contained-padding-y)
+    var(--ds-accordion-dimension-regular-contained-padding-x);
+  gap: 0;
+}
+
+.ds-accordion--contained.ds-accordion--open {
+  gap: var(--ds-accordion-dimension-regular-gap-section-open);
+}
+
+.ds-accordion--contained.ds-accordion--small {
+  border-radius: var(--ds-accordion-dimension-small-contained-radius);
+  padding:
+    var(--ds-accordion-dimension-small-contained-padding-y)
+    var(--ds-accordion-dimension-small-contained-padding-x);
+}
+
+.ds-accordion--contained.ds-accordion--small.ds-accordion--open {
+  gap: var(--ds-accordion-dimension-small-gap-section-open);
+}
+
+/* ─── Ghost ─── */
+
+.ds-accordion--ghost {
+  background: var(--ds-accordion-color-background-ghost);
+  border-bottom: var(--ds-accordion-dimension-regular-ghost-border-width) solid
+    var(--ds-accordion-color-border-ghost);
+  padding:
+    var(--ds-accordion-dimension-regular-ghost-padding-y)
+    var(--ds-accordion-dimension-regular-ghost-padding-x);
+  gap: 0;
+}
+
+.ds-accordion--ghost.ds-accordion--open {
+  gap: var(--ds-accordion-dimension-regular-gap-section-open);
+}
+
+.ds-accordion--ghost.ds-accordion--small {
+  border-bottom-width: var(--ds-accordion-dimension-small-ghost-border-width);
+  padding:
+    var(--ds-accordion-dimension-small-ghost-padding-y)
+    var(--ds-accordion-dimension-small-ghost-padding-x);
+}
+
+.ds-accordion--ghost.ds-accordion--small.ds-accordion--open {
+  gap: var(--ds-accordion-dimension-small-gap-section-open);
+}
+
+/* ─── Focus ring — applied to root via :has() ─── */
+
+.ds-accordion--contained:has(.ds-accordion__trigger:focus-visible) {
+  outline: none;
+  overflow: clip;
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread)
+    var(--ds-general-shadows-focus-ring);
+}
+
+.ds-accordion--ghost:has(.ds-accordion__trigger:focus-visible) {
+  outline: none;
+  border-radius: var(--ds-accordion-dimension-regular-ghost-focus-radius);
+  overflow: clip;
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread)
+    var(--ds-general-shadows-focus-ring);
+}
+
+.ds-accordion--ghost.ds-accordion--small:has(.ds-accordion__trigger:focus-visible) {
+  border-radius: var(--ds-accordion-dimension-small-ghost-focus-radius);
+}
+
+.ds-accordion__trigger:focus-visible {
+  outline: none;
+}
+
+/* ─── Trigger button (title row) ─── */
+
+.ds-accordion__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-accordion-dimension-regular-gap-title-row);
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+  flex-shrink: 0;
+}
+
+.ds-accordion--small .ds-accordion__trigger {
+  gap: var(--ds-accordion-dimension-small-gap-title-row);
+}
+
+/* ─── Title-and-icon row ─── */
+
+.ds-accordion__title-and-icon {
+  display: flex;
+  flex: 1 0 0;
+  align-items: flex-start;
+  gap: var(--ds-accordion-dimension-regular-gap-title-row);
+  min-width: 0;
+}
+
+.ds-accordion--small .ds-accordion__title-and-icon {
+  gap: var(--ds-accordion-dimension-small-gap-title-row);
+}
+
+/* ─── Icon aligner ─── */
+
+.ds-accordion__icon-aligner {
+  display: flex;
+  align-items: flex-start;
+  padding-top: var(--ds-accordion-dimension-icon-aligner-padding-y);
+  padding-bottom: var(--ds-accordion-dimension-icon-aligner-padding-y);
+  align-self: stretch;
+  flex-shrink: 0;
+  color: var(--ds-accordion-color-icon);
+}
+
+/* ─── Text block (Line 1 + Line 2) ─── */
+
+.ds-accordion__text {
+  display: flex;
+  flex: 1 0 0;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-accordion-dimension-regular-gap-lines-default);
+  min-width: 0;
+}
+
+.ds-accordion--small .ds-accordion__text {
+  gap: var(--ds-accordion-dimension-small-gap-lines-small);
+}
+
+.ds-accordion__title {
+  display: block;
+  width: 100%;
+  color: var(--ds-accordion-color-foreground);
+}
+
+.ds-accordion__subtitle {
+  display: block;
+  width: 100%;
+  color: var(--ds-accordion-color-muted);
+}
+
+/* ─── Tags & actions slot ─── */
+
+.ds-accordion__tags-actions {
+  display: flex;
+  align-items: center;
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 44px;
+}
+
+/* ─── Chevron ─── */
+
+.ds-accordion__chevron {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  color: var(--ds-accordion-color-chevron);
+}
+
+/* ─── Content slot ─── */
+
+.ds-accordion__content {
+  width: 100%;
+}

@@ -1,0 +1,155 @@
+/**
+ * Full semantic text styles: one modifier = one Figma text style (variant slug).
+ * Uses only `var(--ds-general-typography-*)` — regenerate tokens via `npm run tokens:build` when Figma/JSON changes.
+ */
+
+.ds-text--heading-1 {
+  font-family:
+    var(--ds-general-typography-font-family-headings), var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-heading-1-font-size);
+  line-height: var(--ds-general-typography-heading-1-line-height);
+  letter-spacing: var(--ds-general-typography-heading-1-letter-spacing);
+  font-weight: var(--ds-general-typography-heading-1-weight);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--heading-2 {
+  font-family:
+    var(--ds-general-typography-font-family-headings), var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-heading-2-font-size);
+  line-height: var(--ds-general-typography-heading-2-line-height);
+  letter-spacing: var(--ds-general-typography-heading-2-letter-spacing);
+  font-weight: var(--ds-general-typography-heading-2-weight);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--heading-3 {
+  font-family:
+    var(--ds-general-typography-font-family-headings), var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-heading-3-font-size);
+  line-height: var(--ds-general-typography-heading-3-line-height);
+  letter-spacing: var(--ds-general-typography-heading-3-letter-spacing);
+  font-weight: var(--ds-general-typography-heading-3-weight);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--heading-4 {
+  font-family:
+    var(--ds-general-typography-font-family-headings), var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-heading-4-font-size);
+  line-height: var(--ds-general-typography-heading-4-line-height);
+  letter-spacing: var(--ds-general-typography-heading-4-letter-spacing);
+  font-weight: var(--ds-general-typography-heading-4-weight);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--heading-5 {
+  font-family:
+    var(--ds-general-typography-font-family-headings), var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-heading-4-font-size);
+  line-height: var(--ds-general-typography-heading-4-line-height);
+  letter-spacing: var(--ds-general-typography-heading-4-letter-spacing);
+  font-weight: var(--ds-general-typography-heading-4-weight);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--paragraph-regular,
+.ds-text--paragraph-default,
+.ds-text--paragraph-large,
+.ds-text--paragraph-medium,
+.ds-text--paragraph-bold {
+  font-family: var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+  letter-spacing: var(--ds-general-typography-paragraph-regular-letter-spacing);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--paragraph-regular {
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}
+
+.ds-text--paragraph-default,
+.ds-text--paragraph-large {
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}
+
+.ds-text--paragraph-medium {
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+}
+
+.ds-text--paragraph-bold {
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+}
+
+.ds-text--paragraph-small-regular,
+.ds-text--paragraph-small,
+.ds-text--paragraph-small-medium,
+.ds-text--paragraph-small-bold {
+  font-family: var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  letter-spacing: var(--ds-general-typography-paragraph-small-letter-spacing);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--paragraph-small-regular {
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}
+
+.ds-text--paragraph-small {
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}
+
+.ds-text--paragraph-small-medium {
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+}
+
+.ds-text--paragraph-small-bold {
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+}
+
+.ds-text--paragraph-mini-regular,
+.ds-text--paragraph-mini,
+.ds-text--paragraph-mini-medium,
+.ds-text--paragraph-mini-bold {
+  font-family: var(--ds-general-typography-font-family-body), system-ui, sans-serif;
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  line-height: var(--ds-general-typography-paragraph-mini-line-height);
+  letter-spacing: var(--ds-general-typography-paragraph-mini-letter-spacing);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}
+
+.ds-text--paragraph-mini-regular {
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}
+
+.ds-text--paragraph-mini {
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}
+
+.ds-text--paragraph-mini-medium {
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+}
+
+.ds-text--paragraph-mini-bold {
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+}
+
+.ds-text--monospace {
+  font-family: var(--ds-general-typography-font-family-monospace), ui-monospace, monospace;
+  font-size: var(--ds-general-typography-monospaced-font-size);
+  line-height: var(--ds-general-typography-monospaced-line-height);
+  letter-spacing: var(--ds-general-typography-monospaced-letter-spacing);
+  font-weight: var(--ds-general-typography-monospaced-weight);
+  text-transform: var(--ds-general-typography-text-case);
+  text-decoration: var(--ds-general-typography-text-decoration);
+}

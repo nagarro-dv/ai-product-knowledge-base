@@ -1,0 +1,21 @@
+@import "@fontsource/geist-sans/400.css";
+@import "@fontsource/geist-sans/500.css";
+@import "@fontsource/geist-sans/600.css";
+@import "@fontsource/geist-sans/700.css";
+
+@import "./styles/tokens.generated.css";
+@import "./styles/typography.semantic.css";
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: var(--ds-general-typography-font-family-body, system-ui, sans-serif);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-foreground);
+}

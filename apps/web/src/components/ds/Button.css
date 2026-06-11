@@ -1,0 +1,240 @@
+/**
+ * Button — BFSI DS Starter Kit, Figma node 33:476.
+ * Variants: Primary, Secondary, Raised, Ghost, Destructive, Inverse.
+ * Sizes: Large, Regular, Small, Mini. States via :hover, :active, :focus-visible, :disabled.
+ */
+
+.ds-btn {
+  --ds-btn-raised-outer: var(--ds-general-shadows-raised-md-shadow-3-x) var(--ds-general-shadows-raised-md-shadow-3-y) var(--ds-general-shadows-raised-md-shadow-3-blur)
+      var(--ds-general-shadows-raised-md-shadow-3-spread) var(--ds-general-shadows-raised-md-shadow-3-color),
+    var(--ds-general-shadows-raised-md-shadow-2-x) var(--ds-general-shadows-raised-md-shadow-2-y) var(--ds-general-shadows-raised-md-shadow-2-blur)
+      var(--ds-general-shadows-raised-md-shadow-2-spread) var(--ds-general-shadows-raised-md-shadow-2-color),
+    var(--ds-general-shadows-raised-md-shadow-1-x) var(--ds-general-shadows-raised-md-shadow-1-y) var(--ds-general-shadows-raised-md-shadow-1-blur)
+      var(--ds-general-shadows-raised-md-shadow-1-spread) var(--ds-general-shadows-raised-md-shadow-1-color);
+
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-btn-gap);
+  min-height: var(--ds-btn-height);
+  padding: 0 var(--ds-btn-pad-h);
+  margin: 0;
+  border: none;
+  border-radius: var(--ds-btn-radius);
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.ds-btn:focus-visible {
+  outline: none;
+}
+
+/* —— sizes (dimension tokens) —— */
+.ds-btn[data-size="large"] {
+  --ds-btn-height: var(--ds-button-dimension-large-height);
+  --ds-btn-pad-h: var(--ds-button-dimension-large-h-padding);
+  --ds-btn-gap: var(--ds-button-dimension-large-gap);
+  --ds-btn-radius: var(--ds-button-dimension-large-radius);
+  --ds-btn-icon-size: var(--ds-button-dimension-large-icon-size);
+  --ds-btn-text-pad: var(--ds-button-dimension-large-text-container-padding);
+}
+
+.ds-btn[data-size="regular"] {
+  --ds-btn-height: var(--ds-button-dimension-regular-height);
+  --ds-btn-pad-h: var(--ds-button-dimension-regular-h-padding);
+  --ds-btn-gap: var(--ds-button-dimension-regular-gap);
+  --ds-btn-radius: var(--ds-button-dimension-regular-radius);
+  --ds-btn-icon-size: var(--ds-button-dimension-regular-icon-size);
+  --ds-btn-text-pad: var(--ds-button-dimension-regular-text-container-padding);
+}
+
+.ds-btn[data-size="small"] {
+  --ds-btn-height: var(--ds-button-dimension-small-height);
+  --ds-btn-pad-h: var(--ds-button-dimension-small-h-padding);
+  --ds-btn-gap: var(--ds-button-dimension-small-gap);
+  --ds-btn-radius: var(--ds-button-dimension-small-radius);
+  --ds-btn-icon-size: var(--ds-button-dimension-small-icon-size);
+  --ds-btn-text-pad: var(--ds-button-dimension-small-text-container-padding);
+}
+
+.ds-btn[data-size="mini"] {
+  --ds-btn-height: var(--ds-button-dimension-mini-height);
+  --ds-btn-pad-h: var(--ds-button-dimension-mini-h-padding);
+  --ds-btn-gap: var(--ds-button-dimension-mini-gap);
+  --ds-btn-radius: var(--ds-button-dimension-mini-radius);
+  --ds-btn-icon-size: var(--ds-button-dimension-mini-icon-size);
+  --ds-btn-text-pad: var(--ds-button-dimension-mini-text-container-padding);
+}
+
+.ds-btn__icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-btn-icon-size);
+  height: var(--ds-btn-icon-size);
+  color: inherit;
+}
+
+.ds-btn__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ds-btn__text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 var(--ds-btn-text-pad);
+  color: inherit;
+}
+
+/* —— Primary —— */
+.ds-btn--primary {
+  background: var(--ds-button-color-primary-background);
+  color: var(--ds-button-color-primary-foreground);
+  box-shadow: none;
+}
+
+.ds-btn--primary:hover:not(:disabled),
+.ds-btn--primary:active:not(:disabled) {
+  background: var(--ds-button-color-primary-hover);
+}
+
+.ds-btn--primary:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring);
+}
+
+/* —— Secondary —— */
+.ds-btn--secondary {
+  background: var(--ds-button-color-secondary-background);
+  color: var(--ds-button-color-secondary-foreground);
+}
+
+.ds-btn--secondary:hover:not(:disabled),
+.ds-btn--secondary:active:not(:disabled) {
+  background: var(--ds-button-color-secondary-hover);
+}
+
+.ds-btn--secondary:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring);
+}
+
+/* —— Ghost —— */
+.ds-btn--ghost {
+  background: var(--ds-button-color-ghost-background);
+  color: var(--ds-button-color-ghost-foreground);
+}
+
+.ds-btn--ghost:hover:not(:disabled),
+.ds-btn--ghost:active:not(:disabled) {
+  background: var(--ds-button-color-ghost-hover);
+}
+
+.ds-btn--ghost:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring);
+}
+
+/* —— Destructive —— */
+.ds-btn--destructive {
+  background: var(--ds-button-color-destructive-background);
+  color: var(--ds-button-color-destructive-foreground);
+}
+
+.ds-btn--destructive:hover:not(:disabled),
+.ds-btn--destructive:active:not(:disabled) {
+  background: var(--ds-button-color-destructive-hover);
+}
+
+.ds-btn--destructive:focus-visible {
+  background: var(--ds-general-color-destructive-surface);
+  color: var(--ds-button-color-destructive-foreground);
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring-error);
+}
+
+/* —— Inverse (Figma: fill only; border token reserved for other contexts) —— */
+.ds-btn--inverse {
+  background: var(--ds-button-color-inverse-background);
+  color: var(--ds-button-color-inverse-foreground);
+}
+
+.ds-btn--inverse:hover:not(:disabled),
+.ds-btn--inverse:active:not(:disabled) {
+  background: var(--ds-button-color-inverse-hover);
+}
+
+.ds-btn--inverse:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring);
+}
+
+/* —— Raised (Figma: outer raised-md + fill underlay + inner shadow; hover gradient; focus ring only) —— */
+.ds-btn--raised {
+  background: transparent;
+  box-shadow: var(--ds-btn-raised-outer);
+  overflow: hidden;
+}
+
+.ds-btn__raised-underlay {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: var(--ds-button-color-raised-background);
+  z-index: 0;
+}
+
+.ds-btn__raised-inner {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  box-shadow: inset var(--ds-general-shadows-raised-md-inner-shadow-x) var(--ds-general-shadows-raised-md-inner-shadow-y)
+    var(--ds-general-shadows-raised-md-inner-shadow-blur) var(--ds-general-shadows-raised-md-inner-shadow-spread)
+    var(--ds-general-shadows-raised-md-inner-shadow-color);
+}
+
+.ds-btn--raised .ds-btn__icon,
+.ds-btn--raised .ds-btn__text {
+  position: relative;
+  z-index: 3;
+  color: var(--ds-button-color-raised-foreground);
+}
+
+.ds-btn--raised:hover:not(:disabled):not(:focus-visible) .ds-btn__raised-underlay,
+.ds-btn--raised:active:not(:disabled):not(:focus-visible) .ds-btn__raised-underlay {
+  background-image: linear-gradient(
+      180deg,
+      var(--ds-button-color-raised-gradient-overlay-start) 47.115%,
+      var(--ds-button-color-raised-gradient-overlay-end) 100%
+    ),
+    linear-gradient(90deg, var(--ds-button-color-raised-hover) 0%, var(--ds-button-color-raised-hover) 100%);
+}
+
+.ds-btn--raised:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring);
+}
+
+.ds-btn--raised:focus-visible .ds-btn__raised-underlay {
+  background-color: var(--ds-button-color-raised-background);
+  background-image: linear-gradient(
+      180deg,
+      var(--ds-button-color-raised-gradient-overlay-start) 47.115%,
+      var(--ds-button-color-raised-gradient-overlay-end) 100%
+    ),
+    linear-gradient(90deg, var(--ds-button-color-raised-background) 0%, var(--ds-button-color-raised-background) 100%);
+}
+
+.ds-btn--raised:focus-visible .ds-btn__raised-inner {
+  display: none;
+}

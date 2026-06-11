@@ -1,0 +1,77 @@
+/**
+ * SliderShowcase — layout for the DsSlider playground panel.
+ */
+
+.slider-showcase {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xl);
+  width: 100%;
+}
+
+.slider-showcase-hint {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.slider-showcase-mono {
+  font-family: var(--ds-general-typography-font-family-mono, monospace);
+  font-size: 0.9em;
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 6%, transparent);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
+.slider-showcase-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--ds-general-gap-3xl);
+}
+
+@media (max-width: 600px) {
+  .slider-showcase-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.slider-showcase-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
+}
+
+.slider-showcase-section-title {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-foreground);
+}
+
+.slider-showcase-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+}
+
+.slider-showcase-cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+}
+
+.slider-showcase-label {
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.slider-showcase-value {
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-general-color-foreground);
+  font-variant-numeric: tabular-nums;
+}

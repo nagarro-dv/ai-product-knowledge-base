@@ -1,0 +1,181 @@
+/**
+ * FlexibleRange — Figma XLKRFXYtGQPPHD9cq4JNn8, node 4138:59185.
+ *
+ * Layout derived from Figma metadata (all measurements in px at 1× density):
+ *   Widget outer            342 × 392  padding 24px
+ *   Slot inner              294 × 344
+ *   ├─ Container            294 × 284
+ *   │  ├─ Title row              h=36
+ *   │  ├─ Header divider    y=44  h=1   (8px gap after title row)
+ *   │  ├─ Body              y=61  h=222 (16px gap after header divider)
+ *   │  │  ├─ Instruction    y=0   h=32  (2 lines paragraph-small-regular)
+ *   │  │  ├─ SliderSection  y=52  h=110 (20px gap after instruction)
+ *   │  │  │  ├─ Slider      y=0   h=30
+ *   │  │  │  └─ Amounts     y=46  h=64  (16px gap after slider)
+ *   │  │  │     ├─ Column   w=87.33 × 3  gap=16px
+ *   │  │  │     │  ├─ Label      h=20
+ *   │  │  │     │  └─ Value box  h=36  (8px gap after label)
+ *   │  │  └─ Reset button   y=239 h=44  (16px gap after slider section)
+ *   │  └─ Footer divider    y=283 h=1
+ *   └─ Actions              y=300 h=44  (16px gap after container)
+ *
+ * Token mapping — no raw values:
+ *   --ds-general-gap-2xl       16px   ← most structural gaps
+ *   --ds-general-gap-3xl       20px   ← instruction → slider section
+ *   --ds-general-radius-rounded-lg 8px ← value box corners
+ *   --ds-general-color-border       ← dividers + value box border
+ *   --ds-general-color-canvas       ← value box background
+ *   --ds-general-color-foreground   ← title, labels, values
+ *   --ds-general-color-muted-foreground ← instruction text
+ */
+
+/* ── 1. Header ──────────────────────────────────────────────────────────────── */
+
+.ds-flexible-range__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 36px;
+}
+
+.ds-flexible-range__title {
+  color: var(--ds-general-color-foreground);
+  margin: 0;
+}
+
+.ds-flexible-range__info-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: var(--ds-general-radius-rounded-lg);
+  color: var(--ds-general-color-muted-foreground);
+  cursor: pointer;
+  transition: background 100ms ease, color 100ms ease;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.ds-flexible-range__info-btn:hover {
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+.ds-flexible-range__info-btn:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread, 3px) var(--ds-general-shadows-focus-ring);
+}
+
+.ds-flexible-range__info-icon {
+  display: block;
+}
+
+/* ── 2. Header divider ──────────────────────────────────────────────────────── */
+
+.ds-flexible-range__divider {
+  height: 1px;
+  background: var(--ds-general-color-border);
+  flex-shrink: 0;
+  /* Figma: divider at y=44 → 8px below the 36px title row */
+  margin-top: 8px;
+}
+
+/* ── 3. Body ────────────────────────────────────────────────────────────────── */
+
+.ds-flexible-range__body {
+  display: flex;
+  flex-direction: column;
+  /* Figma: body starts at y=61 → 16px gap after divider at y=44+1=45 */
+  padding-top: var(--ds-general-gap-2xl, 16px);
+}
+
+/* ── 3a. Instruction ────────────────────────────────────────────────────────── */
+
+.ds-flexible-range__instruction {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── 3b + 3c. Slider + Amounts (3-Amounts-Slider section) ──────────────────── */
+
+.ds-flexible-range__slider-section {
+  display: flex;
+  flex-direction: column;
+  /* Figma: slider y=0 within section, amounts y=46, slider h=30 → gap=16px */
+  gap: var(--ds-general-gap-2xl, 16px);
+  /* Figma: section starts at y=52 within body (52-32=20px below instruction) */
+  margin-top: var(--ds-general-gap-3xl, 20px);
+}
+
+.ds-flexible-range__slider {
+  width: 100%;
+}
+
+/* ── 3c. Amounts row ────────────────────────────────────────────────────────── */
+
+.ds-flexible-range__amounts {
+  display: flex;
+  /* Figma: each column 87.33px, gaps of 16px; 87.33×3 + 16×2 = 294px */
+  gap: var(--ds-general-gap-2xl, 16px);
+}
+
+.ds-flexible-range__amount {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  /* Figma: label h=20, input starts at y=28 → 8px gap */
+  gap: 8px;
+  min-width: 0;
+}
+
+.ds-flexible-range__amount-label {
+  color: var(--ds-general-color-foreground);
+}
+
+/* ── Value display box — mirrors the DS Input component appearance ─────────── */
+
+.ds-flexible-range__amount-value {
+  box-sizing: border-box;
+  /* Figma: Input height=36px */
+  height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--ds-general-padding-lg, 12px);
+  /* Canvas white on the default-background widget */
+  background: var(--ds-general-color-canvas);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg, 8px);
+  color: var(--ds-general-color-foreground);
+  transition: border-color 100ms ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* ── 3d. Reset to Recommendation ────────────────────────────────────────────── */
+
+.ds-flexible-range__reset {
+  /* Figma: Reset button at y=239 within MainContainer, amounts end at 61+162=223 → gap 16px */
+  margin-top: var(--ds-general-gap-2xl, 16px);
+  width: 100%;
+}
+
+/* ── 4. Footer divider ──────────────────────────────────────────────────────── */
+
+.ds-flexible-range__footer-divider {
+  height: 1px;
+  background: var(--ds-general-color-border);
+  flex-shrink: 0;
+  /* Divider sits immediately below Reset button (no extra gap in Figma) */
+}
+
+/* ── 5. Apply button ────────────────────────────────────────────────────────── */
+
+.ds-flexible-range__apply {
+  /* Figma: Actions at y=300 within slot, Container ends at 284 → gap 16px */
+  margin-top: var(--ds-general-gap-2xl, 16px);
+  width: 100%;
+}

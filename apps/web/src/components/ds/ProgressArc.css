@@ -1,0 +1,58 @@
+/**
+ * Progress Arc — Figma XLKRFXYtGQPPHD9cq4JNn8 / 3851:47112
+ * Reuses --ds-progress-linear-* color tokens for fill and track.
+ */
+
+.ds-progress-arc {
+  display: block;
+  width: 100%;
+  max-width: 278px;
+  height: auto;
+  overflow: visible;
+}
+
+/* ── Variant colour maps ──────────────────────────────────────────────────── */
+
+.ds-progress-arc--default {
+  --pa-track: var(--ds-progress-linear-color-primary-background);
+  --pa-fill:  var(--ds-progress-linear-color-primary-foreground);
+}
+
+.ds-progress-arc--success {
+  --pa-track: var(--ds-progress-linear-color-primary-background);
+  --pa-fill:  var(--ds-progress-linear-color-success-foreground);
+}
+
+.ds-progress-arc--warning {
+  --pa-track: var(--ds-progress-linear-color-primary-background);
+  --pa-fill:  var(--ds-progress-linear-color-warning-foreground);
+}
+
+.ds-progress-arc--error {
+  --pa-track: var(--ds-progress-linear-color-primary-background);
+  --pa-fill:  var(--ds-progress-linear-color-error-foreground);
+}
+
+.ds-progress-arc--accent {
+  --pa-track: var(--ds-progress-linear-color-primary-background);
+  --pa-fill:  var(--ds-progress-linear-color-accent-foreground);
+}
+
+/* ── Parts ───────────────────────────────────────────────────────────────── */
+
+.ds-progress-arc__track {
+  stroke: var(--pa-track);
+}
+
+.ds-progress-arc__fill {
+  stroke: var(--pa-fill);
+  transition: stroke-dasharray 400ms ease;
+}
+
+.ds-progress-arc__label {
+  fill: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  font-weight: var(--ds-general-typography-paragraph-regular-weight);
+}

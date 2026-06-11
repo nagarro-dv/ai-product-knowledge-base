@@ -1,0 +1,384 @@
+---
+description: WCAG 2.2 + European Accessibility Act (EAA) compliance for all components, pages, and designs. Always audit and flag violations.
+alwaysApply: true
+---
+
+# Accessibility — WCAG 2.2 & European Accessibility Act
+
+You MUST treat accessibility as a **blocking quality gate**, not an optional enhancement. Apply this rule whenever you create, modify, review, or design **any** UI component, page, layout, Figma frame, token, or interaction pattern.
+
+## Compliance targets
+
+| Standard | Target | Notes |
+|----------|--------|-------|
+| **WCAG 2.2 Level A + AA** | **Mandatory** | 55 active success criteria (4.1.1 Parsing removed). Legal baseline for EU, UK, US ADA, and most public-sector policies. |
+| **WCAG 2.2 Level AAA** | **Recommended** | 31 additional criteria. Pursue where feasible; flag gaps as non-blocking recommendations. |
+| **European Accessibility Act** (Directive EU 2019/882) | **Mandatory** for EU-market products/services | Enforceable from 28 June 2025. Requires perceivable, operable, understandable, robust digital experiences. |
+| **EN 301 549** (EU ICT standard) | **Mandatory technical reference** | Incorporates WCAG for web/software. Target **WCAG 2.2 AA** (ahead of EN 301 549's current WCAG 2.1 reference). |
+
+Conformance levels are **cumulative**: AA requires all A + AA criteria.
+
+---
+
+## Agent enforcement protocol
+
+### When this rule applies
+
+- Creating or editing React/HTML components, CSS, pages, or showcases
+- Designing in Figma or generating Figma designs
+- Defining design tokens that affect readability, contrast, focus, motion, or touch targets
+- Adding forms, navigation, modals, tooltips, media, or authentication flows
+
+### What you MUST do before delivering work
+
+1. **Self-audit** every deliverable against the checklists in this rule.
+2. **Implement** WCAG 2.2 AA requirements by default in code and design specs.
+3. **Flag every violation** to the user — never silently ship non-compliant UI.
+4. **Propose fixes** alongside each flag (code snippet, token change, or design adjustment).
+5. **Prefer semantic HTML + ARIA only when needed** — do not use ARIA to fix bad semantics.
+
+### Violation flagging format
+
+When output does not comply, append an **Accessibility Audit** section:
+
+```markdown
+## ⚠️ Accessibility Audit
+
+| ID | Criterion | Level | Severity | Issue | Fix |
+|----|-----------|-------|----------|-------|-----|
+| 1.4.3 | Contrast (Minimum) | AA | **Blocking** | Button label #8A8A8A on #FFFFFF = 2.9:1 | Use `general/color/text/primary` token (≥4.5:1) |
+| 2.5.8 | Target Size (Minimum) | AA | **Blocking** | Icon button 20×20px | Increase hit area to ≥24×24px (44×44 for AAA) |
+
+**Blocking** = WCAG A/AA or EAA failure. **Recommendation** = AAA or best-practice gap.
+```
+
+If fully compliant, state briefly: `✅ Accessibility: WCAG 2.2 AA compliant (EAA-aligned).`
+
+---
+
+## Pre-delivery checklists
+
+### Every interactive component
+
+- [ ] Keyboard operable; visible focus ring (≥2px, ≥3:1 contrast against adjacent colors)
+- [ ] Focus not fully obscured by sticky headers, modals, or sheets (2.4.11)
+- [ ] Accessible name matches visible label (2.5.3); `aria-label` only when no visible label
+- [ ] Role, name, value, and state exposed (4.1.2); disabled/expanded/checked announced
+- [ ] Touch/click target ≥24×24 CSS px (2.5.8); prefer 44×44 (2.5.5 AAA)
+- [ ] Color not sole indicator of state — add icon, text, pattern, or border (1.4.1, 1.3.3)
+- [ ] Text contrast ≥4.5:1 (normal), ≥3:1 (large text ≥18pt/14pt bold) (1.4.3)
+- [ ] UI control boundaries ≥3:1 against background (1.4.11)
+- [ ] Motion/animation respects `prefers-reduced-motion` (2.3.3 AAA)
+- [ ] No seizure-inducing flash >3/sec (2.3.1)
+
+### Every page / screen / Figma frame
+
+- [ ] Unique, descriptive `<title>` / frame name (2.4.2)
+- [ ] Logical heading hierarchy (`h1`→`h2`→…); one `h1` per view (1.3.1, 2.4.6)
+- [ ] Skip link or landmark to main content (2.4.1)
+- [ ] `lang` on root; `lang` on foreign-language passages (3.1.1, 3.1.2)
+- [ ] Focus order matches visual/reading order (2.4.3)
+- [ ] Consistent nav, help, and component identification across pages (3.2.3, 3.2.4, 3.2.6)
+- [ ] Reflows at 320px width / 400% zoom without horizontal scroll (1.4.10)
+- [ ] Status messages use `role="status"` / `role="alert"` / `aria-live` (4.1.3)
+- [ ] Tooltips/popovers: dismissable (Esc), hoverable, persistent until dismissed (1.4.13)
+
+### Every form
+
+- [ ] Visible `<label>` linked via `for`/`id` or wrapping (3.3.2, 1.3.1)
+- [ ] `autocomplete` tokens on personal data fields (1.3.5)
+- [ ] Errors identified in text, linked to fields via `aria-describedby` (3.3.1)
+- [ ] Correction suggestions where possible (3.3.3)
+- [ ] Legal/financial/data submissions: reversible, validated, or confirmed (3.3.4)
+- [ ] Do not re-ask for data already entered in same session (3.3.7)
+- [ ] Auth: allow paste, password managers; no cognitive puzzles without alternative (3.3.8)
+
+### Design tokens (this design system)
+
+- [ ] Semantic color tokens meet contrast pairs (text/background, control/border)
+- [ ] Focus ring tokens: visible in light and dark appearance modes
+- [ ] Minimum spacing tokens support 24px+ targets and text-spacing overrides (1.4.12)
+- [ ] Motion tokens gated behind reduced-motion preference in CSS
+
+---
+
+## WCAG 2.2 — all 86 active success criteria
+
+Criterion **4.1.1 Parsing** was removed in WCAG 2.2. All others below are active.
+
+### Principle 1 — Perceivable
+
+#### 1.1 Text alternatives
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 1.1.1 | A | Non-text content has text alternative | `alt` on images; `aria-label`/`aria-labelledby` on icon-only controls; decorative images `alt=""` + `aria-hidden="true"` |
+
+#### 1.2 Time-based media
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 1.2.1 | A | Audio/video alternatives | Transcript for audio; transcript or audio-described version for video |
+| 1.2.2 | A | Captions (prerecorded) | Synchronized captions on prerecorded video |
+| 1.2.3 | A | Audio description or alternative | Audio description track or text alternative describing visuals |
+| 1.2.4 | AA | Captions (live) | Live captioning for live audio |
+| 1.2.5 | AA | Audio description (prerecorded) | Audio description for prerecorded video |
+| 1.2.6 | AAA | Sign language | Sign language interpretation |
+| 1.2.7 | AAA | Extended audio description | Pause video for extended descriptions when needed |
+| 1.2.8 | AAA | Media alternative | Full text document equivalent for prerecorded media |
+| 1.2.9 | AAA | Audio-only (live) | Live text alternative for live audio-only |
+
+#### 1.3 Adaptable
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 1.3.1 | A | Info and relationships | Semantic HTML: `<button>`, `<nav>`, `<main>`, `<table>`, `<th scope>`, fieldset/legend for groups |
+| 1.3.2 | A | Meaningful sequence | DOM order = reading order; CSS must not break sequence |
+| 1.3.3 | A | Sensory characteristics | "Click the red button" → add "Submit" label; don't rely on shape/position/sound alone |
+| 1.3.4 | AA | Orientation | No lock to portrait/landscape unless essential |
+| 1.3.5 | AA | Identify input purpose | `autocomplete="email"`, `tel`, `name`, `street-address`, etc. |
+| 1.3.6 | AAA | Identify purpose | `aria-label` with purpose tokens; schema.org/microdata where applicable |
+
+#### 1.4 Distinguishable
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 1.4.1 | A | Use of color | Pair color with text, icon, or pattern for errors, links, charts, states |
+| 1.4.2 | A | Audio control | Auto-playing audio >3s: provide pause/stop/mute |
+| 1.4.3 | AA | Contrast (minimum) | **4.5:1** normal text; **3:1** large text (≥24px or ≥18.66px bold) |
+| 1.4.4 | AA | Resize text | 200% zoom: no loss of content/function (use rem/em, avoid fixed px heights on text containers) |
+| 1.4.5 | AA | Images of text | Use real text + web fonts; images of text only when essential |
+| 1.4.6 | AAA | Contrast (enhanced) | **7:1** normal text; **4.5:1** large text |
+| 1.4.7 | AAA | Low background audio | Speech foreground 20dB louder than background |
+| 1.4.8 | AAA | Visual presentation | User can set width, spacing, colors (no !important blocking overrides) |
+| 1.4.9 | AAA | Images of text (no exception) | No images of text except logo/essential |
+| 1.4.10 | AA | Reflow | 320 CSS px width at 400% zoom: single column, no horizontal scroll for vertical content |
+| 1.4.11 | AA | Non-text contrast | Icons, borders, focus rings, chart lines: **3:1** against adjacent colors |
+| 1.4.12 | AA | Text spacing | Survive user overrides: line-height 1.5×, paragraph spacing 2×, letter-spacing 0.12em, word-spacing 0.16em |
+| 1.4.13 | AA | Content on hover/focus | Additional content (tooltip): dismissable (Esc), pointer can move to content, stays until dismissed/hover removed |
+
+### Principle 2 — Operable
+
+#### 2.1 Keyboard accessible
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 2.1.1 | A | Keyboard | All functionality via keyboard; no `onClick`-only without `onKeyDown` equivalent |
+| 2.1.2 | A | No keyboard trap | Focus can leave modals (Esc, close button, focus trap with exit) |
+| 2.1.3 | AAA | Keyboard (no exception) | No exceptions to keyboard access |
+| 2.1.4 | A | Character key shortcuts | Single-key shortcuts (e.g. `j`): provide disable/remap or active-only-when-focused |
+
+#### 2.2 Enough time
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 2.2.1 | A | Timing adjustable | Session timeouts: warn + extend; carousels: pause control |
+| 2.2.2 | A | Pause, stop, hide | Moving/blinking/auto-updating content >5s: user can pause/stop/hide |
+| 2.2.3 | AAA | No timing | No time limits except real-time events (auctions) |
+| 2.2.4 | AAA | Interruptions | Defer non-urgent interruptions; user can postpone |
+| 2.2.5 | AAA | Re-authenticating | Preserve data after re-auth |
+| 2.2.6 | AAA | Timeouts | Warn users before data loss from inactivity |
+
+#### 2.3 Seizures
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 2.3.1 | A | Three flashes | No content flashing >3 times/sec above thresholds |
+| 2.3.2 | AAA | Three flashes | Stricter flash limits |
+| 2.3.3 | AAA | Animation from interactions | Respect `prefers-reduced-motion: reduce`; provide off switch |
+
+#### 2.4 Navigable
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 2.4.1 | A | Bypass blocks | `<a href="#main" class="skip-link">Skip to content</a>` + `<main id="main">` |
+| 2.4.2 | A | Page titled | Unique `<title>` describing page purpose |
+| 2.4.3 | A | Focus order | `tabIndex` only on interactive elements; order matches visual flow |
+| 2.4.4 | A | Link purpose (in context) | Link text + context = destination; avoid "click here" |
+| 2.4.5 | AA | Multiple ways | Nav + search + sitemap for multi-page sites |
+| 2.4.6 | AA | Headings and labels | Headings describe sections; labels describe inputs |
+| 2.4.7 | AA | Focus visible | Never `outline: none` without custom focus style |
+| 2.4.8 | AAA | Location | Breadcrumbs or "you are here" indicator |
+| 2.4.9 | AAA | Link purpose (link only) | Link text alone describes destination |
+| 2.4.10 | AAA | Section headings | Organize content with headings |
+| 2.4.11 | AA | **Focus not obscured (min)** | **WCAG 2.2 NEW** — Sticky bars/sheets must not fully hide focused element |
+| 2.4.12 | AAA | **Focus not obscured (enhanced)** | **WCAG 2.2 NEW** — No part of focused element hidden |
+| 2.4.13 | AAA | **Focus appearance** | **WCAG 2.2 NEW** — Focus indicator: ≥2px perimeter, ≥3:1 contrast change |
+
+#### 2.5 Input modalities
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 2.5.1 | A | Pointer gestures | Pinch/swipe/multi-finger: provide single-pointer alternative |
+| 2.5.2 | A | Pointer cancellation | Use `click` event (up-event), not `mousedown` alone |
+| 2.5.3 | A | Label in name | Visible "Search" → `aria-label` must contain "Search" |
+| 2.5.4 | A | Motion actuation | Shake/tilt triggers: provide UI alternative + disable option |
+| 2.5.5 | AAA | Target size (enhanced) | **44×44 CSS px** minimum |
+| 2.5.6 | AAA | Concurrent input mechanisms | Don't disable keyboard when touch is available |
+| 2.5.7 | AA | **Dragging movements** | **WCAG 2.2 NEW** — Sliders/drag-drop: provide tap/click alternative |
+| 2.5.8 | AA | **Target size (minimum)** | **WCAG 2.2 NEW** — **24×24 CSS px** minimum (or 24px spacing to another target) |
+
+### Principle 3 — Understandable
+
+#### 3.1 Readable
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 3.1.1 | A | Language of page | `<html lang="en">` |
+| 3.1.2 | AA | Language of parts | `<span lang="de">` on foreign phrases |
+| 3.1.3 | AAA | Unusual words | Glossary for jargon |
+| 3.1.4 | AAA | Abbreviations | Expand abbreviations on first use or via mechanism |
+| 3.1.5 | AAA | Reading level | Supplemental plain-language summary for complex text |
+| 3.1.6 | AAA | Pronunciation | Ruby/phonetic for ambiguous words |
+
+#### 3.2 Predictable
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 3.2.1 | A | On focus | Focus alone does not navigate or submit |
+| 3.2.2 | A | On input | Changing input does not auto-navigate without warning |
+| 3.2.3 | AA | Consistent navigation | Same nav order/position across pages |
+| 3.2.4 | AA | Consistent identification | Same icon/label for same function everywhere |
+| 3.2.5 | AAA | Change on request | Context changes only on explicit user action |
+| 3.2.6 | A | **Consistent help** | **WCAG 2.2 NEW** — Help/contact links in same relative position across pages |
+
+#### 3.3 Input assistance
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 3.3.1 | A | Error identification | Describe error in text; `aria-invalid="true"` |
+| 3.3.2 | A | Labels or instructions | Every input has visible label + hint text when needed |
+| 3.3.3 | AA | Error suggestion | "Email must include @" not just "Invalid" |
+| 3.3.4 | AA | Error prevention (legal/financial/data) | Confirm step, review screen, or undo for critical actions |
+| 3.3.5 | AAA | Help | Context-sensitive help available |
+| 3.3.6 | AAA | Error prevention (all) | Confirm/review for all submissions |
+| 3.3.7 | A | **Redundant entry** | **WCAG 2.2 NEW** — Auto-fill from prior entries in same process |
+| 3.3.8 | AA | **Accessible authentication (min)** | **WCAG 2.2 NEW** — Allow paste + password managers; no memory puzzles without alternative |
+| 3.3.9 | AAA | **Accessible authentication (enhanced)** | **WCAG 2.2 NEW** — No object-recognition or user-supplied image CAPTCHAs |
+
+### Principle 4 — Robust
+
+#### 4.1 Compatible
+| ID | Lvl | Rule | Implementation |
+|----|-----|------|----------------|
+| 4.1.2 | A | Name, role, value | Native controls preferred; custom widgets need ARIA roles/states |
+| 4.1.3 | AA | Status messages | Toast/validation banners: `role="status"` or `aria-live="polite"` |
+
+---
+
+## European Accessibility Act (EAA) — additional requirements
+
+Beyond WCAG, the EAA (Directive 2019/882) imposes **functional** obligations. Flag these when relevant to the product scope.
+
+### EAA scope (digital products & services in EU market)
+
+Applies to e-commerce, consumer banking, telecommunications, transport booking, e-books, and related hardware/software interfaces. Design system components built for these contexts must meet EAA from the start.
+
+### EAA functional requirements (Article 4)
+
+| Requirement | What to enforce |
+|-------------|-----------------|
+| **Perceivable** | Information presented in usable formats for users with visual, auditory, speech, and cognitive disabilities |
+| **Operable** | UI operable via assistive tech and alternative input; no unnecessary barriers |
+| **Understandable** | Clear language, predictable behaviour, input assistance |
+| **Robust** | Compatible with assistive technologies; valid, semantic markup |
+| **Consistent & adequate** | Websites and apps accessible in a **consistent** way across the service |
+
+### EAA service-specific (flag for product teams)
+
+| Area | Requirement |
+|------|-------------|
+| **E-commerce** | Product info, checkout, payment, order tracking — all WCAG 2.2 AA + clear error recovery |
+| **Consumer banking** | Account info, transactions, authentication — enhanced error prevention (3.3.4) |
+| **Help & support** | Help desks, call centres, and training must provide accessibility information (offline channels too) |
+| **Documentation** | Technical documentation describing accessibility features |
+| **Accessibility statement** | Public statement of conformance, contact for feedback, enforcement procedure link (per national law) |
+| **Non-digital components** | ATMs, terminals, hardware — physical operability (out of scope for web DS, but flag if designing kiosk UI) |
+
+### EN 301 549 alignment
+
+- Web content: conform to **WCAG 2.2 Level AA** (exceeds current EN 301 549 WCAG 2.1 reference).
+- Software (mobile/desktop): same WCAG criteria apply to web views; native apps follow platform accessibility APIs.
+- Documentation: provide conformance evidence (test results, VPAT/ACR where applicable).
+
+---
+
+## Component patterns (this design system)
+
+### Button / IconButton / LinkButton
+```tsx
+// ✅ GOOD
+<button type="button" className="ds-button" disabled={isDisabled}>
+  {label}
+</button>
+
+// ❌ BAD — div with click only, no keyboard, no role
+<div onClick={handleClick}>{label}</div>
+```
+- Min height/width for hit area: 24px (AA), 44px preferred (AAA)
+- Focus ring: use `--ds-*` focus tokens; never remove outline
+- Disabled: `disabled` attribute (not just styled); do not remove from tab order if it performs an action — use `aria-disabled` only when appropriate
+
+### Checkbox / Radio / Switch
+- Native `<input>` + `<label>`; group with `<fieldset>` + `<legend>`
+- `aria-describedby` for helper/error text
+- Checked/indeterminate states programmatically determinable
+
+### Tooltip
+- Trigger must be keyboard-focusable
+- Content: `role="tooltip"`, `id` linked via `aria-describedby`
+- Dismissable with Esc; hoverable without disappearing (1.4.13)
+- Do not put essential info only in tooltips
+
+### Modal / BottomSheet
+- Focus trap with initial focus on first interactive element
+- `role="dialog"`, `aria-modal="true"`, `aria-labelledby` pointing to title
+- Esc closes; focus returns to trigger on close
+- Background scroll locked; focused element not fully obscured (2.4.11)
+
+### Slider / FlexibleRange
+- Provide text input alternative for precise values (2.5.7)
+- `aria-valuemin`, `aria-valuemax`, `aria-valuenow`, `aria-valuetext`
+- Keyboard: arrow keys adjust value
+
+### Spinner / Progress
+- `role="progressbar"` with `aria-valuenow`, `aria-valuemin`, `aria-valuemax`
+- If indeterminate: `aria-busy="true"` on container + visible text "Loading…"
+
+### Typography / Text
+- Use semantic headings (`DsTypography` variant = correct HTML element)
+- Line height ≥1.5 for body text
+- Do not disable user text-spacing overrides in CSS
+
+---
+
+## Figma design requirements
+
+When creating or modifying Figma designs:
+
+1. **Name layers semantically** — reflect heading level, button, input, nav (maps to 1.3.1, 4.1.2).
+2. **Annotate** contrast ratios on text/color pairs; flag any <4.5:1 (1.4.3) or <3:1 for UI shapes (1.4.11).
+3. **Show focus states** as a variant for every interactive component (2.4.7, 2.4.11).
+4. **Size touch targets** ≥24px (annotate 44px as best practice) (2.5.8).
+5. **Never indicate state by color alone** — show icon + label variants (1.4.1).
+6. **Prototype keyboard paths** — tab order annotation layer (2.4.3).
+7. **Reduced motion variant** — static state alternative (2.3.3).
+8. **Export specs** must include: accessible name, role, state, error text, and focus behaviour.
+
+---
+
+## Testing guidance
+
+When verifying compliance, check:
+
+1. **Keyboard-only** — Tab through entire flow; all actions reachable; focus visible; no traps.
+2. **Screen reader** — VoiceOver (macOS/iOS) or NVDA (Windows): names, roles, states, live regions announced.
+3. **Zoom** — 200% and 400% browser zoom; 320px viewport reflow.
+4. **Contrast** — Measure with DevTools or APCA; verify token pairs in both light and dark appearance.
+5. **Automated** — axe-core / Lighthouse accessibility audit; fix all critical/serious issues.
+6. **Reduced motion** — Enable OS setting; animations must stop or substitute.
+
+---
+
+## Priority when fixing violations
+
+1. **Blocking (A/AA + EAA)** — Fix before delivering. Flag to user if you cannot fix in scope.
+2. **AAA recommendations** — Document as improvements; implement when low-cost.
+3. **EAA organisational** (statements, training, help desk) — Flag for product/legal team; not code-fixable alone.
+
+---
+
+## References
+
+- [WCAG 2.2 Quick Reference (W3C)](https://www.w3.org/WAI/WCAG22/quickref/)
+- [Understanding WCAG 2.2](https://www.w3.org/WAI/WCAG22/Understanding/)
+- [European Accessibility Act — EUR-Lex](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=legissum:4403933)
+- [EN 301 549 (ETSI)](https://www.etsi.org/standards)

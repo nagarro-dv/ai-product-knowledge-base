@@ -1,0 +1,139 @@
+/**
+ * Link Button — BFSI DS Starter Kit, Figma node 2500:8380 (doc 2688:15957).
+ * Types: Accent, Primary. Sizes: Default, Large, Small, Mini.
+ * Focus: Accent → general focus ring; Primary → link-button focus tokens.
+ */
+
+.ds-link-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-link-btn-gap);
+  min-height: var(--ds-link-btn-min-height);
+  padding: var(--ds-link-btn-v-padding) var(--ds-link-btn-h-padding);
+  margin: 0;
+  border: none;
+  border-radius: var(--ds-link-btn-radius);
+  background: var(--ds-link-btn-bg);
+  color: var(--ds-link-btn-fg);
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ds-link-btn:disabled,
+.ds-link-btn[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ds-link-btn:focus {
+  outline: none;
+}
+
+.ds-link-btn:focus-visible {
+  outline: none;
+}
+
+/* —— sizes (dimensions + typography + icon slot) —— */
+.ds-link-btn[data-size="default"] {
+  --ds-link-btn-gap: var(--ds-link-button-dimension-default-gap);
+  --ds-link-btn-h-padding: var(--ds-link-button-dimension-default-h-padding);
+  --ds-link-btn-v-padding: var(--ds-link-button-dimension-default-v-padding);
+  --ds-link-btn-min-height: var(--ds-link-button-dimension-default-min-height);
+  --ds-link-btn-radius: var(--ds-link-button-dimension-radius-regular);
+  --ds-link-btn-icon-size: 14px;
+}
+
+.ds-link-btn[data-size="large"] {
+  --ds-link-btn-gap: var(--ds-link-button-dimension-large-gap);
+  --ds-link-btn-h-padding: var(--ds-link-button-dimension-large-h-padding);
+  --ds-link-btn-v-padding: var(--ds-link-button-dimension-large-v-padding);
+  --ds-link-btn-min-height: var(--ds-link-button-dimension-large-min-height);
+  --ds-link-btn-radius: var(--ds-link-button-dimension-radius-regular);
+  --ds-link-btn-icon-size: 16px;
+}
+
+.ds-link-btn[data-size="small"] {
+  --ds-link-btn-gap: var(--ds-link-button-dimension-small-gap);
+  --ds-link-btn-h-padding: var(--ds-link-button-dimension-small-h-padding);
+  --ds-link-btn-v-padding: var(--ds-link-button-dimension-small-v-padding);
+  --ds-link-btn-min-height: var(--ds-link-button-dimension-small-min-height);
+  --ds-link-btn-radius: var(--ds-link-button-dimension-radius-regular);
+  --ds-link-btn-icon-size: 14px;
+}
+
+.ds-link-btn[data-size="mini"] {
+  --ds-link-btn-gap: var(--ds-link-button-dimension-mini-gap);
+  --ds-link-btn-h-padding: var(--ds-link-button-dimension-mini-h-padding);
+  --ds-link-btn-v-padding: var(--ds-link-button-dimension-mini-v-padding);
+  --ds-link-btn-min-height: var(--ds-link-button-dimension-mini-min-height);
+  --ds-link-btn-icon-size: 10px;
+}
+
+.ds-link-btn[data-size="mini"][data-variant="accent"] {
+  border-radius: var(--ds-link-button-dimension-radius-mini);
+}
+
+.ds-link-btn[data-size="mini"][data-variant="primary"] {
+  border-radius: var(--ds-link-button-dimension-radius-regular);
+}
+
+/* —— Accent —— */
+.ds-link-btn--accent {
+  --ds-link-btn-bg: var(--ds-link-button-color-accent-background);
+  --ds-link-btn-fg: var(--ds-link-button-color-accent-foreground);
+}
+
+.ds-link-btn--accent:hover:not(:disabled):not([aria-disabled="true"]) {
+  opacity: 0.88;
+}
+
+.ds-link-btn--accent:active:not(:disabled):not([aria-disabled="true"]) {
+  opacity: 0.82;
+}
+
+.ds-link-btn--accent:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread) var(--ds-general-shadows-focus-ring);
+}
+
+/* —— Primary —— */
+.ds-link-btn--primary {
+  --ds-link-btn-bg: var(--ds-link-button-color-primary-background);
+  --ds-link-btn-fg: var(--ds-link-button-color-primary-foreground);
+}
+
+.ds-link-btn--primary:hover:not(:disabled):not([aria-disabled="true"]) {
+  opacity: 0.88;
+}
+
+.ds-link-btn--primary:active:not(:disabled):not([aria-disabled="true"]) {
+  opacity: 0.82;
+}
+
+.ds-link-btn--primary:focus-visible {
+  box-shadow: 0 0 0 var(--ds-link-button-effects-focus-ring-spread) var(--ds-link-button-effects-focus-ring-color);
+}
+
+.ds-link-btn__icon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-link-btn-icon-size);
+  height: var(--ds-link-btn-icon-size);
+  color: inherit;
+}
+
+.ds-link-btn__icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ds-link-btn__text {
+  color: inherit;
+}

@@ -1,0 +1,19 @@
+{
+  "name": "@ds-starter/agent-orchestrator",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Local Cursor SDK server for the DS Accelerator playground.",
+  "scripts": {
+    "serve": "tsx src/server.ts"
+  },
+  "dependencies": {
+    "@cursor/sdk": "^1.0.12",
+    "dotenv": "^17.4.2"
+  },
+  "devDependencies": {
+    "@types/node": "^25.7.0",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.3"
+  }
+}
