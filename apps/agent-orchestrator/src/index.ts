@@ -2,8 +2,7 @@ import dotenv from "dotenv";
 import { setMaxListeners } from "node:events";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { Agent, Cursor, CursorAgentError, CursorSdkError } from "@cursor/sdk";
-type LocalSettingSource = "project" | "user" | "team" | "mdm" | "plugins" | "all";
+import { CursorAdapter } from "./providers/cursor/CursorAdapter.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,6 +25,7 @@ if (args.includes("--help") || args.includes("-h")) {
   console.log("");
   console.log("Environment variables:");
   console.log("  CURSOR_API_KEY    Required Cursor API key");
+  console.log("  CURSOR_MODEL      Optional preferred model ID");
   console.log("  FSB_REPO_ROOT     Optional absolute monorepo path override");
   process.exit(0);
 }
@@ -40,12 +40,10 @@ if (apiKey === "cursor_xxx") {
   process.exit(1);
 }
 
-const fsbRepoRoot = process.env.FSB_REPO_ROOT;
-const repoRoot = fsbRepoRoot ? path.resolve(fsbRepoRoot) : defaultRepoRoot;
-const localSettingSources = process.env.CURSOR_LOCAL_SETTING_SOURCES?.trim() || "all";
-const resolvedSettingSources: LocalSettingSource[] = localSettingSources === "all" ? ["all"] : [];
+const repoRoot = process.env.FSB_REPO_ROOT
+  ? path.resolve(process.env.FSB_REPO_ROOT)
+  : defaultRepoRoot;
 const task = args.join(" ").trim();
-const requestedModel = process.env.CURSOR_MODEL?.trim() || "composer-2";
 
 const prompt = `
 You are working in the Vorwerk monorepo.
@@ -69,40 +67,35 @@ try {
     console.log("task: (default) inspect/propose mode");
   }
 
-  console.log("Checking Cursor API key and available models...");
-  const me = await Cursor.me({ apiKey });
-  const models = await Cursor.models.list({ apiKey });
-  if (models.length === 0) {
-    throw new Error("No models available for this API key.");
-  }
+  const settingSources: string[] =
+    (process.env.CURSOR_LOCAL_SETTING_SOURCES?.trim() || "all") === "all" ? ["all"] : [];
 
-  const hasRequestedModel = models.some((model) => model.id === requestedModel);
-  const modelId = hasRequestedModel ? requestedModel : models[0].id;
-  if (!hasRequestedModel) {
-    console.warn(
-      `Requested model '${requestedModel}' is not available for this key. Falling back to '${modelId}'.`
-    );
-  }
-  console.log(`apiKeyName: ${me.apiKeyName}`);
-  console.log(`model: ${modelId}`);
-
-  const result = await Agent.prompt(prompt, {
+  const adapter = new CursorAdapter({
     apiKey,
-    model: { id: modelId },
-    local: { cwd: repoRoot, settingSources: resolvedSettingSources }
+    requestedModel: process.env.CURSOR_MODEL?.trim() || "",
+    settingSources,
   });
 
-  if ("id" in result && typeof result.id === "string") {
-    console.log(`run: ${result.id}`);
-  }
+  console.log("Checking Cursor API key and available models...");
+  await adapter.initialize();
+  console.log(`health: ${JSON.stringify(adapter.health())}`);
+
+  const events: unknown[] = [];
+  const result = await adapter.runJob({
+    prompt,
+    cwd: repoRoot,
+    onEvent: (event) => events.push(event),
+    signal: new AbortController().signal,
+  });
+
   console.log(`status: ${result.status}`);
-  if (typeof result.durationMs === "number") {
-    console.log(`durationMs: ${result.durationMs}`);
-  }
-  if (result.result?.trim()) {
+  if (result.runId) console.log(`runId: ${result.runId}`);
+  if (typeof result.durationMs === "number") console.log(`durationMs: ${result.durationMs}`);
+
+  if (result.output?.trim()) {
     console.log("");
     console.log("Agent output:");
-    console.log(result.result.trim());
+    console.log(result.output.trim());
   } else {
     console.log("Agent output: (empty)");
   }
@@ -111,25 +104,6 @@ try {
     process.exitCode = 2;
   }
 } catch (error) {
-  if (error instanceof CursorAgentError) {
-    console.error("Cursor SDK request failed.");
-    console.error(`message: ${error.message}`);
-    if (error instanceof CursorSdkError) {
-      console.error(`code: ${error.code ?? "n/a"}`);
-      console.error(`status: ${error.status ?? "n/a"}`);
-      console.error(`retryable: ${String(error.isRetryable)}`);
-      if (error.operation) {
-        console.error(`operation: ${error.operation}`);
-      }
-      if (error.endpoint) {
-        console.error(`endpoint: ${error.endpoint}`);
-      }
-      if (error.requestId) {
-        console.error(`requestId: ${error.requestId}`);
-      }
-    }
-    process.exitCode = 1;
-  } else {
-    throw error;
-  }
+  console.error("Unexpected error:", error instanceof Error ? error.message : error);
+  process.exitCode = 1;
 }

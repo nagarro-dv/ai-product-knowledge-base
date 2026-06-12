@@ -4,10 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Agent, Cursor, CursorAgentError, CursorSdkError } from '@cursor/sdk';
-import type { SDKAgent } from '@cursor/sdk';
-import { interactionUpdateToSsePayloads } from './delta-stream-format.js';
-import { sdkMessageToSsePayloads } from './stream-format.js';
+import { CursorAdapter } from './providers/cursor/CursorAdapter.js';
+import { registerAdapter, requireAdapter, getAdapter, listAdapters } from './providers/registry.js';
 
 type RequestMessage = {
   role: 'user' | 'assistant';
@@ -17,9 +15,10 @@ type RequestMessage = {
 type ChatRequest = {
   messages?: RequestMessage[];
   message?: string;
+  /** AI provider to use. Defaults to DEFAULT_PROVIDER when omitted. */
+  provider?: string;
 };
 
-type LocalSettingSource = 'project' | 'user' | 'team' | 'mdm' | 'plugins' | 'all';
 type AgentStreamDone = {
   kind: 'done';
   status: string;
@@ -28,22 +27,27 @@ type AgentStreamDone = {
   model?: string;
   output?: string;
 };
+
 type JobStatus = 'queued' | 'running' | 'finished' | 'error' | 'cancelled';
 type JobEventListener = (payload: unknown) => void;
 
 type AgentJob = {
   id: string;
   status: JobStatus;
+  provider: string;
   createdAt: number;
   updatedAt: number;
   events: unknown[];
   listeners: Set<JobEventListener>;
   messages: RequestMessage[];
-  agent?: SDKAgent;
-  cancelRequested: boolean;
+  /** Abort this controller to cancel a running job. Cleared when the job settles. */
+  abortController?: AbortController;
   result?: AgentStreamDone;
   errorMessage?: string;
 };
+
+/** Provider id used when the request omits the provider field. */
+const DEFAULT_PROVIDER = 'cursor';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -56,22 +60,14 @@ setMaxListeners(0);
 dotenv.config({ path: appEnvPath, quiet: true });
 dotenv.config({ path: repoEnvPath, override: false, quiet: true });
 
-const apiKey = process.env.CURSOR_API_KEY?.trim();
-if (!apiKey || apiKey === 'cursor_xxx') {
-  throw new Error('Set CURSOR_API_KEY in apps/agent-orchestrator/.env before starting the API server.');
-}
-
-const requestedModel = process.env.CURSOR_MODEL?.trim() || '';
 const repoRoot = process.env.DS_REPO_ROOT?.trim()
   ? path.resolve(process.env.DS_REPO_ROOT)
   : process.env.FSB_REPO_ROOT?.trim()
     ? path.resolve(process.env.FSB_REPO_ROOT)
     : defaultRepoRoot;
 const port = Number.parseInt(process.env.AGENT_SERVER_PORT || '8787', 10);
-const localSettingSources = process.env.CURSOR_LOCAL_SETTING_SOURCES?.trim() || 'all';
-const hasFigmaMcpHint = localSettingSources === 'all';
-const resolvedSettingSources: LocalSettingSource[] = hasFigmaMcpHint ? ['all'] : [];
 
+// DS Accelerator prompt — owned here, not by any provider adapter.
 const basePrompt = `
 You are working in the DS Starter Kit monorepo (design-system playground + tokens + components).
 
@@ -83,7 +79,6 @@ Guardrails:
 - Explain intent clearly.
 `.trim();
 
-let resolvedModelId = requestedModel;
 const jobs = new Map<string, AgentJob>();
 const JOB_TTL_MS = 30 * 60 * 1000;
 const MAX_JOB_EVENTS = 5_000;
@@ -114,17 +109,21 @@ function writeSseData(res: ServerResponse, payload: unknown) {
   }
 }
 
-function createJob(messages: RequestMessage[]): AgentJob {
+function resolveProvider(body: ChatRequest): string {
+  return body.provider?.trim() || DEFAULT_PROVIDER;
+}
+
+function createJob(messages: RequestMessage[], provider: string): AgentJob {
   const now = Date.now();
   return {
     id: randomUUID(),
     status: 'queued',
+    provider,
     createdAt: now,
     updatedAt: now,
     events: [],
     listeners: new Set(),
     messages,
-    cancelRequested: false,
   };
 }
 
@@ -161,112 +160,42 @@ function parseAfterOffset(req: IncomingMessage): number {
 
 async function runJob(job: AgentJob) {
   updateJobStatus(job, 'running');
+  const adapter = requireAdapter(job.provider);
   const prompt = buildPrompt(job.messages);
-  const agent = await Agent.create({
-    apiKey,
-    model: { id: resolvedModelId },
-    local: { cwd: repoRoot, settingSources: resolvedSettingSources },
-  });
-  job.agent = agent;
+  const abortController = new AbortController();
+  job.abortController = abortController;
 
   try {
-    const run = await agent.send(prompt, {
-      model: {
-        id: resolvedModelId,
-        params: [{ id: 'thinking', value: 'high' }],
-      },
-      onDelta: ({ update }) => {
-        if (job.cancelRequested) {
-          return;
-        }
-        const payloads = interactionUpdateToSsePayloads(update);
-        for (const payload of payloads) {
-          appendJobEvent(job, payload);
-        }
-      },
+    const result = await adapter.runJob({
+      prompt,
+      cwd: repoRoot,
+      onEvent: (event) => appendJobEvent(job, event),
+      signal: abortController.signal,
     });
 
-    if (!run.supports('stream')) {
-      const message = run.unsupportedReason('stream') ?? 'Stream is not supported for this run.';
-      appendJobEvent(job, { kind: 'error', message });
-      updateJobStatus(job, 'error', message);
-      return;
-    }
-
-    for await (const message of run.stream()) {
-      if (job.cancelRequested) break;
-      const payloads = sdkMessageToSsePayloads(message);
-      for (const payload of payloads) {
-        appendJobEvent(job, payload);
-      }
-    }
-
-    if (job.cancelRequested) {
-      const cancelledDone: AgentStreamDone = {
-        kind: 'done',
-        status: 'cancelled',
-        runId: job.id,
-        model: resolvedModelId,
-        output: '',
-      };
-      job.result = cancelledDone;
-      appendJobEvent(job, cancelledDone);
-      updateJobStatus(job, 'cancelled');
-      return;
-    }
-
-    const result = await run.wait();
     const donePayload: AgentStreamDone = {
       kind: 'done',
       status: result.status,
-      runId: result.id,
+      runId: result.runId || job.id,
       durationMs: result.durationMs,
-      model: resolvedModelId,
-      output: result.result ?? '',
+      model: result.model,
+      output: result.output ?? '',
     };
     job.result = donePayload;
     appendJobEvent(job, donePayload);
-    updateJobStatus(job, result.status === 'finished' ? 'finished' : 'error');
+    updateJobStatus(
+      job,
+      result.status === 'finished' ? 'finished' : result.status === 'cancelled' ? 'cancelled' : 'error',
+    );
   } catch (error) {
+    // Adapters must not throw; this is a defensive catch for unexpected failures.
     const message = error instanceof Error ? error.message : 'Unexpected job error.';
     appendJobEvent(job, { kind: 'error', message });
-    if (job.cancelRequested) {
-      updateJobStatus(job, 'cancelled');
-    } else {
-      updateJobStatus(job, 'error', message);
-    }
+    updateJobStatus(job, abortController.signal.aborted ? 'cancelled' : 'error', message);
   } finally {
-    try {
-      if (job.agent) {
-        await disposeAgent(job.agent);
-      }
-    } finally {
-      job.agent = undefined;
-      job.listeners.clear();
-      job.updatedAt = Date.now();
-    }
-  }
-}
-
-async function disposeAgent(agent: SDKAgent): Promise<void> {
-  const withDispose = agent as SDKAgent & {
-    [Symbol.asyncDispose]?: () => Promise<void>;
-    close?: () => void;
-  };
-  try {
-    if (typeof withDispose[Symbol.asyncDispose] === 'function') {
-      await withDispose[Symbol.asyncDispose]();
-      return;
-    }
-  } catch {
-    // fall through
-  }
-  try {
-    if (typeof withDispose.close === 'function') {
-      withDispose.close();
-    }
-  } catch {
-    // ignore
+    job.abortController = undefined;
+    job.listeners.clear();
+    job.updatedAt = Date.now();
   }
 }
 
@@ -357,23 +286,22 @@ Respond as the assistant to the final user message.`;
 }
 
 async function bootstrap() {
-  const me = await Cursor.me({ apiKey });
-  const models = await Cursor.models.list({ apiKey });
-  if (models.length === 0) {
-    throw new Error('No Cursor models available for this API key.');
+  // Read and register the Cursor adapter.
+  // Move env reading and validation inside bootstrap() so a missing Cursor key
+  // only prevents startup when Cursor is the sole registered provider — future
+  // adapters (e.g. Claude, Mock) can be registered independently.
+  const cursorApiKey = process.env.CURSOR_API_KEY?.trim() ?? '';
+  if (!cursorApiKey || cursorApiKey === 'cursor_xxx') {
+    throw new Error('Set CURSOR_API_KEY in apps/agent-orchestrator/.env before starting the API server.');
   }
-
-  if (!resolvedModelId) {
-    const codexModel = models.find((model) => /codex/i.test(model.id));
-    const composerModel = models.find((model) => /composer/i.test(model.id));
-    resolvedModelId = codexModel?.id ?? composerModel?.id ?? models[0].id;
-  } else if (!models.some((model) => model.id === resolvedModelId)) {
-    const codexModel = models.find((model) => /codex/i.test(model.id));
-    resolvedModelId = codexModel?.id ?? models[0].id;
-    console.warn(
-      `Requested model '${requestedModel}' is unavailable for key '${me.apiKeyName}'. Falling back to '${resolvedModelId}'.`,
-    );
-  }
+  const cursorAdapter = new CursorAdapter({
+    apiKey: cursorApiKey,
+    requestedModel: process.env.CURSOR_MODEL?.trim() || '',
+    settingSources: (process.env.CURSOR_LOCAL_SETTING_SOURCES?.trim() || 'all') === 'all' ? ['all'] : [],
+  });
+  await cursorAdapter.initialize();
+  registerAdapter(cursorAdapter);
+  // Future adapters registered here: registerAdapter(new ClaudeAdapter(...))
 
   const server = createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -392,13 +320,11 @@ async function bootstrap() {
     }
 
     if (req.method === 'GET' && pathname === '/api/agent/health') {
-      sendJson(res, 200, {
-        ok: true,
-        model: resolvedModelId,
-        repoRoot,
-        localSettingSources,
-        figmaMcpAccessLikely: hasFigmaMcpHint,
-      });
+      const providerHealth: Record<string, unknown> = {};
+      for (const adapter of listAdapters()) {
+        providerHealth[adapter.id] = adapter.health();
+      }
+      sendJson(res, 200, { repoRoot, providers: providerHealth });
       return;
     }
 
@@ -411,10 +337,17 @@ async function bootstrap() {
           return;
         }
 
-        const job = createJob(messages);
+        const provider = resolveProvider(body);
+        if (!getAdapter(provider)) {
+          const available = listAdapters().map((a) => a.id).join(', ');
+          sendJson(res, 400, { error: `Unknown provider '${provider}'. Available: ${available}` });
+          return;
+        }
+
+        const job = createJob(messages, provider);
         jobs.set(job.id, job);
         void runJob(job);
-        sendJson(res, 202, { jobId: job.id, status: job.status, eventCount: job.events.length });
+        sendJson(res, 202, { jobId: job.id, status: job.status, provider: job.provider, eventCount: job.events.length });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unexpected server error.';
         sendJson(res, 500, { error: message });
@@ -432,6 +365,7 @@ async function bootstrap() {
       sendJson(res, 200, {
         jobId: job.id,
         status: job.status,
+        provider: job.provider,
         createdAt: job.createdAt,
         updatedAt: job.updatedAt,
         eventCount: job.events.length,
@@ -448,13 +382,10 @@ async function bootstrap() {
         sendJson(res, 404, { error: 'Job not found.' });
         return;
       }
-      job.cancelRequested = true;
+      // Abort signal triggers disposal inside the adapter's runJob() finally block.
+      job.abortController?.abort();
       updateJobStatus(job, 'cancelled');
       appendJobEvent(job, { kind: 'status', status: 'cancelled', message: 'Implementation run cancelled by user.' });
-      if (job.agent) {
-        await disposeAgent(job.agent);
-        job.agent = undefined;
-      }
       sendJson(res, 200, { ok: true, jobId: job.id, status: job.status });
       return;
     }
@@ -498,6 +429,7 @@ async function bootstrap() {
       return;
     }
 
+    // Legacy one-shot blocking endpoint — routes through the adapter.
     if (req.method === 'POST' && pathname === '/api/agent/chat') {
       try {
         const body = await readJsonBody<ChatRequest>(req);
@@ -507,52 +439,41 @@ async function bootstrap() {
           return;
         }
 
-        const result = await Agent.prompt(buildPrompt(messages), {
-          apiKey,
-          model: { id: resolvedModelId },
-          local: { cwd: repoRoot, settingSources: resolvedSettingSources },
+        const provider = resolveProvider(body);
+        const adapter = getAdapter(provider);
+        if (!adapter) {
+          const available = listAdapters().map((a) => a.id).join(', ');
+          sendJson(res, 400, { error: `Unknown provider '${provider}'. Available: ${available}` });
+          return;
+        }
+
+        const result = await adapter.runJob({
+          prompt: buildPrompt(messages),
+          cwd: repoRoot,
+          onEvent: () => {},
+          signal: new AbortController().signal,
         });
 
         sendJson(res, 200, {
           status: result.status,
-          runId: result.id,
+          provider,
+          runId: result.runId,
           durationMs: result.durationMs,
-          model: resolvedModelId,
-          output: result.result ?? '',
+          model: result.model,
+          output: result.output ?? '',
         });
       } catch (error) {
-        if (error instanceof CursorAgentError) {
-          const sdkError = error as CursorSdkError;
-          sendJson(res, 502, {
-            error: sdkError.message,
-            code: sdkError.code ?? null,
-            status: sdkError.status ?? null,
-            requestId: sdkError.requestId ?? null,
-          });
-          return;
-        }
-
         const message = error instanceof Error ? error.message : 'Unexpected server error.';
         sendJson(res, 500, { error: message });
       }
       return;
     }
 
+    // Legacy streaming endpoint — routes through the adapter with SSE output.
     if (req.method === 'POST' && pathname === '/api/agent/chat/stream') {
-      let clientClosed = false;
       let responseEnded = false;
 
-      req.on('aborted', () => {
-        clientClosed = true;
-      });
-
-      res.on('close', () => {
-        if (!responseEnded) {
-          clientClosed = true;
-        }
-      });
-
-      const endSse = (res: ServerResponse) => {
+      const endSse = () => {
         try {
           responseEnded = true;
           res.end();
@@ -569,64 +490,37 @@ async function bootstrap() {
           return;
         }
 
-        const prompt = buildPrompt(messages);
+        const provider = resolveProvider(body);
+        const adapter = getAdapter(provider);
+        if (!adapter) {
+          const available = listAdapters().map((a) => a.id).join(', ');
+          sendJson(res, 400, { error: `Unknown provider '${provider}'. Available: ${available}` });
+          return;
+        }
 
-        const agent = await Agent.create({
-          apiKey,
-          model: { id: resolvedModelId },
-          local: { cwd: repoRoot, settingSources: resolvedSettingSources },
+        const abortController = new AbortController();
+        req.on('aborted', () => abortController.abort());
+        res.on('close', () => {
+          if (!responseEnded) abortController.abort();
         });
 
         sendSseHeaders(res);
 
-        try {
-          const run = await agent.send(prompt, {
-            model: {
-              id: resolvedModelId,
-              params: [{ id: 'thinking', value: 'high' }],
-            },
-            onDelta: ({ update }) => {
-              if (clientClosed) {
-                return;
-              }
-              const payloads = interactionUpdateToSsePayloads(update);
-              for (const payload of payloads) {
-                writeSseData(res, payload);
-              }
-            },
-          });
-          if (!run.supports('stream')) {
-            writeSseData(res, {
-              kind: 'error',
-              message: run.unsupportedReason('stream') ?? 'Stream is not supported for this run.',
-            });
-            endSse(res);
-            await disposeAgent(agent);
-            return;
-          }
+        const result = await adapter.runJob({
+          prompt: buildPrompt(messages),
+          cwd: repoRoot,
+          onEvent: (event) => writeSseData(res, event),
+          signal: abortController.signal,
+        });
 
-          for await (const message of run.stream()) {
-            if (clientClosed) {
-              break;
-            }
-            const payloads = sdkMessageToSsePayloads(message);
-            for (const payload of payloads) {
-              writeSseData(res, payload);
-            }
-          }
-
-          const result = await run.wait();
-          writeSseData(res, {
-            kind: 'done',
-            status: result.status,
-            runId: result.id,
-            durationMs: result.durationMs,
-            model: resolvedModelId,
-            output: result.result ?? '',
-          });
-        } finally {
-          await disposeAgent(agent);
-        }
+        writeSseData(res, {
+          kind: 'done',
+          status: result.status,
+          runId: result.runId,
+          durationMs: result.durationMs,
+          model: result.model,
+          output: result.output ?? '',
+        });
       } catch (error) {
         if (!res.headersSent) {
           sendJson(res, 500, {
@@ -634,17 +528,13 @@ async function bootstrap() {
           });
           return;
         }
-
-        const message =
-          error instanceof CursorAgentError
-            ? (error as CursorSdkError).message
-            : error instanceof Error
-              ? error.message
-              : 'Unexpected server error.';
-        writeSseData(res, { kind: 'error', message });
+        writeSseData(res, {
+          kind: 'error',
+          message: error instanceof Error ? error.message : 'Unexpected server error.',
+        });
       }
 
-      endSse(res);
+      endSse();
       return;
     }
 
@@ -669,9 +559,7 @@ async function bootstrap() {
   server.listen(port, () => {
     console.log(`Agent API listening on http://localhost:${port}`);
     console.log(`Repo root: ${repoRoot}`);
-    console.log(`Model: ${resolvedModelId}`);
-    console.log(`Local settingSources: ${localSettingSources}`);
-    console.log(`Figma MCP access likely: ${hasFigmaMcpHint ? 'yes' : 'no'}`);
+    console.log(`Providers: ${listAdapters().map((a) => a.id).join(', ')}`);
   });
 }
 
