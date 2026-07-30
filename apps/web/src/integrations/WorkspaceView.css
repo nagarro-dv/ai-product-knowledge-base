@@ -1,0 +1,458 @@
+.workspaceView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.workspaceView__loading,
+.workspaceView__error {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.workspaceView__error {
+  border-color: var(--ds-general-color-destructive-border);
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+.workspaceView__list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  box-shadow: var(--elev-sm);
+  overflow: hidden;
+}
+
+.workspaceView__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-md) var(--ds-general-padding-lg);
+  background: var(--ds-general-color-canvas);
+}
+
+.workspaceView__row + .workspaceView__row {
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.workspaceView__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.workspaceView__avatar--connected {
+  border-color: var(--ds-general-color-success-border);
+  background: var(--ds-general-color-success-muted);
+  color: var(--ds-general-color-success-foreground);
+}
+
+.workspaceView__avatar--attention {
+  border-color: var(--ds-general-color-warning-border);
+  background: var(--ds-general-color-warning-muted);
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.workspaceView__avatar--pending {
+  border-color: var(--ds-general-color-informative-border);
+  background: var(--ds-general-color-informative-muted);
+  color: var(--ds-general-color-informative-foreground);
+}
+
+.workspaceView__rowCopy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.workspaceView__rowCopy p {
+  margin: 0;
+}
+
+.workspaceView__rowDescription {
+  color: var(--ds-general-color-muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceView__siteLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  color: var(--ds-general-color-muted-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.workspaceView__siteLink:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.workspaceView__repoPath {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-mono, monospace);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.workspaceView__rowStatusIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.workspaceView__icon--ok {
+  color: var(--ds-general-color-success-foreground);
+}
+
+.workspaceView__icon--warn {
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.workspaceView__icon--muted {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.workspaceView__icon--pending {
+  color: var(--ds-general-color-informative-foreground);
+}
+
+.workspaceView__detailsList {
+  display: grid;
+  gap: 2px;
+  margin: 4px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workspaceView__detailsList dt {
+  display: inline;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.workspaceView__detailsList dd {
+  display: inline;
+  margin: 0;
+}
+
+.workspaceView__diagnostic {
+  margin-top: 6px;
+}
+
+.workspaceView__diagnosticPre {
+  margin: 4px 0 0;
+  padding: 8px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: var(--ds-general-color-muted-background, var(--ds-general-color-background));
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  font-family: var(--ds-general-typography-font-family-mono, monospace);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.workspaceView__rowAction {
+  flex-shrink: 0;
+}
+
+.workspaceView__rowActionGroup {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-2xs);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.workspaceView__row--stacked {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--ds-general-gap-sm);
+}
+
+.workspaceView__rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm) var(--ds-general-gap-md);
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.workspaceView__rowMain .workspaceView__rowCopy {
+  flex-basis: 200px;
+}
+
+.workspaceView__rowMain .workspaceView__rowActionGroup {
+  margin-left: auto;
+}
+
+.workspaceView__inlineConnect {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  flex-wrap: wrap;
+  padding-left: calc(28px + var(--ds-general-gap-md));
+}
+
+.workspaceView__inlineConnectInput {
+  flex: 1 1 260px;
+  min-width: 200px;
+  padding: 6px var(--ds-general-padding-sm);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.workspaceView__inlineConnectInput:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.workspaceView__inlineConnectError {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+.workspaceView__inlineConnectStatus {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.workspaceView__emptyStateActions {
+  display: flex;
+  gap: var(--ds-general-gap-sm);
+  padding-left: calc(28px + var(--ds-general-gap-md));
+  flex-wrap: wrap;
+}
+
+.workspaceView__githubDetails {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--ds-general-gap-sm) var(--ds-general-gap-lg);
+  margin: 0;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  padding-left: calc(28px + var(--ds-general-gap-md));
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-background);
+}
+
+.workspaceView__githubDetails dt {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.workspaceView__githubDetails dd {
+  margin: 0;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workspaceView__githubPicker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-md);
+  margin-left: calc(28px + var(--ds-general-gap-md));
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.workspaceView__pickerRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  flex-wrap: wrap;
+}
+
+.workspaceView__pickerLabel {
+  flex: 0 0 110px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.workspaceView__pickerSelect {
+  flex: 1 1 220px;
+  min-width: 180px;
+  padding: 6px var(--ds-general-padding-sm);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.workspaceView__pickerSelect:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.workspaceView__pickerInlineError {
+  color: var(--ds-general-color-destructive-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.workspaceView__linkButton {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.workspaceView__linkButton:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.workspaceView__pickerActions {
+  display: flex;
+  gap: var(--ds-general-gap-sm);
+}
+
+.workspaceView__inlineCode {
+  padding: 1px 4px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+  background: var(--ds-general-color-muted-surface, var(--ds-general-color-background));
+  font-family: var(--ds-general-typography-font-family-mono, monospace);
+  font-size: 0.9em;
+}
+
+.workspaceView__figmaGuide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-padding-lg);
+  margin-left: calc(28px + var(--ds-general-gap-md));
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.workspaceView__figmaGuide > .ds-btn {
+  align-self: flex-start;
+}
+
+.workspaceView__figmaConnectedHint {
+  margin: 0;
+  padding-left: calc(28px + var(--ds-general-gap-md));
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.workspaceView__figmaConnectedHint--ok {
+  color: var(--ds-general-color-success-foreground);
+}
+
+.workspaceView__figmaConnectedHint--error {
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+.workspaceView__steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: var(--ds-general-gap-md);
+}
+
+.workspaceView__steps li {
+  /* Deliberately NOT `display: grid` here — that overrides the <li>'s default
+     `display: list-item`, which silently drops the numbered marker even
+     though `list-style-type` is still set. The inner wrapper below carries
+     the grid layout instead so the "1./2./3./4." numbering stays visible. */
+  display: list-item;
+}
+
+.workspaceView__steps li > .workspaceView__stepBody {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+}
+
+.workspaceView__steps p {
+  margin: 0;
+}
+
+.workspaceView__steps a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.workspaceView__commandChip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-sm);
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--ds-general-padding-2xs) var(--ds-general-padding-2xs) var(--ds-general-padding-2xs) var(--ds-general-padding-sm);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+}
+
+.workspaceView__commandChip code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  color: var(--ds-general-color-foreground);
+  overflow-wrap: anywhere;
+}
+
+.workspaceView__copyButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  border: 1px solid transparent;
+  background: none;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.workspaceView__copyButton:hover {
+  background: var(--ds-general-color-muted-surface, var(--ds-general-color-background));
+  color: var(--ds-general-color-foreground);
+}
+
+.workspaceView__copyButton:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}

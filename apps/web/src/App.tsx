@@ -1,237 +1,246 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Braces, Component, DraftingCompass, Search } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { AlertTriangle, Check, Settings as SettingsIcon } from "lucide-react";
 import { DsAcceleratorTool } from "./accelerator/DsAcceleratorTool";
-import { ComponentsView } from "./ComponentsView";
-import { FoundationView } from "./FoundationView";
-import { COMPONENT_REGISTRY, type ComponentId } from "./component-registry";
+import { SettingsView, type SettingsTab } from "./settings/SettingsView";
+import { JIRA_RETURN_TO_KEY } from "./integrations/jiraClient";
+import { GITHUB_RETURN_TO_KEY } from "./integrations/repositoryClient";
+import { OPEN_SETTINGS_EVENT } from "./navigationEvents";
 import { useTokenMode } from "./useTokenMode";
 import "./App.css";
 
-type Section = "foundation" | "components" | "tools";
+/**
+ * The product is an empty shell around two surfaces: the Accelerator (the
+ * workflow) and Settings (connections). The design system itself lives in the
+ * team's connected Storybook — there is no built-in component browser.
+ */
+type Section = "tools" | "settings";
 
 function getInitialSection(): Section {
-  if (typeof window === "undefined") return "foundation";
+  if (typeof window === "undefined") return "tools";
   const params = new URLSearchParams(window.location.search);
-  const section = params.get("section");
-  if (section === "tools") return "tools";
-  if (section === "components") return "components";
-  if (section === "foundation") return "foundation";
-  return "foundation";
+  // Legacy deep links to the removed browsing sections land on the workflow.
+  return params.get("section") === "settings" ? "settings" : "tools";
 }
 
-function SidebarNavTooltip({ label }: { label: string }) {
-  return (
-    <span className="app-icon-sidebar__linkTooltip" role="tooltip">
-      <span className="ds-tooltip ds-tooltip--right">
-        <span className="ds-tooltip__label">{label}</span>
-      </span>
-    </span>
-  );
+function getInitialSettingsTab(): SettingsTab {
+  if (typeof window === "undefined") return "ai-models";
+  const params = new URLSearchParams(window.location.search);
+  return params.get("tool") === "workspace" ? "workspace" : "ai-models";
+}
+
+/** Reads a stashed pre-OAuth location (set by startJiraConnect) so the user returns
+ *  to wherever they started connecting, not a hardcoded destination. Falls back to
+ *  whatever the backend put in the URL when no stash exists (e.g. cross-tab). */
+function useJiraCallback(): {
+  banner: { kind: "connected" | "error"; message?: string } | null;
+  initialOverride: { section: Section; settingsTab: SettingsTab } | null;
+} {
+  const [state] = useState(() => {
+    if (typeof window === "undefined") return { banner: null, initialOverride: null };
+    const params = new URLSearchParams(window.location.search);
+    const jira = params.get("jira");
+    if (jira !== "connected" && jira !== "error") return { banner: null, initialOverride: null };
+
+    const banner = { kind: jira as "connected" | "error", message: params.get("jiraMessage") ?? undefined };
+    let initialOverride: { section: Section; settingsTab: SettingsTab } | null = null;
+    try {
+      const stashed = sessionStorage.getItem(JIRA_RETURN_TO_KEY);
+      if (stashed) {
+        const stashedUrl = new URL(stashed, window.location.origin);
+        const stashedParams = stashedUrl.searchParams;
+        const stashedSection = stashedParams.get("section");
+        if (stashedSection === "tools" || stashedSection === "settings") {
+          initialOverride = {
+            section: stashedSection,
+            settingsTab: stashedParams.get("tool") === "workspace" ? "workspace" : "ai-models",
+          };
+        }
+        sessionStorage.removeItem(JIRA_RETURN_TO_KEY);
+      }
+    } catch {
+      // sessionStorage unavailable — fall back to the backend's own redirect target.
+    }
+
+    // Clean the one-shot params out of the URL so a refresh doesn't re-show the banner.
+    params.delete("jira");
+    params.delete("jiraMessage");
+    const nextUrl = `${window.location.pathname}?${params.toString()}`;
+    window.history.replaceState(window.history.state, "", nextUrl);
+
+    return { banner, initialOverride };
+  });
+  return state;
+}
+
+/**
+ * GitHub's OAuth callback lands the user back here having only authorized the
+ * *identity* — no repository is chosen yet, so unlike Jira there's nothing to
+ * confirm with a banner on success (the org/repo/branch picker in
+ * WorkspaceView reads `?github=authorized` itself and opens to continue the
+ * flow). A failure is still worth a top-level banner in case the restored
+ * section/tab isn't Settings → Workspace.
+ */
+function useGithubCallback(): {
+  banner: { kind: "error"; message?: string } | null;
+  initialOverride: { section: Section; settingsTab: SettingsTab } | null;
+} {
+  const [state] = useState(() => {
+    if (typeof window === "undefined") return { banner: null, initialOverride: null };
+    const params = new URLSearchParams(window.location.search);
+    const github = params.get("github");
+    if (github !== "authorized" && github !== "error") return { banner: null, initialOverride: null };
+
+    let initialOverride: { section: Section; settingsTab: SettingsTab } | null = null;
+    try {
+      const stashed = sessionStorage.getItem(GITHUB_RETURN_TO_KEY);
+      if (stashed) {
+        const stashedUrl = new URL(stashed, window.location.origin);
+        const stashedParams = stashedUrl.searchParams;
+        const stashedSection = stashedParams.get("section");
+        if (stashedSection === "tools" || stashedSection === "settings") {
+          initialOverride = {
+            section: stashedSection,
+            settingsTab: stashedParams.get("tool") === "workspace" ? "workspace" : "ai-models",
+          };
+        }
+        sessionStorage.removeItem(GITHUB_RETURN_TO_KEY);
+      }
+    } catch {
+      // sessionStorage unavailable
+    }
+
+    if (github === "error") {
+      const banner = { kind: "error" as const, message: params.get("githubMessage") ?? undefined };
+      params.delete("github");
+      params.delete("githubMessage");
+      const nextUrl = `${window.location.pathname}?${params.toString()}`;
+      window.history.replaceState(window.history.state, "", nextUrl);
+      return { banner, initialOverride };
+    }
+
+    // Success: leave `?github=authorized` in place — WorkspaceView reads and clears it itself.
+    return { banner: null, initialOverride };
+  });
+  return state;
 }
 
 export default function App() {
-  const { mode, setTheme, setAppearance, setDensity } = useTokenMode();
-  const [section, setSection] = useState<Section>(getInitialSection);
-  const [componentId, setComponentId] = useState<ComponentId | null>(null);
-  const [componentSearchOpen, setComponentSearchOpen] = useState(false);
-  const [componentSearch, setComponentSearch] = useState("");
-
-  const goFoundation = useCallback(() => setSection("foundation"), []);
-  const goComponents = useCallback(() => {
-    setSection("components");
-  }, []);
-  const goTools = useCallback(() => setSection("tools"), []);
-
-  const componentSearchTerm = componentSearch.trim().toLowerCase();
-  const filteredComponents = useMemo(
-    () =>
-      componentSearchTerm.length === 0
-        ? COMPONENT_REGISTRY
-        : COMPONENT_REGISTRY.filter(
-            (entry) =>
-              entry.title.toLowerCase().includes(componentSearchTerm) ||
-              entry.id.toLowerCase().includes(componentSearchTerm),
-          ),
-    [componentSearchTerm],
+  // Applies the persisted theme/appearance/density to the document.
+  useTokenMode();
+  const jiraCallback = useJiraCallback();
+  const githubCallback = useGithubCallback();
+  const [section, setSection] = useState<Section>(
+    () => jiraCallback.initialOverride?.section ?? githubCallback.initialOverride?.section ?? getInitialSection(),
   );
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>(
+    () =>
+      jiraCallback.initialOverride?.settingsTab ??
+      githubCallback.initialOverride?.settingsTab ??
+      getInitialSettingsTab(),
+  );
+  const [jiraBanner, setJiraBanner] = useState(jiraCallback.banner);
+  const [githubBanner, setGithubBanner] = useState(githubCallback.banner);
+
+  const goTools = useCallback(() => setSection("tools"), []);
+  const goSettings = useCallback(() => setSection("settings"), []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const params = new URLSearchParams(window.location.search);
     params.set("section", section);
+    if (section === "settings" && settingsTab === "workspace") {
+      params.set("tool", "workspace");
+    } else {
+      params.delete("tool");
+    }
     const nextUrl = `${window.location.pathname}?${params.toString()}`;
     const current = `${window.location.pathname}${window.location.search}`;
     if (nextUrl !== current) {
       window.history.replaceState(window.history.state, "", nextUrl);
     }
-  }, [section]);
+  }, [section, settingsTab]);
 
-  const showContextSidebar = section === "components" || section === "tools";
-  const appBodyClassName = ["app-body", showContextSidebar ? "app-body--with-context" : ""]
-    .filter(Boolean)
-    .join(" ");
+  useEffect(() => {
+    const onOpenSettings = (event: Event) => {
+      const tab = (event as CustomEvent<SettingsTab | undefined>).detail;
+      setSection("settings");
+      if (tab) setSettingsTab(tab);
+    };
+    window.addEventListener(OPEN_SETTINGS_EVENT, onOpenSettings);
+    return () => window.removeEventListener(OPEN_SETTINGS_EVENT, onOpenSettings);
+  }, []);
 
   return (
     <div className="app-shell">
-      <div className={appBodyClassName}>
-        <div className="app-nav-stack">
-          <aside className="app-icon-sidebar" aria-label="Playground quick navigation">
-            <div className="app-icon-sidebar__brandmark" aria-hidden>
-              <div className="app-icon-sidebar__logo">DS</div>
-            </div>
-            <div className="app-icon-sidebar__title">Starter Kit</div>
-            <nav className="app-icon-sidebar__nav" aria-label="Playground icon sections">
-              <div className="app-icon-sidebar__group">
-                <div className="app-icon-sidebar__linkWrap">
-                  <button
-                    type="button"
-                    className={
-                      section === "tools" ? "app-icon-sidebar__link is-active" : "app-icon-sidebar__link"
-                    }
-                    onClick={goTools}
-                    aria-label="Tools"
-                    aria-current={section === "tools" ? "true" : undefined}
-                  >
-                    <DraftingCompass size={20} strokeWidth={1.9} aria-hidden />
-                  </button>
-                  <SidebarNavTooltip label="Tools" />
-                </div>
-              </div>
-              <div className="app-icon-sidebar__group app-icon-sidebar__group--bottom">
-                <div className="app-icon-sidebar__linkWrap">
-                  <button
-                    type="button"
-                    className={
-                      section === "components" ? "app-icon-sidebar__link is-active" : "app-icon-sidebar__link"
-                    }
-                    onClick={goComponents}
-                    aria-label="Components"
-                    aria-current={section === "components" ? "true" : undefined}
-                  >
-                    <Component size={20} strokeWidth={1.9} aria-hidden />
-                  </button>
-                  <SidebarNavTooltip label="Components" />
-                </div>
-                <div className="app-icon-sidebar__linkWrap">
-                  <button
-                    type="button"
-                    className={
-                      section === "foundation" ? "app-icon-sidebar__link is-active" : "app-icon-sidebar__link"
-                    }
-                    onClick={goFoundation}
-                    aria-label="Foundation"
-                    aria-current={section === "foundation" ? "true" : undefined}
-                  >
-                    <Braces size={20} strokeWidth={1.9} aria-hidden />
-                  </button>
-                  <SidebarNavTooltip label="Foundation" />
-                </div>
-              </div>
-            </nav>
-          </aside>
+      <header className="app-topbar" aria-label="Top navigation">
+        <button
+          type="button"
+          className="app-topbar__brand"
+          onClick={goTools}
+          aria-current={section === "tools" ? "page" : undefined}
+        >
+          <span className="app-topbar__logo" aria-hidden>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none">
+              <path
+                d="M9 6.5 4 12l5 5.5M15 6.5 20 12l-5 5.5"
+                stroke="currentColor"
+                strokeWidth="2.1"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
+          <span className="app-topbar__title">DS Accelerator</span>
+        </button>
+        <button
+          type="button"
+          className={section === "settings" ? "app-topbar__settings is-active" : "app-topbar__settings"}
+          onClick={goSettings}
+          aria-current={section === "settings" ? "page" : undefined}
+        >
+          <SettingsIcon size={16} strokeWidth={1.9} aria-hidden />
+          Settings
+        </button>
+      </header>
 
-          {showContextSidebar ? (
-            <aside
-              className="app-context-sidebar"
-              aria-label={section === "tools" ? "Tool list" : "Component list"}
-            >
-              {section === "tools" ? (
-                <>
-                  <div className="app-context-sidebar__head">
-                    <h2 className="app-context-sidebar__title">Tools</h2>
-                  </div>
-                  <ul className="app-context-sidebar__list" aria-label="Tool list">
-                    <li>
-                      <button
-                        type="button"
-                        className="app-context-sidebar__item is-active"
-                        onClick={goTools}
-                      >
-                        DS Accelerator
-                      </button>
-                    </li>
-                  </ul>
-                </>
-              ) : (
-                <>
-                  <div className="app-context-sidebar__head">
-                    <h2 className="app-context-sidebar__title">Components</h2>
-                    <button
-                      type="button"
-                      className="app-context-sidebar__search-toggle"
-                      aria-expanded={componentSearchOpen}
-                      aria-controls="app-components-search"
-                      onClick={() => {
-                        setComponentSearchOpen((open) => !open);
-                        if (componentSearchOpen) setComponentSearch("");
-                      }}
-                      title="Search components"
-                    >
-                      <Search size={16} strokeWidth={2} aria-hidden />
-                      <span className="app-context-sidebar__search-toggle-label">Search</span>
-                    </button>
-                  </div>
-                  {componentSearchOpen ? (
-                    <div className="app-context-sidebar__search-wrap">
-                      <input
-                        id="app-components-search"
-                        className="playground-control playground-control--search"
-                        type="search"
-                        value={componentSearch}
-                        onChange={(e) => setComponentSearch(e.target.value)}
-                        placeholder="Search components"
-                      />
-                    </div>
-                  ) : null}
-                  <ul className="app-context-sidebar__list" aria-label="Component list">
-                    {filteredComponents.length === 0 ? (
-                      <li className="app-context-sidebar__empty">No components found.</li>
-                    ) : (
-                      filteredComponents.map((entry) => (
-                        <li key={entry.id}>
-                          <button
-                            type="button"
-                            className={
-                              componentId === entry.id && section === "components"
-                                ? "app-context-sidebar__item is-active"
-                                : "app-context-sidebar__item"
-                            }
-                            onClick={() => {
-                              setSection("components");
-                              setComponentId(entry.id);
-                            }}
-                          >
-                            {entry.title}
-                          </button>
-                        </li>
-                      ))
-                    )}
-                  </ul>
-                </>
-              )}
-            </aside>
-          ) : null}
-        </div>
-
+      <div className="app-body">
         <div className="app-main-column">
-          {section === "foundation" ? (
-            <FoundationView
-              mode={mode}
-              setTheme={setTheme}
-              setAppearance={setAppearance}
-              setDensity={setDensity}
-            />
-          ) : section === "tools" ? (
-            <DsAcceleratorTool />
+          {jiraBanner ? (
+            <div
+              className={`app-jiraBanner app-jiraBanner--${jiraBanner.kind === "connected" ? "success" : "error"}`}
+              role={jiraBanner.kind === "error" ? "alert" : "status"}
+            >
+              {jiraBanner.kind === "connected" ? (
+                <Check size={14} aria-hidden />
+              ) : (
+                <AlertTriangle size={14} aria-hidden />
+              )}
+              <span>{jiraBanner.kind === "connected" ? "Jira connected." : (jiraBanner.message ?? "Couldn't connect Jira.")}</span>
+              <button type="button" className="app-jiraBanner__dismiss" onClick={() => setJiraBanner(null)} aria-label="Dismiss">
+                ×
+              </button>
+            </div>
+          ) : null}
+
+          {githubBanner ? (
+            <div className="app-jiraBanner app-jiraBanner--error" role="alert">
+              <AlertTriangle size={14} aria-hidden />
+              <span>{githubBanner.message ?? "Couldn't connect GitHub."}</span>
+              <button
+                type="button"
+                className="app-jiraBanner__dismiss"
+                onClick={() => setGithubBanner(null)}
+                aria-label="Dismiss"
+              >
+                ×
+              </button>
+            </div>
+          ) : null}
+
+          {section === "settings" ? (
+            <SettingsView activeTab={settingsTab} onTabChange={setSettingsTab} />
           ) : (
-            <ComponentsView
-              mode={mode}
-              selectedId={componentId}
-              onSelectComponent={setComponentId}
-              setTheme={setTheme}
-              setAppearance={setAppearance}
-              setDensity={setDensity}
-            />
+            <DsAcceleratorTool />
           )}
         </div>
       </div>

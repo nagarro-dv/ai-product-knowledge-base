@@ -6572,7 +6572,7 @@
           }
         },
         "hover": {
-          "value": "{general.color.ghost-hover}",
+          "value": "{general.color.muted-alt-1}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6592,7 +6592,7 @@
           }
         },
         "border": {
-          "value": "{general.color.border}",
+          "value": "{general.color.muted-foreground}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6657,6 +6657,16 @@
         },
         "foreground": {
           "value": "{general.color.primary-foreground}",
+          "type": "color",
+          "$extensions": {
+            "com.figma.scopes": [
+              "ALL_SCOPES"
+            ],
+            "com.figma.hiddenFromPublishing": true
+          }
+        },
+        "border": {
+          "value": "{general.color.border-alt-1}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [

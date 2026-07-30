@@ -1,0 +1,83 @@
+/* Persistent horizontal tab bar for one Change — replaces the old
+   forward-only, view-only stepper. Every unlocked tab stays clickable so
+   "where am I" never means "where am I stuck". */
+
+.acceleratorTabs {
+  display: flex;
+  gap: var(--ds-general-gap-2xl);
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
+  flex-shrink: 0;
+  padding: 0 var(--ds-general-gap-xs);
+}
+
+.acceleratorTabs__tab {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  border: none;
+  background: transparent;
+  padding: var(--ds-general-gap-md) 2px calc(var(--ds-general-gap-md) + 1px);
+  margin-bottom: -1px;
+  color: var(--ds-general-color-muted-foreground);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.acceleratorTabs__marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-full);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 10px;
+  font-weight: 700;
+  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard), color var(--dur-base) var(--ease-standard);
+}
+
+.acceleratorTabs__tab--active .acceleratorTabs__marker {
+  border-color: var(--ds-general-color-primary);
+  background: var(--ds-general-color-primary);
+  color: var(--ds-general-color-primary-foreground);
+}
+
+.acceleratorTabs__tab--done .acceleratorTabs__marker {
+  border-color: var(--ds-general-color-border);
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+.acceleratorTabs__tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.acceleratorTabs__tab:not(:disabled):hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.acceleratorTabs__tab:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.acceleratorTabs__tab--active {
+  color: var(--ds-general-color-foreground);
+  border-bottom-color: var(--ds-general-color-primary);
+}
+
+.acceleratorTabs__errorDot {
+  position: absolute;
+  top: 4px;
+  right: -8px;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-destructive-foreground);
+}

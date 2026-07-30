@@ -1,0 +1,127 @@
+/**
+ * Circular Slider — new DS primitive, sibling to ProgressCircle.css / Slider.css.
+ *
+ * Direct token reuse: every colour/shadow value below is a straight reference to an
+ * existing token family (no new custom properties are introduced by this component).
+ *   Ring track/fill   → --ds-progress-linear-color-* (same tokens DsProgressCircle uses)
+ *   Handle fill/border → --ds-slider-color-marker* (same tokens DsSlider's thumb uses)
+ *   Focus ring         → --ds-general-shadows-focus-* (same as DsSlider's thumb focus state)
+ *   Labels/value text  → --ds-slider-color-foreground-label / --ds-general-typography-*
+ */
+
+.ds-circular-slider-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-slider-dimension-gap, 8px);
+  width: 100%;
+}
+
+.ds-circular-slider__title {
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-slider-color-foreground-label);
+}
+
+.ds-circular-slider__helper {
+  margin: 0;
+  max-width: 32ch;
+  text-align: center;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-slider-color-muted-foreground);
+}
+
+/* ── Ring box ───────────────────────────────────────────────────────────────
+   Width/height are set inline from the `size` prop (SVG viewBox units), but
+   `max-width: 100%` + `aspect-ratio` let the box shrink on narrow containers
+   (e.g. a mobile card) instead of overflowing. The handle is positioned in %
+   (see CircularSlider.tsx) so it always lands on the fill arc at any rendered
+   size — only the *drag math* needs `size` at all, and that reads the box's
+   live getBoundingClientRect(), never the `size` prop, so shrinking is safe. */
+
+.ds-circular-slider {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.ds-circular-slider--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ds-circular-slider__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ds-circular-slider__track {
+  stroke: var(--ds-progress-linear-color-primary-background);
+}
+
+.ds-circular-slider__fill {
+  stroke: var(--ds-progress-linear-color-primary-foreground);
+  transition: stroke-dasharray 150ms ease;
+}
+
+/* ── Handle — reuses DsSlider's Round marker sizing/tokens ───────────────────
+   24×24 hit target meets WCAG 2.2 SC 2.5.8 (Target Size, Minimum). */
+
+.ds-circular-slider__handle {
+  position: absolute;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: 9999px;
+  background: var(--ds-slider-color-marker);
+  border: var(--ds-slider-dimension-marker-stroke, 1.5px) solid var(--ds-slider-color-marker-border);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  outline: none;
+  transition: box-shadow 100ms ease;
+}
+
+.ds-circular-slider__handle:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread, 3px) var(--ds-general-shadows-focus-ring);
+}
+
+/* ── Value text — always visible, centred inside the ring ───────────────── */
+
+.ds-circular-slider__value {
+  position: relative;
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+  color: var(--ds-slider-color-foreground-label);
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-circular-slider__fill,
+  .ds-circular-slider__handle {
+    transition: none;
+  }
+}
+
+/* Very narrow containers (e.g. a stacked mobile card): cap the ring so the
+   title/helper text next to it never gets squeezed past a readable width. */
+@media (max-width: 360px) {
+  .ds-circular-slider {
+    max-width: 140px;
+  }
+}

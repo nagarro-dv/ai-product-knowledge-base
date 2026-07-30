@@ -1,5 +1,47 @@
 /** SSE payloads from the local agent orchestrator (`apps/agent-orchestrator`). */
 
+export type AgentAuthMethodStatus = "connected" | "not-configured" | "unavailable";
+
+export type AgentAuthMethod = {
+  id: string;
+  label: string;
+  /** 'api-key' | 'local-runtime' | 'oauth' | 'gateway' */
+  kind: string;
+  /** 'organisation' (admin-configured) or 'personal' (the user's own credential). */
+  source: "organisation" | "personal";
+  description: string;
+  /** Plain-language instruction for making this method available. */
+  hint: string;
+  /** Exact env var name an admin sets for this method, when applicable (api-key methods only). */
+  envVar?: string;
+  /** For local-runtime methods: the exact terminal command to sign in (e.g. 'claude' or 'cursor-agent login'). */
+  signInCommand?: string;
+  /** For local-runtime methods: docs URL for installing the CLI. */
+  installUrl?: string;
+  /** Named MCP servers this method has real, working wiring for (e.g. ['figma']). */
+  mcpServers?: string[];
+  /** For connected personal keys: safe display hint like '····abc4'. Never the key itself. */
+  maskedHint?: string;
+  /** When the personal key was saved (epoch ms). */
+  savedAt?: number;
+  capabilities: { localRepoEdits: boolean; streaming: boolean; mcp: boolean };
+  status: AgentAuthMethodStatus;
+  ok: boolean;
+  model?: string;
+  /** How the runtime actually authenticated on its last run (e.g. 'oauth'). */
+  lastAuthSource?: string;
+  error?: string;
+};
+
+export type AgentProvider = {
+  id: string;
+  label: string;
+  ok: boolean;
+  model?: string;
+  defaultAuthMethod?: string | null;
+  authMethods?: AgentAuthMethod[];
+};
+
 export type AgentStreamDone = {
   kind: "done";
   status: string;
@@ -54,6 +96,13 @@ function agentJobsBaseUrl(): string {
   const envOrigin = import.meta.env.VITE_AGENT_API_ORIGIN?.trim().replace(/\/$/, "") ?? "";
   const origin = envOrigin || (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
   const path = "/api/agent/jobs";
+  return origin ? `${origin}${path}` : path;
+}
+
+function agentProvidersUrl(): string {
+  const envOrigin = import.meta.env.VITE_AGENT_API_ORIGIN?.trim().replace(/\/$/, "") ?? "";
+  const origin = envOrigin || (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
+  const path = "/api/agent/providers";
   return origin ? `${origin}${path}` : path;
 }
 
@@ -159,6 +208,92 @@ export async function cancelAgentJob(jobId: string, init?: { signal?: AbortSigna
   return (await response.json()) as AgentJobSummary;
 }
 
+export async function fetchAgentProviders(init?: { signal?: AbortSignal }): Promise<AgentProvider[]> {
+  const response = await fetch(agentProvidersUrl(), { signal: init?.signal });
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+  const parsed = (await response.json()) as { providers?: AgentProvider[] };
+  return Array.isArray(parsed.providers) ? parsed.providers : [];
+}
+
+/**
+ * Forces a live recheck (CLI/auth probes, API-key validation, re-read .env)
+ * instead of serving whatever the server already has cached. Slower than
+ * `fetchAgentProviders` — use it for an explicit user-triggered refresh, not
+ * on every page load.
+ */
+export async function refreshAgentProviders(init?: { signal?: AbortSignal }): Promise<AgentProvider[]> {
+  const response = await fetch(`${agentProvidersUrl()}/refresh`, { method: "POST", signal: init?.signal });
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+  const parsed = (await response.json()) as { providers?: AgentProvider[] };
+  return Array.isArray(parsed.providers) ? parsed.providers : [];
+}
+
+/**
+ * Connects a personal API key. The server validates the key against the
+ * provider with a real call BEFORE storing it, and never returns it —
+ * responses only ever contain the non-secret masked hint.
+ */
+export async function connectPersonalKey(providerId: string, apiKey: string): Promise<AgentProvider[]> {
+  const response = await fetch(`${agentProvidersUrl()}/${encodeURIComponent(providerId)}/personal-key`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ apiKey }),
+  });
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+  const parsed = (await response.json()) as { providers?: AgentProvider[] };
+  return Array.isArray(parsed.providers) ? parsed.providers : [];
+}
+
+export async function disconnectPersonalKey(providerId: string): Promise<AgentProvider[]> {
+  const response = await fetch(`${agentProvidersUrl()}/${encodeURIComponent(providerId)}/personal-key`, {
+    method: "DELETE",
+  });
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+  const parsed = (await response.json()) as { providers?: AgentProvider[] };
+  return Array.isArray(parsed.providers) ? parsed.providers : [];
+}
+
+async function callMethodLifecycle(
+  providerId: string,
+  methodId: string,
+  action: "disconnect" | "reconnect",
+): Promise<AgentProvider[]> {
+  const response = await fetch(
+    `${agentProvidersUrl()}/${encodeURIComponent(providerId)}/methods/${encodeURIComponent(methodId)}/${action}`,
+    { method: "POST" },
+  );
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+  const parsed = (await response.json()) as { providers?: AgentProvider[] };
+  return Array.isArray(parsed.providers) ? parsed.providers : [];
+}
+
+/**
+ * Disconnects any auth method with a real, user-owned connection: a personal
+ * API key (deletes the stored secret) or a local-runtime CLI sign-in like
+ * Claude Code / Cursor CLI (stops this app from using it — does NOT sign the
+ * user out of the external tool itself, since that session may be used
+ * elsewhere on this machine). Refused server-side for organisation-managed
+ * methods.
+ */
+export async function disconnectAuthMethod(providerId: string, methodId: string): Promise<AgentProvider[]> {
+  return callMethodLifecycle(providerId, methodId, "disconnect");
+}
+
+/** Re-enables a previously in-app-disconnected local-runtime method and re-probes it. */
+export async function reconnectAuthMethod(providerId: string, methodId: string): Promise<AgentProvider[]> {
+  return callMethodLifecycle(providerId, methodId, "reconnect");
+}
+
 export async function streamAgentJob(
   jobId: string,
   onEvent: (event: AgentStreamEvent) => void,
@@ -194,6 +329,13 @@ export async function streamAgentJob(
         if (!event) continue;
         onEvent(event);
         if (event.kind === "error") throw new Error(event.message);
+        // Don't rely solely on the server closing the response after a terminal event —
+        // stop consuming as soon as we see one, so a race on the server's side (or a proxy
+        // that buffers the close) can never hang the client waiting for a read that never comes.
+        if (event.kind === "done") {
+          await reader.cancel().catch(() => {});
+          return;
+        }
       }
     }
   }

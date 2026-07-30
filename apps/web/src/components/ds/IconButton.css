@@ -27,6 +27,18 @@
   cursor: pointer;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  /* Every variant below changes background/box-shadow on hover and focus
+     with no transition of its own — state changes snapped instantly,
+     which reads as unfinished no matter how considered the colors are.
+     One shared rule, all variants inherit it. */
+  transition: background-color var(--dur-fast, 120ms) var(--ease-standard, ease-out),
+    box-shadow var(--dur-fast, 120ms) var(--ease-standard, ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-icon-btn {
+    transition: none;
+  }
 }
 
 .ds-icon-btn:disabled {

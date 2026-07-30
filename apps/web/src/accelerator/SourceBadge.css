@@ -1,0 +1,128 @@
+.sourceBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-2xs) var(--ds-general-padding-sm);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-xs, 0 1px 2px rgba(0, 0, 0, 0.06));
+  cursor: pointer;
+  text-align: left;
+  max-width: 260px;
+  min-width: 0;
+  transition: border-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.sourceBadge:hover {
+  border-color: var(--ds-general-color-muted-foreground);
+}
+
+.sourceBadge:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.sourceBadge__icon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+.sourceBadge__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.sourceBadge__type {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+  line-height: 1.3;
+}
+
+.sourceBadge__name {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 600;
+  color: var(--ds-general-color-foreground);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Fixed-position so `.accelerator`'s overflow:hidden can't clip it. */
+.sourceBadge__popover {
+  position: fixed;
+  z-index: 90;
+  width: min(340px, calc(100vw - 16px));
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+  padding: var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--ds-general-color-foreground) 12%, transparent);
+}
+
+.sourceBadge__popover p {
+  margin: 0;
+}
+
+.sourceBadge__popoverType {
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourceBadge__popoverName {
+  overflow-wrap: anywhere;
+}
+
+.sourceBadge__popoverLink {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-2xs);
+  color: var(--ds-general-color-accent);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  text-decoration: none;
+  min-width: 0;
+}
+
+.sourceBadge__popoverLink:hover {
+  text-decoration: underline;
+}
+
+.sourceBadge__popoverLink svg {
+  flex-shrink: 0;
+}
+
+.sourceBadge__popoverUrl {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceBadge__popoverMeta,
+.sourceBadge__popoverContext {
+  color: var(--ds-general-color-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.sourceBadge__popoverContext {
+  padding-top: var(--ds-general-gap-2xs);
+  border-top: 1px solid var(--ds-general-color-border);
+}

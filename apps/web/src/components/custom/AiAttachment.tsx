@@ -15,6 +15,8 @@ export type AiAttachmentProps = {
   icon?: ReactNode;
   onRemove?: () => void;
   className?: string;
+  /** Full detail shown on hover (e.g. the complete URL a chip abbreviates). */
+  title?: string;
 };
 
 function detectKind(kind: AiAttachmentProps["kind"], href: string | null | undefined): AiAttachmentKind {
@@ -43,6 +45,7 @@ export function AiAttachment({
   icon,
   onRemove,
   className,
+  title,
 }: AiAttachmentProps) {
   const resolvedKind = detectKind(kind, href);
   const rootClassName = useMemo(() => {
@@ -53,9 +56,10 @@ export function AiAttachment({
 
   if (size === "tag") {
     return (
-      <div className={rootClassName}>
+      <div className={rootClassName} title={title}>
         <div className="aiAttachment__tag">
           <span className="aiAttachment__tagIcon">{icon ?? renderIcon(resolvedKind, true)}</span>
+          {subtitle ? <span className="aiAttachment__tagType">{subtitle}</span> : null}
           {href ? (
             <a className="aiAttachment__tagValue aiAttachment__link" href={href} target="_blank" rel="noreferrer">
               {value}

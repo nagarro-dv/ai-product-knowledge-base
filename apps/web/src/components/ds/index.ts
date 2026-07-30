@@ -49,10 +49,12 @@ export {
 export { LinkButtonShowcase } from "./LinkButtonShowcase";
 export { DsProgressArc, type DsProgressArcProps, type DsProgressArcVariant } from "./ProgressArc";
 export { ProgressArcShowcase } from "./ProgressArcShowcase";
+export { DsProgressCircle, type DsProgressCircleProps, type DsProgressCircleVariant } from "./ProgressCircle";
 export { DsProgressLinear, type DsProgressLinearProps, type DsProgressLinearVariant } from "./ProgressLinear";
 export { ProgressLinearShowcase } from "./ProgressLinearShowcase";
 export { DsCreditScore, type DsCreditScoreProps } from "./CreditScore";
 export { CreditScoreShowcase } from "./CreditScoreShowcase";
+export { DsCreditScoreCircular, type DsCreditScoreCircularProps } from "./CreditScoreCircular";
 export { DsSpinner, type DsSpinnerProps } from "./Spinner";
 export { SpinnerShowcase } from "./SpinnerShowcase";
 export { DsSuccess, type DsSuccessProps } from "./Success";
@@ -66,6 +68,10 @@ export {
   type DsSliderType,
 } from "./Slider";
 export { SliderShowcase } from "./SliderShowcase";
+export { DsCircularSlider, type DsCircularSliderProps } from "./CircularSlider";
+export { CircularSliderShowcase } from "./CircularSliderShowcase";
+export { DsConfidenceSelector, type DsConfidenceSelectorProps } from "./CircularConfidenceSelector";
+export { CircularConfidenceSelectorShowcase } from "./CircularConfidenceSelectorShowcase";
 export {
   DsFlexibleRange,
   type DsFlexibleRangeProps,

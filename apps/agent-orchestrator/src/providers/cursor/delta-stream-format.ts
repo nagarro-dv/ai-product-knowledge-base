@@ -1,4 +1,5 @@
 import type { InteractionUpdate } from '@cursor/sdk';
+import type { NormalizedEvent } from '../types.js';
 
 /**
  * Maps `agent.send({ onDelta })` payloads to the same SSE JSON shape as `stream-format.ts`
@@ -6,7 +7,7 @@ import type { InteractionUpdate } from '@cursor/sdk';
  *
  * @see https://cursor.com/docs/api/sdk/typescript — "Streaming raw deltas"
  */
-export function interactionUpdateToSsePayloads(update: InteractionUpdate): Record<string, unknown>[] {
+export function interactionUpdateToSsePayloads(update: InteractionUpdate): NormalizedEvent[] {
   switch (update.type) {
     case 'thinking-delta':
       return update.text ? [{ kind: 'thinking_delta', text: update.text }] : [];

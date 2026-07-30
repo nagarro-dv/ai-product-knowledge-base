@@ -1,0 +1,54 @@
+.personalKeyModal__field {
+  display: grid;
+  gap: var(--ds-general-gap-xs);
+}
+
+.personalKeyModal__input {
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-background);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  color: var(--ds-general-color-foreground);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+}
+
+.personalKeyModal__input::placeholder {
+  font-family: var(--ds-general-typography-font-family-body);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.personalKeyModal__input:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.personalKeyModal__connectedRow {
+  display: grid;
+  gap: 2px;
+}
+
+.personalKeyModal__connectedRow p {
+  margin: 0;
+}
+
+.personalKeyModal__mask {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  padding: 0 var(--ds-general-padding-4xs);
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: var(--ds-general-color-background);
+}
+
+.personalKeyModal__link {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.personalKeyModal__link:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+

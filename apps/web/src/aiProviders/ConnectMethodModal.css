@@ -1,0 +1,215 @@
+.connectModal__root {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+}
+
+.connectModal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 34%, transparent);
+}
+
+.connectModal {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(480px, calc(100vw - var(--ds-general-gap-4xl)));
+  max-height: min(85vh, 640px);
+  overflow: auto;
+  display: grid;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-gap-2xl);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-md);
+}
+
+.connectModal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.connectModal__headerIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-foreground);
+}
+
+.connectModal__title {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.connectModal__closeButton {
+  flex-shrink: 0;
+}
+
+.connectModal__body {
+  display: grid;
+  gap: var(--ds-general-gap-md);
+}
+
+.connectModal__body > p {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.connectModal__steps {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: var(--ds-general-gap-md);
+}
+
+.connectModal__steps li {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+}
+
+.connectModal__steps p {
+  margin: 0;
+}
+
+.connectModal__chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-sm);
+  width: fit-content;
+  max-width: 100%;
+  padding: var(--ds-general-padding-2xs) var(--ds-general-padding-2xs) var(--ds-general-padding-2xs)
+    var(--ds-general-padding-sm);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.connectModal__chipCode {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  color: var(--ds-general-color-foreground);
+  overflow-wrap: anywhere;
+}
+
+.connectModal__adminCard {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-informative-border);
+  background: var(--ds-general-color-informative-muted);
+}
+
+.connectModal__adminCard p {
+  margin: 0;
+}
+
+.connectModal__disclosure {
+  justify-self: start;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--ds-general-color-muted-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  cursor: pointer;
+}
+
+.connectModal__disclosure:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.connectModal__footnote {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.connectModal__errorBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-warning-border);
+  background: var(--ds-general-color-warning-muted);
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.connectModal__errorBanner svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.connectModal__errorBanner p {
+  margin: 0;
+}
+
+.connectModal__errorBanner p:first-child {
+  color: var(--ds-general-color-foreground);
+}
+
+.connectModal__resultBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.connectModal__resultBanner svg {
+  flex-shrink: 0;
+  color: var(--ds-general-color-success-foreground);
+}
+
+.connectModal__resultBanner p {
+  margin: 0;
+}
+
+.connectModal__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-md);
+}
+
+.connectModal__actionsSpacer {
+  flex: 1 1 auto;
+}
+
+/* Shared disconnect-confirmation step — see DisconnectConfirm.tsx. Used by
+   both PersonalKeyModal and ConnectMethodModal so the confirmation reads and
+   behaves identically regardless of which auth-method kind is disconnecting. */
+.connectModal__confirm {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  justify-content: flex-end;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-destructive-border);
+  background: var(--ds-general-color-destructive-muted);
+}
+
+.connectModal__confirm p {
+  margin: 0;
+  flex: 1 1 auto;
+}

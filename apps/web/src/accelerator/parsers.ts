@@ -1,4 +1,22 @@
-import type { ChangeIntent, ChangeIntentType, AnalysisOutput, AnalysisTask } from "./types";
+import type {
+  ChangeIntent,
+  ChangeIntentType,
+  AnalysisOutput,
+  Direction,
+  DirectionComplexity,
+  UnderstandingBrief,
+} from "./types";
+
+/**
+ * True when `directions` is real model output, false when the parser had
+ * nothing to work with and substituted the two hardcoded placeholder
+ * directions (see the `parseAnalysisOutput` fallback below). Callers must
+ * check this before treating a run as successful — an unchecked fallback
+ * silently presents "no usable output" as a completed result.
+ */
+export function hasRealDirections(directions: Direction[]): boolean {
+  return !(directions.length === 2 && directions[0]?.id === "fallback-1" && directions[1]?.id === "fallback-2");
+}
 
 export function slugify(value: string, fallback: string): string {
   const slug = value
@@ -86,6 +104,41 @@ export function parseChangeIntent(raw: string): ChangeIntent {
   }
 }
 
+/** Splits a markdown section into clean bullet items; tolerates plain lines when no bullets are present. */
+function parseBulletList(section: string): string[] {
+  const lines = section
+    .split("\n")
+    .map((line) => line.replace(/^[-*]\s+/, "").trim())
+    .filter((line) => line.length > 0 && !/^none\.?$/i.test(line));
+  return lines;
+}
+
+/**
+ * Parses the phase-1 understanding brief the user reviews at the checkpoint.
+ * Missing sections stay empty — the UI shows honest gaps instead of invented
+ * content, so a weak analysis is visibly weak.
+ */
+export function parseUnderstanding(raw: string): UnderstandingBrief {
+  return {
+    summary: extractSection(raw, "Summary"),
+    interpretation: extractSection(raw, "Interpretation"),
+    sourcesReviewed: parseBulletList(extractSection(raw, "Sources Reviewed")),
+    inScope: parseBulletList(extractSection(raw, "In Scope")),
+    outOfScope: parseBulletList(extractSection(raw, "Out of Scope")),
+    assumptions: parseBulletList(extractSection(raw, "Assumptions")),
+    openQuestions: parseBulletList(extractSection(raw, "Open Questions")),
+    risks: parseBulletList(extractSection(raw, "Risks")),
+    changeIntent: parseChangeIntent(raw),
+    raw,
+  };
+}
+
+/**
+ * Text-only fallback for engines without local repo-edit access — parses the same
+ * "Planning Tasks" bullet format the product always used before real per-direction
+ * generation existed. Directions from this path never get a real preview
+ * (previewModulePath stays null) because there is no code to preview.
+ */
 export function parseAnalysisOutput(raw: string): AnalysisOutput {
   const summary = extractSection(raw, "Summary");
   const taskAnalysis = extractSection(raw, "Task Analysis");
@@ -93,50 +146,94 @@ export function parseAnalysisOutput(raw: string): AnalysisOutput {
   const needMoreContextSection = extractSection(raw, "Need More Context");
   const changeIntent = parseChangeIntent(raw);
   const detailedNotes = extractSection(raw, "Detailed Notes");
+  // Zipped positionally onto Planning Tasks, not matched by title — the model
+  // is asked to emit exactly one bullet per solution, in the same order, so
+  // this avoids fragile fuzzy title-matching between two separate sections.
+  const responsiveNotesList = parseBulletList(extractSection(raw, "Responsive Behaviour"));
 
-  const parsedTasks = planningTasksSection
+  const parsedDirections = planningTasksSection
     .split("\n")
     .map((line) => line.trim())
-    .filter((line) => /^[-*]\s+\[(?: |x|X)\]\s+/.test(line) || /^[-*]\s+/.test(line))
+    .filter((line) => /^[-*]?\s*\[(?: |x|X)\]\s+/.test(line) || /^[-*]\s+/.test(line))
     .map((line, index) => {
-      const rawLabel = line
-        .replace(/^[-*]\s+\[(?: |x|X)\]\s+/, "")
+      const withoutRecommendedMarker = line.replace(/\s*\(recommended\)\s*$/i, "");
+      const recommended = withoutRecommendedMarker.length !== line.length;
+      const rawLabel = withoutRecommendedMarker
+        .replace(/^[-*]?\s*\[(?: |x|X)\]\s+/, "")
         .replace(/^[-*]\s+/, "")
         .trim();
-      const dashParts = rawLabel.split(/\s+[—–]\s+/);
-      const hyphenParts = rawLabel.split(/\s+-\s+/);
-      let label = rawLabel;
-      let description = "Generated from analysis output.";
+      // Pulled out before splitting on the title dash so it never leaks into
+      // the displayed summary — see buildTextDirectionsPrompt's required
+      // "Axis: ..." segment. Kept separate from `reasoning` (always empty in
+      // this text-only path) so directionQuality.ts still has a real signal
+      // to compare between solutions even without staged code to diff.
+      const axisMatch = rawLabel.match(/\bAxis:\s*([^.]+)\.?\s*/i);
+      const differentiationAxis = axisMatch?.[1]?.trim() ?? "";
+      const labelWithoutAxis = axisMatch ? rawLabel.replace(axisMatch[0], " ").replace(/\s+/g, " ").trim() : rawLabel;
+      const dashParts = labelWithoutAxis.split(/\s+[—–]\s+/);
+      const hyphenParts = labelWithoutAxis.split(/\s+-\s+/);
+      let title = labelWithoutAxis;
+      let summaryText = "Generated from analysis output.";
       if (dashParts.length >= 2) {
-        label = dashParts[0]!.trim();
-        description = dashParts.slice(1).join(" — ").trim();
+        title = dashParts[0]!.trim();
+        summaryText = dashParts.slice(1).join(" — ").trim();
       } else if (hyphenParts.length === 2 && hyphenParts[0]!.length <= 120) {
-        label = hyphenParts[0]!.trim();
-        description = hyphenParts[1]!.trim();
+        title = hyphenParts[0]!.trim();
+        summaryText = hyphenParts[1]!.trim();
       }
       return {
-        id: `task-${index + 1}-${slugify(label, `item-${index + 1}`)}`,
-        label,
-        description,
-        active: true,
-      } satisfies AnalysisTask;
+        id: `${index + 1}-${slugify(title, `item-${index + 1}`)}`,
+        title,
+        summary: summaryText,
+        highlights: [],
+        reasoning: "",
+        differentiationAxis,
+        tradeoffs: [],
+        complexity: "medium" as DirectionComplexity,
+        affectedFiles: [],
+        confidence: 0,
+        recommended,
+        previewModulePath: null,
+        previewStatus: "unavailable" as const,
+        responsiveNotes: responsiveNotesList[index] ?? "",
+      } satisfies Direction;
     });
 
-  const tasks =
-    parsedTasks.length > 0
-      ? parsedTasks
+  const directions: Direction[] =
+    parsedDirections.length > 0
+      ? parsedDirections
       : [
           {
             id: "fallback-1",
-            label: "Solution A",
-            description: "First implementation direction from analysis.",
-            active: true,
+            title: "Direction A",
+            summary: "First implementation direction from analysis.",
+            highlights: [],
+            reasoning: "",
+            differentiationAxis: "",
+            tradeoffs: [],
+            complexity: "medium",
+            affectedFiles: [],
+            confidence: 0,
+            recommended: false,
+            previewModulePath: null,
+            previewStatus: "unavailable",
+            responsiveNotes: "",
           },
           {
             id: "fallback-2",
-            label: "Solution B",
-            description: "Alternative direction with different trade-offs.",
-            active: true,
+            title: "Direction B",
+            summary: "Alternative direction with different trade-offs.",
+            highlights: [],
+            reasoning: "",
+            differentiationAxis: "",
+            tradeoffs: [],
+            complexity: "medium",
+            affectedFiles: [],
+            confidence: 0,
+            recommended: false,
+            previewModulePath: null,
+            previewStatus: "unavailable",
+            responsiveNotes: "",
           },
         ];
 
@@ -146,7 +243,7 @@ export function parseAnalysisOutput(raw: string): AnalysisOutput {
   return {
     summary: summary || "Analysis completed.",
     taskAnalysis: taskAnalysis || "No task analysis section was returned.",
-    tasks,
+    directions,
     needMoreContext,
     changeIntent,
     detailedNotes: detailedNotes || "",
@@ -154,10 +251,72 @@ export function parseAnalysisOutput(raw: string): AnalysisOutput {
   };
 }
 
-export function parseChangedFilesFromApplyOutput(raw: string): string[] {
-  const section = extractSection(raw, "Changed Files");
-  const candidateText = section || raw;
-  const matchedPaths =
-    candidateText.match(/[A-Za-z0-9._/-]+\/[A-Za-z0-9._/-]+\.(?:tsx|ts|css|md|json|mdc)/g) ?? [];
-  return Array.from(new Set(matchedPaths));
+/**
+ * The real pipeline for agentic engines — parses the "Directions JSON" manifest the
+ * agent emits after actually writing staged code + a Preview.tsx harness per
+ * direction (see buildProposalPrompt). Falls back to the text-only parse if the
+ * manifest is missing or malformed, so a bad model response degrades gracefully
+ * instead of showing nothing.
+ */
+export function parseProposalOutput(raw: string, runId: string): AnalysisOutput {
+  const base = parseAnalysisOutput(raw);
+  const section = extractSection(raw, "Directions JSON");
+  if (!section) return base;
+  const jsonText = extractJsonFence(section);
+  if (!jsonText) return base;
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonText);
+  } catch {
+    return base;
+  }
+  if (!Array.isArray(parsed) || parsed.length === 0) return base;
+
+  const validComplexity = (value: unknown): DirectionComplexity =>
+    value === "low" || value === "high" ? value : "medium";
+
+  const directions: Direction[] = parsed
+    .map((entry, index): Direction | null => {
+      if (typeof entry !== "object" || entry === null) return null;
+      const e = entry as Record<string, unknown>;
+      const id = typeof e.id === "string" && e.id.trim() ? e.id.trim() : String.fromCharCode(97 + index);
+      const title = typeof e.title === "string" && e.title.trim() ? e.title.trim() : `Direction ${id.toUpperCase()}`;
+      const previewFile = typeof e.previewFile === "string" && e.previewFile.trim() ? e.previewFile.trim() : null;
+      return {
+        id,
+        title,
+        summary: typeof e.summary === "string" ? e.summary.trim() : "",
+        highlights: Array.isArray(e.highlights)
+          ? e.highlights.filter((v): v is string => typeof v === "string" && v.trim().length > 0).slice(0, 4)
+          : [],
+        reasoning: typeof e.reasoning === "string" ? e.reasoning.trim() : "",
+        differentiationAxis: typeof e.differentiationAxis === "string" ? e.differentiationAxis.trim() : "",
+        responsiveNotes: typeof e.responsiveNotes === "string" ? e.responsiveNotes.trim() : "",
+        tradeoffs: Array.isArray(e.tradeoffs)
+          ? e.tradeoffs.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+          : [],
+        complexity: validComplexity(e.complexity),
+        affectedFiles: Array.isArray(e.affectedFiles)
+          ? e.affectedFiles.filter((v): v is string => typeof v === "string" && v.trim().length > 0)
+          : [],
+        confidence: parseConfidence(e.confidence),
+        recommended: e.recommended === true,
+        previewModulePath: previewFile ? `/src/accelerator/.generated/${runId}/${previewFile}` : null,
+        previewStatus: previewFile ? "pending" : "unavailable",
+      };
+    })
+    .filter((entry): entry is Direction => entry !== null);
+
+  if (directions.length === 0) return base;
+
+  // A model may over-eagerly mark more than one direction recommended — keep only the first.
+  let sawRecommended = false;
+  for (const direction of directions) {
+    if (direction.recommended && sawRecommended) direction.recommended = false;
+    else if (direction.recommended) sawRecommended = true;
+  }
+
+  return { ...base, directions };
 }
+

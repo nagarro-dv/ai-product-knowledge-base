@@ -1,0 +1,220 @@
+.jiraPicker {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+}
+
+.jiraPicker__tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-background);
+  width: fit-content;
+}
+
+.jiraPicker__tab {
+  border: none;
+  padding: 6px 10px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: transparent;
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  cursor: pointer;
+}
+
+.jiraPicker__tab--active {
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-weight: 600;
+}
+
+.jiraPicker__tab:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.jiraPicker__searchField {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: 8px var(--ds-general-padding-sm);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.jiraPicker__searchField:focus-within {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.jiraPicker__searchInput {
+  flex: 1 1 auto;
+  border: none;
+  background: transparent;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+}
+
+.jiraPicker__searchInput:focus {
+  outline: none;
+}
+
+.jiraPicker__results {
+  max-height: 220px;
+  overflow-y: auto;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  padding: 4px;
+}
+
+.jiraPicker__resultRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.jiraPicker__resultRow:hover {
+  background: var(--ds-general-color-background);
+}
+
+.jiraPicker__resultRow:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.jiraPicker__resultKey {
+  flex-shrink: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 600;
+}
+
+.jiraPicker__resultTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-general-color-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.jiraPicker__statusIcon--done {
+  color: var(--ds-general-color-success-foreground);
+  flex-shrink: 0;
+}
+
+.jiraPicker__statusIcon--progress {
+  color: var(--ds-general-color-informative-foreground);
+  flex-shrink: 0;
+}
+
+.jiraPicker__statusIcon--todo {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+}
+
+.jiraPicker__state {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: 16px 10px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  justify-content: center;
+}
+
+.jiraPicker__state--error {
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.jiraPicker__manualLink {
+  justify-self: start;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--ds-general-color-muted-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  cursor: pointer;
+}
+
+.jiraPicker__manualLink:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+/* ── Preview ────────────────────────────────────────────────────────────── */
+
+.jiraPicker__preview {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-background);
+}
+
+.jiraPicker__previewHeader {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-general-gap-sm);
+}
+
+.jiraPicker__previewKey {
+  font-weight: 700;
+  color: var(--ds-general-color-foreground);
+}
+
+.jiraPicker__previewMeta {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.jiraPicker__previewTitle {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+  font-weight: 600;
+}
+
+.jiraPicker__previewLine {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.jiraPicker__previewDescription {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  white-space: pre-line;
+}
+
+.jiraPicker__previewDescriptionEmpty {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-style: italic;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.jiraPicker__previewActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-md);
+  margin-top: var(--ds-general-gap-xs);
+}

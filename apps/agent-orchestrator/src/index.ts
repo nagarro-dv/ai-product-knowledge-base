@@ -26,7 +26,7 @@ if (args.includes("--help") || args.includes("-h")) {
   console.log("Environment variables:");
   console.log("  CURSOR_API_KEY    Required Cursor API key");
   console.log("  CURSOR_MODEL      Optional preferred model ID");
-  console.log("  FSB_REPO_ROOT     Optional absolute monorepo path override");
+  console.log("  DS_REPO_ROOT      Optional absolute monorepo path override (FSB_REPO_ROOT also accepted)");
   process.exit(0);
 }
 
@@ -40,21 +40,23 @@ if (apiKey === "cursor_xxx") {
   process.exit(1);
 }
 
-const repoRoot = process.env.FSB_REPO_ROOT
-  ? path.resolve(process.env.FSB_REPO_ROOT)
-  : defaultRepoRoot;
+const repoRoot = process.env.DS_REPO_ROOT?.trim()
+  ? path.resolve(process.env.DS_REPO_ROOT)
+  : process.env.FSB_REPO_ROOT?.trim()
+    ? path.resolve(process.env.FSB_REPO_ROOT)
+    : defaultRepoRoot;
 const task = args.join(" ").trim();
 
 const prompt = `
-You are working in the Vorwerk monorepo.
+You are working in the DS Starter Kit monorepo (design-system playground + tokens + components).
 
 Objective:
 - ${task || "Inspect apps/web and propose the smallest safe component change in src/components/ds with implementation steps."}
 
 Guardrails:
 - Treat the repository files and .cursor/rules as source of truth.
-- Keep changes scoped to apps/web unless absolutely required.
-- Reuse existing DS components, conventions, and --vds-* token usage.
+- Keep changes scoped to apps/web and packages/tokens unless absolutely required.
+- Reuse existing DS components, conventions, and var(--ds-*) token usage; never introduce client-specific branding.
 - Explain intended changes before editing files.
 `.trim();
 

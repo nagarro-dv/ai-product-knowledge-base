@@ -1,0 +1,55 @@
+/**
+ * Progress Circle — new DS primitive, sibling to ProgressArc.css.
+ * Reuses --ds-progress-linear-* color tokens for fill and track.
+ */
+
+.ds-progress-circle {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+/* ── Variant colour maps (same semantics as ds-progress-arc) ──────────────── */
+
+.ds-progress-circle--default {
+  --pc-track: var(--ds-progress-linear-color-primary-background);
+  --pc-fill: var(--ds-progress-linear-color-primary-foreground);
+}
+
+.ds-progress-circle--success {
+  --pc-track: var(--ds-progress-linear-color-primary-background);
+  --pc-fill: var(--ds-progress-linear-color-success-foreground);
+}
+
+.ds-progress-circle--warning {
+  --pc-track: var(--ds-progress-linear-color-primary-background);
+  --pc-fill: var(--ds-progress-linear-color-warning-foreground);
+}
+
+.ds-progress-circle--error {
+  --pc-track: var(--ds-progress-linear-color-primary-background);
+  --pc-fill: var(--ds-progress-linear-color-error-foreground);
+}
+
+.ds-progress-circle--accent {
+  --pc-track: var(--ds-progress-linear-color-primary-background);
+  --pc-fill: var(--ds-progress-linear-color-accent-foreground);
+}
+
+/* ── Parts ───────────────────────────────────────────────────────────────── */
+
+.ds-progress-circle__track {
+  stroke: var(--pc-track);
+}
+
+.ds-progress-circle__fill {
+  stroke: var(--pc-fill);
+  transition: stroke-dasharray 400ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-progress-circle__fill {
+    transition: none;
+  }
+}

@@ -4,8 +4,18 @@ import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { CursorAdapter } from './providers/cursor/CursorAdapter.js';
-import { registerAdapter, requireAdapter, getAdapter, listAdapters } from './providers/registry.js';
+import { requireAdapter, getAdapter, listAdapters } from './providers/registry.js';
+import { buildRunMcpServers } from './mcpServers.js';
+import { IntegrationsRouter } from './integrationsRouter.js';
+import { ProposalsRouter } from './proposalsRouter.js';
+import {
+  buildProvidersPayload,
+  connectPersonalKey,
+  disconnectMethod,
+  disconnectPersonalKey,
+  reconnectMethod,
+  syncProviders,
+} from './providersCatalog.js';
 
 type RequestMessage = {
   role: 'user' | 'assistant';
@@ -15,8 +25,12 @@ type RequestMessage = {
 type ChatRequest = {
   messages?: RequestMessage[];
   message?: string;
-  /** AI provider to use. Defaults to DEFAULT_PROVIDER when omitted. */
+  /** AI provider family to use (e.g. 'claude'). Defaults to DEFAULT_PROVIDER when omitted. */
   provider?: string;
+  /** Authentication method within the provider (e.g. 'api-key', 'claude-code'). Provider default when omitted. */
+  authMethod?: string;
+  /** Optional Figma URLs from the accelerator request; translated into MCP server config for compatible adapters. */
+  figmaUrls?: string[];
 };
 
 type AgentStreamDone = {
@@ -35,11 +49,15 @@ type AgentJob = {
   id: string;
   status: JobStatus;
   provider: string;
+  /** Auth method within the provider ('' = provider default). */
+  authMethod: string;
   createdAt: number;
   updatedAt: number;
   events: unknown[];
   listeners: Set<JobEventListener>;
   messages: RequestMessage[];
+  /** Optional Figma URLs from the web request; turned into MCP server config for compatible adapters. */
+  figmaUrls?: string[];
   /** Abort this controller to cancel a running job. Cleared when the job settles. */
   abortController?: AbortController;
   result?: AgentStreamDone;
@@ -47,7 +65,7 @@ type AgentJob = {
 };
 
 /** Provider id used when the request omits the provider field. */
-const DEFAULT_PROVIDER = 'cursor';
+const DEFAULT_PROVIDER = 'claude';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,6 +101,11 @@ const jobs = new Map<string, AgentJob>();
 const JOB_TTL_MS = 30 * 60 * 1000;
 const MAX_JOB_EVENTS = 5_000;
 
+// All /api/integrations/* routes (Workspace: Storybook, Repository, Figma, Jira).
+const integrations = new IntegrationsRouter(repoRoot);
+// /api/agent/proposals/* — staging → preview → apply lifecycle for generated directions.
+const proposals = new ProposalsRouter(repoRoot, integrations.getRepository());
+
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
   res.statusCode = statusCode;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -109,21 +132,41 @@ function writeSseData(res: ServerResponse, payload: unknown) {
   }
 }
 
-function resolveProvider(body: ChatRequest): string {
-  return body.provider?.trim() || DEFAULT_PROVIDER;
+function resolveTarget(body: ChatRequest): { provider: string; authMethod: string } {
+  let provider = body.provider?.trim() ?? '';
+  let authMethod = body.authMethod?.trim() ?? '';
+  // Tolerate composite adapter ids ('claude:claude-code') — clients that
+  // cached the briefly-exposed composite format keep working.
+  if (provider.includes(':')) {
+    const [family, method] = provider.split(':', 2);
+    provider = family;
+    if (!authMethod && method) authMethod = method;
+  }
+  if (!provider) {
+    provider = getAdapter(DEFAULT_PROVIDER) ? DEFAULT_PROVIDER : (listAdapters()[0]?.providerId ?? DEFAULT_PROVIDER);
+  }
+  return { provider, authMethod };
 }
 
-function createJob(messages: RequestMessage[], provider: string): AgentJob {
+function describeAvailableTargets(): string {
+  return listAdapters()
+    .map((adapter) => `${adapter.providerId} (${adapter.authMethod.id})`)
+    .join(', ');
+}
+
+function createJob(messages: RequestMessage[], provider: string, authMethod: string, figmaUrls?: string[]): AgentJob {
   const now = Date.now();
   return {
     id: randomUUID(),
     status: 'queued',
     provider,
+    authMethod,
     createdAt: now,
     updatedAt: now,
     events: [],
     listeners: new Set(),
     messages,
+    figmaUrls: figmaUrls?.filter((value): value is string => typeof value === 'string' && value.trim().length > 0),
   };
 }
 
@@ -160,7 +203,7 @@ function parseAfterOffset(req: IncomingMessage): number {
 
 async function runJob(job: AgentJob) {
   updateJobStatus(job, 'running');
-  const adapter = requireAdapter(job.provider);
+  const adapter = requireAdapter(job.provider, job.authMethod || undefined);
   const prompt = buildPrompt(job.messages);
   const abortController = new AbortController();
   job.abortController = abortController;
@@ -171,6 +214,9 @@ async function runJob(job: AgentJob) {
       cwd: repoRoot,
       onEvent: (event) => appendJobEvent(job, event),
       signal: abortController.signal,
+      ...(job.figmaUrls && job.figmaUrls.length > 0 && integrations.isFigmaConnected()
+        ? { mcpServers: buildRunMcpServers(job.figmaUrls) }
+        : {}),
     });
 
     const donePayload: AgentStreamDone = {
@@ -286,22 +332,12 @@ Respond as the assistant to the final user message.`;
 }
 
 async function bootstrap() {
-  // Read and register the Cursor adapter.
-  // Move env reading and validation inside bootstrap() so a missing Cursor key
-  // only prevents startup when Cursor is the sole registered provider — future
-  // adapters (e.g. Claude, Mock) can be registered independently.
-  const cursorApiKey = process.env.CURSOR_API_KEY?.trim() ?? '';
-  if (!cursorApiKey || cursorApiKey === 'cursor_xxx') {
-    throw new Error('Set CURSOR_API_KEY in apps/agent-orchestrator/.env before starting the API server.');
-  }
-  const cursorAdapter = new CursorAdapter({
-    apiKey: cursorApiKey,
-    requestedModel: process.env.CURSOR_MODEL?.trim() || '',
-    settingSources: (process.env.CURSOR_LOCAL_SETTING_SOURCES?.trim() || 'all') === 'all' ? ['all'] : [],
-  });
-  await cursorAdapter.initialize();
-  registerAdapter(cursorAdapter);
-  // Future adapters registered here: registerAdapter(new ClaudeAdapter(...))
+  // Describe every known provider auth method (Cursor, Claude, ChatGPT,
+  // Gemini) and register the ones that are configured and initialize cleanly.
+  await syncProviders();
+
+  // Restore connected integrations (Storybook/Figma/Repository) before serving.
+  await integrations.init();
 
   const server = createServer(async (req, res) => {
     if (!req.url || !req.method) {
@@ -319,12 +355,76 @@ async function bootstrap() {
       return;
     }
 
+    // Workspace integration routes (/api/integrations/*). Returns true once handled.
+    if (await integrations.handle(req, res, pathname, req.method)) {
+      return;
+    }
+
+    // Proposal staging routes (/api/agent/proposals/*). Returns true once handled.
+    if (await proposals.handle(req, res, pathname, req.method)) {
+      return;
+    }
+
     if (req.method === 'GET' && pathname === '/api/agent/health') {
       const providerHealth: Record<string, unknown> = {};
       for (const adapter of listAdapters()) {
         providerHealth[adapter.id] = adapter.health();
       }
       sendJson(res, 200, { repoRoot, providers: providerHealth });
+      return;
+    }
+
+    if (req.method === 'GET' && pathname === '/api/agent/providers') {
+      sendJson(res, 200, buildProvidersPayload());
+      return;
+    }
+
+    // Live recheck: re-read .env and re-probe every method (user-triggered).
+    if (req.method === 'POST' && pathname === '/api/agent/providers/refresh') {
+      try {
+        await syncProviders({ reloadEnvPaths: [appEnvPath, repoEnvPath] });
+        sendJson(res, 200, buildProvidersPayload());
+      } catch (error) {
+        sendJson(res, 500, { error: error instanceof Error ? error.message : 'Could not refresh providers.' });
+      }
+      return;
+    }
+
+    const personalKeyMatch = /^\/api\/agent\/providers\/([^/]+)\/personal-key$/.exec(pathname);
+    if (personalKeyMatch && (req.method === 'POST' || req.method === 'DELETE')) {
+      const providerId = decodeURIComponent(personalKeyMatch[1]);
+      try {
+        if (req.method === 'POST') {
+          const body = await readJsonBody<{ apiKey?: string }>(req);
+          await connectPersonalKey(providerId, body.apiKey ?? '');
+        } else {
+          await disconnectPersonalKey(providerId);
+        }
+        sendJson(res, 200, buildProvidersPayload());
+      } catch (error) {
+        sendJson(res, 400, { error: error instanceof Error ? error.message : 'Could not update the API key.' });
+      }
+      return;
+    }
+
+    // Generic disconnect/reconnect for any auth method with a real, user-owned
+    // connection (personal API keys, local-runtime CLI sign-ins). See
+    // providersCatalog.ts's disconnectMethod/reconnectMethod for why
+    // organisation-managed methods are refused here.
+    const methodLifecycleMatch = /^\/api\/agent\/providers\/([^/]+)\/methods\/([^/]+)\/(disconnect|reconnect)$/.exec(
+      pathname,
+    );
+    if (methodLifecycleMatch && req.method === 'POST') {
+      const providerId = decodeURIComponent(methodLifecycleMatch[1]!);
+      const methodId = decodeURIComponent(methodLifecycleMatch[2]!);
+      const action = methodLifecycleMatch[3];
+      try {
+        if (action === 'disconnect') await disconnectMethod(providerId, methodId);
+        else await reconnectMethod(providerId, methodId);
+        sendJson(res, 200, buildProvidersPayload());
+      } catch (error) {
+        sendJson(res, 400, { error: error instanceof Error ? error.message : 'Could not update this connection.' });
+      }
       return;
     }
 
@@ -337,17 +437,24 @@ async function bootstrap() {
           return;
         }
 
-        const provider = resolveProvider(body);
-        if (!getAdapter(provider)) {
-          const available = listAdapters().map((a) => a.id).join(', ');
-          sendJson(res, 400, { error: `Unknown provider '${provider}'. Available: ${available}` });
+        const target = resolveTarget(body);
+        if (!getAdapter(target.provider, target.authMethod || undefined)) {
+          sendJson(res, 400, {
+            error: `No connected runtime for provider '${target.provider}'${target.authMethod ? ` with auth method '${target.authMethod}'` : ''}. Available: ${describeAvailableTargets() || 'none — connect a provider first'}`,
+          });
           return;
         }
 
-        const job = createJob(messages, provider);
+        const job = createJob(messages, target.provider, target.authMethod, body.figmaUrls);
         jobs.set(job.id, job);
         void runJob(job);
-        sendJson(res, 202, { jobId: job.id, status: job.status, provider: job.provider, eventCount: job.events.length });
+        sendJson(res, 202, {
+          jobId: job.id,
+          status: job.status,
+          provider: job.provider,
+          ...(job.authMethod && { authMethod: job.authMethod }),
+          eventCount: job.events.length,
+        });
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unexpected server error.';
         sendJson(res, 500, { error: message });
@@ -439,11 +546,12 @@ async function bootstrap() {
           return;
         }
 
-        const provider = resolveProvider(body);
-        const adapter = getAdapter(provider);
+        const target = resolveTarget(body);
+        const adapter = getAdapter(target.provider, target.authMethod || undefined);
         if (!adapter) {
-          const available = listAdapters().map((a) => a.id).join(', ');
-          sendJson(res, 400, { error: `Unknown provider '${provider}'. Available: ${available}` });
+          sendJson(res, 400, {
+            error: `No connected runtime for provider '${target.provider}'${target.authMethod ? ` with auth method '${target.authMethod}'` : ''}. Available: ${describeAvailableTargets() || 'none — connect a provider first'}`,
+          });
           return;
         }
 
@@ -452,11 +560,14 @@ async function bootstrap() {
           cwd: repoRoot,
           onEvent: () => {},
           signal: new AbortController().signal,
+          ...(body.figmaUrls && body.figmaUrls.length > 0 && integrations.isFigmaConnected()
+            ? { mcpServers: buildRunMcpServers(body.figmaUrls) }
+            : {}),
         });
 
         sendJson(res, 200, {
           status: result.status,
-          provider,
+          provider: target.provider,
           runId: result.runId,
           durationMs: result.durationMs,
           model: result.model,
@@ -490,11 +601,12 @@ async function bootstrap() {
           return;
         }
 
-        const provider = resolveProvider(body);
-        const adapter = getAdapter(provider);
+        const target = resolveTarget(body);
+        const adapter = getAdapter(target.provider, target.authMethod || undefined);
         if (!adapter) {
-          const available = listAdapters().map((a) => a.id).join(', ');
-          sendJson(res, 400, { error: `Unknown provider '${provider}'. Available: ${available}` });
+          sendJson(res, 400, {
+            error: `No connected runtime for provider '${target.provider}'${target.authMethod ? ` with auth method '${target.authMethod}'` : ''}. Available: ${describeAvailableTargets() || 'none — connect a provider first'}`,
+          });
           return;
         }
 
@@ -511,6 +623,9 @@ async function bootstrap() {
           cwd: repoRoot,
           onEvent: (event) => writeSseData(res, event),
           signal: abortController.signal,
+          ...(body.figmaUrls && body.figmaUrls.length > 0 && integrations.isFigmaConnected()
+            ? { mcpServers: buildRunMcpServers(body.figmaUrls) }
+            : {}),
         });
 
         writeSseData(res, {
@@ -555,6 +670,10 @@ async function bootstrap() {
       }
     }
   }, 60_000);
+
+  // Best-effort cleanup for abandoned proposal staging dirs (browser closed before discard fired).
+  void proposals.sweepStaleStagingDirs();
+  setInterval(() => void proposals.sweepStaleStagingDirs(), 30 * 60 * 1000);
 
   server.listen(port, () => {
     console.log(`Agent API listening on http://localhost:${port}`);

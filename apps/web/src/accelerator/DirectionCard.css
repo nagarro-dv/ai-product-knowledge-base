@@ -1,0 +1,291 @@
+/* ── Direction as a product proposal ─────────────────────────────────────
+   Identity chips → dominant preview → one meta line → prose disclosed. */
+
+.directionCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-xl);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-sm);
+  transition: box-shadow var(--dur-base) var(--ease-standard);
+  /* A grid item's default min-width is auto, i.e. its content's min-content
+     size. directionCard__summary below uses white-space: nowrap so its
+     min-content width is its FULL single-line width — for a long summary
+     that can be thousands of pixels, blowing the whole card (and the grid
+     track) out past the viewport instead of letting the summary's own
+     ellipsis truncation do its job. */
+  min-width: 0;
+}
+
+.directionCard:hover {
+  box-shadow: var(--elev-md);
+}
+
+/* Deliberately selected — accent ring + soft glow, not a browser outline. */
+.directionCard--chosen,
+.directionCard--chosen:hover {
+  border-color: var(--ds-general-color-primary);
+  box-shadow:
+    inset 0 0 0 1px var(--ds-general-color-primary),
+    0 4px 20px color-mix(in srgb, var(--ds-general-color-primary) 16%, transparent);
+}
+
+.directionCard__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+}
+
+.directionCard__eyebrowRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.directionCard__eyebrow {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.directionCard__star {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-2xs);
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+}
+
+.directionCard__star svg {
+  color: var(--ds-general-color-primary);
+}
+
+.directionCard__title {
+  margin: 0;
+}
+
+/* Plain text, middot-separated — the identity of a direction is the words,
+   not a row of pill shapes. */
+.directionCard__highlights {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+
+.directionCard__highlight {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.directionCard__highlight:not(:last-child)::after {
+  content: "·";
+  margin: 0 var(--ds-general-gap-xs);
+  color: var(--ds-general-color-border-alt-1, var(--ds-general-color-muted-foreground));
+}
+
+/* ── Preview — the hero ── */
+
+.directionCard__preview {
+  position: relative;
+  min-width: 0;
+}
+
+/* A card-column preview is necessarily small — this is the way out of it
+   without forcing a commitment first: inspect near life-size, then decide. */
+.directionCard__expandButton {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px var(--ds-general-padding-sm);
+  border-radius: var(--ds-general-radius-full);
+  border: 1px solid var(--ds-general-color-border);
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 90%, transparent);
+  backdrop-filter: blur(4px);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: var(--elev-xs);
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.directionCard__expandButton:hover {
+  background: var(--ds-general-color-canvas);
+}
+
+.directionCard__expandButton:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.directionCard__expandBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: var(--ds-general-padding-3xl);
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 45%, transparent);
+}
+
+.directionCard__expandModal {
+  width: min(100%, 960px);
+  max-height: min(88vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--ds-general-radius-rounded-2xl);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-md);
+  overflow: hidden;
+}
+
+.directionCard__expandHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-xl);
+  border-bottom: 1px solid var(--ds-general-color-border);
+}
+
+.directionCard__expandHeader h3 {
+  margin: 4px 0 0;
+}
+
+/* The ONE scroll surface inside the modal — a modal is viewport-bound (it
+   genuinely can't grow past the screen the way an inline card can just make
+   the page taller), so unlike the inline card's preview, this stays
+   scrollable. What must never happen is a SECOND, nested scrollbar inside
+   the stage/iframe on top of this one — the stage below is sized exactly to
+   its real content height (see ResponsivePreviewStage's contentSize prop),
+   never a fixed height, so it never independently scrolls. */
+.directionCard__expandStage {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: var(--ds-general-padding-xl);
+  overflow: auto;
+}
+
+.directionCard__expandFooter {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-xl);
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.directionCard__noPreview {
+  min-height: 320px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px dashed var(--ds-general-color-border);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.directionCard__noPreview p {
+  margin: 0;
+}
+
+/* ── Meta line ── */
+
+.directionCard__meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-md);
+}
+
+.directionCard__complexity {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  color: var(--ds-general-color-foreground);
+}
+
+.directionCard__metaItem {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* One line — full text on hover. */
+.directionCard__summary {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.directionCard__details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+}
+
+.directionCard__details > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+}
+
+.directionCard__details p {
+  margin: 0;
+}
+
+.directionCard__detailLabel {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.directionCard__list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+}
+
+/* Pinned to the card bottom so both proposals' actions align exactly.
+   Unchosen: a raised white button (a gray fill reads disabled). */
+.directionCard__choose {
+  width: 100%;
+  justify-content: center;
+  margin-top: auto;
+}
+
+.directionCard__choose.ds-btn--secondary {
+  background: var(--ds-general-color-canvas);
+  border: 1px solid var(--ds-general-color-border);
+  box-shadow: var(--elev-xs);
+  transition: background-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.directionCard__choose.ds-btn--secondary:hover:not(:disabled) {
+  background: var(--ds-general-color-background);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .directionCard {
+    transition: none;
+  }
+}

@@ -1,0 +1,112 @@
+/* Borderless and centered — the working state is a moment of calm, not
+   another card competing for attention. */
+.generationProgress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.generationProgress__list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.generationProgress__step {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  color: var(--ds-general-color-muted-foreground);
+  transition: color var(--dur-base) var(--ease-standard);
+}
+
+.generationProgress__marker {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--ds-general-radius-full);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  color: var(--ds-general-color-foreground);
+  transition: border-color var(--dur-base) var(--ease-standard), background var(--dur-base) var(--ease-standard);
+}
+
+.generationProgress__step--current {
+  color: var(--ds-general-color-foreground);
+}
+
+.generationProgress__step--current .generationProgress__marker {
+  border-color: var(--ds-general-color-primary);
+}
+
+.generationProgress__step--done .generationProgress__marker {
+  border-color: var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-muted);
+}
+
+/* The model's actual reasoning — the substantive thing to read while
+   waiting, not a synthesized "Working…" pill. Grows to fit whatever text is
+   currently streaming in, never its own internal scrollbar — the page
+   scrolls, this card doesn't. Styled like a quiet transcript, not a loud
+   card. */
+.generationProgress__thinking {
+  width: 100%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--ds-general-padding-md) var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  text-align: left;
+}
+
+.generationProgress__thinkingEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ds-general-color-accent);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.generationProgress__thinkingText {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-style: italic;
+  white-space: pre-line;
+}
+
+/* One line of live process truth — independent of the thinking panel above,
+   so a tool call mid-thought doesn't bump the reasoning off screen. */
+.generationProgress__activity {
+  margin: 0;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.generationProgress__reassurance {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .generationProgress__step,
+  .generationProgress__marker {
+    transition: none;
+  }
+}

@@ -2,3 +2,17 @@ node_modules/
 dist/
 .DS_Store
 *.log
+.env
+.env.local
+.credentials.json
+.credentials-meta.json
+.integrations.json
+.integration-tokens.json
+.dismissed-methods.json
+apps/web/src/accelerator/.generated/
+apps/agent-orchestrator/.workspace-repos/
+
+*storybook.log
+storybook-static
+
+.claude/settings.local.json

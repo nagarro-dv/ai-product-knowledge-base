@@ -1,0 +1,72 @@
+.settingsView {
+  height: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-2xl);
+  padding: var(--ds-general-padding-4xl);
+  background: var(--ds-general-color-background);
+  border-radius: var(--ds-general-radius-rounded-xl);
+}
+
+/* A list of short rows (icon, name, one status word) stretched to a
+   1440px viewport reads as an empty dashboard, not a considered settings
+   page — every real product caps this kind of content to a comfortable
+   scanning width. Same 860px anchor as the analysis checkpoint elsewhere
+   in the product, so both "documents" in the app share one reading
+   measure instead of each screen inventing its own. */
+.settingsView__header,
+.settingsView__body {
+  width: 100%;
+  max-width: 860px;
+}
+
+.settingsView__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-2xl);
+  flex-wrap: wrap;
+}
+
+.settingsView__header h1 {
+  margin: 0;
+}
+
+.settingsView__tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  border: 1px solid var(--ds-general-color-border);
+}
+
+.settingsView__tab {
+  border: none;
+  padding: 6px 14px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: transparent;
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  cursor: pointer;
+}
+
+.settingsView__tab--active {
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-foreground);
+  font-weight: 600;
+}
+
+.settingsView__tab:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.settingsView__body {
+  min-height: 0;
+}

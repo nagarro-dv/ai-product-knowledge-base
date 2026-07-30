@@ -49,11 +49,21 @@ const GENERIC_FONT_FAMILIES = new Set([
 /**
  * Map Token Studio / Figma font names to the family name registered in web `@font-face`
  * (e.g. Fontsource). JSON stays designer-facing per token-consistency skill.
+ *
+ * Equip / Equip Extended are Nagarro's licensed brand faces — we don't have those
+ * font files in this repo, so there's no @font-face for them yet. Keep the real
+ * name first in the stack (so dropping in the licensed files later just works, no
+ * further code changes) followed by Plus Jakarta Sans — a self-hosted stand-in
+ * (see index.css) chosen so the Nagarro theme reads as its own typeface today
+ * instead of silently rendering in the default theme's font — then a system
+ * fallback for the offline/font-blocked case.
  */
 export function mapDesignerFontFamilyToWebCss(value: string): string {
   const t = value.trim();
-  if (t === "Geist" || t === "Equip") return "Geist Sans";
-  if (t === "Equip Extended") return "Geist Sans";
+  const systemFallback = "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif";
+  if (t === "Geist") return "Geist Sans";
+  if (t === "Equip") return `Equip, Plus Jakarta Sans, ${systemFallback}`;
+  if (t === "Equip Extended") return `Equip Extended, Equip, Plus Jakarta Sans, ${systemFallback}`;
   return value;
 }
 

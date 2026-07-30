@@ -1,0 +1,42 @@
+.settingsSectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+}
+
+.settingsSectionHeader__description {
+  margin: 0;
+  max-width: 640px;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.settingsSectionHeader__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-md);
+}
+
+.settingsSectionHeader__checkedAt {
+  color: var(--ds-general-color-muted-foreground);
+  white-space: nowrap;
+}
+
+.settingsSectionHeader__spin {
+  animation: settingsSectionHeader-spin 0.9s linear infinite;
+}
+
+@keyframes settingsSectionHeader-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .settingsSectionHeader__spin {
+    animation: none;
+  }
+}

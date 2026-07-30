@@ -1,0 +1,212 @@
+.historyDrawer__root {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+}
+
+.historyDrawer__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 24%, transparent);
+}
+
+.historyDrawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(460px, 100vw);
+  max-width: 100vw;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: var(--ds-general-gap-2xl);
+  padding: var(--ds-general-gap-2xl);
+  border-left: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  box-shadow: -20px 0 40px color-mix(in srgb, var(--ds-general-color-foreground) 14%, transparent);
+  /* Only ever scrolls vertically — a lone `overflow-y: auto` computes the
+     other axis to `auto` too per spec, which is what let cards force a
+     horizontal scrollbar instead of wrapping. */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.historyDrawer__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+}
+
+.historyDrawer__headerTitles {
+  display: grid;
+  gap: 4px;
+}
+
+.historyDrawer__header h2 {
+  margin: 0;
+}
+
+.historyDrawer__note {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.historyDrawer__empty {
+  display: grid;
+  justify-items: center;
+  gap: var(--ds-general-gap-xs);
+  align-content: center;
+  text-align: center;
+  padding: var(--ds-general-padding-3xl) var(--ds-general-padding-xl);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  border: 1px dashed var(--ds-general-color-border-alt-1);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.historyDrawer__emptyIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--ds-general-gap-xs);
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.historyDrawer__empty p {
+  margin: 0;
+}
+
+.historyDrawer__emptyHint {
+  max-width: 26rem;
+}
+
+/* ── Run list — each run is its own bounded, elevated artefact, not a row in
+   a table. Real whitespace between cards does the separating work that a
+   hairline divider can't. ─────────────────────────────────────────────── */
+
+.historyDrawer__list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.historyDrawer__card {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-xl);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: var(--ds-general-color-canvas);
+  text-align: left;
+  cursor: pointer;
+  box-shadow: var(--elev-xs);
+  transition: box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-out);
+}
+
+/* A deliberate, crafted interactive state — a raised card and a darker
+   border, never the browser's default blue focus ring. */
+.historyDrawer__card:hover,
+.historyDrawer__card:focus-visible {
+  border-color: color-mix(in srgb, var(--ds-general-color-foreground) 24%, var(--ds-general-color-border));
+  box-shadow:
+    0 12px 28px color-mix(in srgb, var(--ds-general-color-foreground) 9%, transparent),
+    0 2px 6px color-mix(in srgb, var(--ds-general-color-foreground) 5%, transparent);
+  transform: translateY(-2px);
+}
+
+.historyDrawer__card:focus-visible {
+  outline: none;
+}
+
+.historyDrawer__cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+  min-width: 0;
+}
+
+.historyDrawer__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-general-color-foreground);
+}
+
+.historyDrawer__affordance {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--ds-general-color-muted-foreground);
+  opacity: 0;
+  transform: translate(-3px, 3px);
+  transition: opacity var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-out);
+}
+
+.historyDrawer__card:hover .historyDrawer__affordance,
+.historyDrawer__card:focus-visible .historyDrawer__affordance {
+  opacity: 1;
+  transform: translate(0, 0);
+}
+
+.historyDrawer__summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  min-width: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.historyDrawer__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  min-width: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  letter-spacing: 0.01em;
+}
+
+.historyDrawer__statusDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-success-foreground);
+}
+
+.historyDrawer__statusDot--stopped {
+  background: var(--ds-general-color-warning-foreground);
+}
+
+.historyDrawer__statusDot--error {
+  background: var(--ds-general-color-destructive-foreground);
+}
+
+.historyDrawer__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: var(--ds-general-gap-lg);
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.historyDrawer__count {
+  color: var(--ds-general-color-muted-foreground);
+}

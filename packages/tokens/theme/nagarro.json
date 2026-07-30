@@ -13,7 +13,7 @@
         }
       },
       "primary-foreground": {
-        "value": "{clay.stable.950}",
+        "value": "#ffffff",
         "type": "color",
         "$extensions": {
           "com.figma.scopes": [
@@ -6653,7 +6653,7 @@
           }
         },
         "hover": {
-          "value": "{general.color.ghost-hover}",
+          "value": "{general.color.muted-alt-1}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6673,7 +6673,7 @@
           }
         },
         "border": {
-          "value": "{general.color.border}",
+          "value": "{general.color.muted-foreground}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6717,7 +6717,7 @@
       },
       "neutral": {
         "background": {
-          "value": "{general.color.primary}",
+          "value": "{general.color.foreground}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6727,7 +6727,7 @@
           }
         },
         "hover": {
-          "value": "{general.color.primary-hover}",
+          "value": "{general.color.secondary-foreground}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6737,7 +6737,17 @@
           }
         },
         "foreground": {
-          "value": "{general.color.primary-foreground}",
+          "value": "{alpha.100}",
+          "type": "color",
+          "$extensions": {
+            "com.figma.scopes": [
+              "ALL_SCOPES"
+            ],
+            "com.figma.hiddenFromPublishing": true
+          }
+        },
+        "border": {
+          "value": "{general.color.border-alt-1}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6749,7 +6759,7 @@
       },
       "success": {
         "background": {
-          "value": "{general.color.destructive.surface}",
+          "value": "{general.color.success.surface}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6759,7 +6769,7 @@
           }
         },
         "hover": {
-          "value": "{general.color.destructive.surface-hover}",
+          "value": "{general.color.success.surface-hover}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6769,7 +6779,7 @@
           }
         },
         "foreground": {
-          "value": "{general.color.destructive.surface-foreground}",
+          "value": "{general.color.success.surface-foreground}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6781,7 +6791,7 @@
       },
       "warning": {
         "background": {
-          "value": "{general.color.destructive.surface}",
+          "value": "{general.color.warning.surface}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6791,7 +6801,7 @@
           }
         },
         "hover": {
-          "value": "{general.color.destructive.surface-hover}",
+          "value": "{general.color.warning.surface-hover}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [
@@ -6801,7 +6811,7 @@
           }
         },
         "foreground": {
-          "value": "{general.color.destructive.surface-foreground}",
+          "value": "{general.color.warning.surface-foreground}",
           "type": "color",
           "$extensions": {
             "com.figma.scopes": [

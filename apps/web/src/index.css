@@ -3,6 +3,18 @@
 @import "@fontsource/geist-sans/600.css";
 @import "@fontsource/geist-sans/700.css";
 
+/* Stand-in for Nagarro's licensed Equip/Equip Extended faces, which aren't
+   available as files in this repo. Loaded (not just referenced) so the
+   Nagarro theme actually reads as a distinct typeface today instead of
+   silently falling back to the same font the default theme uses. Swap for
+   real @font-face rules the moment the licensed files are available — see
+   packages/tokens/flatten.ts mapDesignerFontFamilyToWebCss. */
+@import "@fontsource/plus-jakarta-sans/400.css";
+@import "@fontsource/plus-jakarta-sans/500.css";
+@import "@fontsource/plus-jakarta-sans/600.css";
+@import "@fontsource/plus-jakarta-sans/700.css";
+@import "@fontsource/plus-jakarta-sans/800.css";
+
 @import "./styles/tokens.generated.css";
 @import "./styles/typography.semantic.css";
 

@@ -104,11 +104,38 @@
   background: var(--ds-button-color-primary-background);
   color: var(--ds-button-color-primary-foreground);
   box-shadow: none;
+
+  /*
+   * Hover "pop" — scoped to the primary style only (not the shared .ds-btn
+   * base class), so secondary/ghost/destructive/inverse/raised are
+   * untouched. transform is the only animated property, so this never
+   * triggers layout reflow. Resting scale is set here so the transition
+   * has a defined starting point for both directions (in and out).
+   */
+  transform: scale(1);
+  transition: transform var(--dur-fast, 120ms) var(--ease-standard, ease-out);
 }
 
+/* —— hover/active "pop" (primary only) —— */
 .ds-btn--primary:hover:not(:disabled),
 .ds-btn--primary:active:not(:disabled) {
-  background: var(--ds-button-color-primary-hover);
+  background: color-mix(
+    in srgb,
+    var(--ds-button-color-primary-background) 86%,
+    var(--ds-button-color-primary-foreground) 14%
+  );
+  transform: scale(1.03);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-btn--primary {
+    transition: none;
+  }
+
+  .ds-btn--primary:hover:not(:disabled),
+  .ds-btn--primary:active:not(:disabled) {
+    transform: none;
+  }
 }
 
 .ds-btn--primary:focus-visible {

@@ -1,0 +1,326 @@
+/* ── Analysis checkpoint as a decision brief ─────────────────────────────
+   Hierarchy comes from typography and spacing, never coloured boxes.
+   Verdict (3s) → scope (10s) → only-if-needed questions → everything else
+   one disclosure away. */
+
+.analysisDash {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xl);
+}
+
+.analysisDash__unstructured {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.analysisDash__unstructured p {
+  margin: 0;
+}
+
+.analysisDash__unstructured svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--ds-general-color-warning-foreground);
+}
+
+/* ── Verdict ── */
+
+.analysisDash__verdict {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-lg);
+}
+
+.analysisDash__targetIcon {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+.analysisDash__verdictText {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  min-width: 0;
+}
+
+.analysisDash__titleRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-general-gap-md);
+  flex-wrap: wrap;
+}
+
+.analysisDash__target {
+  margin: 0;
+}
+
+.analysisDash__target:focus-visible {
+  outline: none;
+}
+
+.analysisDash__targetPath {
+  font-family: var(--ds-general-typography-font-family-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 12px;
+  color: var(--ds-general-color-muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.analysisDash__typeLabel {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.analysisDash__confidence {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  margin-top: var(--ds-general-gap-2xs);
+}
+
+.analysisDash__confidenceLabel {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 500;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.analysisDash__meter {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.analysisDash__meterSeg {
+  width: 16px;
+  height: 5px;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-muted);
+}
+
+.analysisDash__meterSeg--on {
+  background: var(--ds-general-color-primary);
+}
+
+.analysisDash__outcome {
+  margin: var(--ds-general-gap-xs) 0 0;
+  max-width: 640px;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── Sections — labelled by typography, separated by spacing, not boxes ── */
+
+.analysisDash__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+}
+
+.analysisDash__sectionTitle {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+}
+
+.analysisDash__scopeList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+}
+
+.analysisDash__scopeItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  color: var(--ds-general-color-foreground);
+}
+
+.analysisDash__scopeItem svg {
+  flex-shrink: 0;
+  margin-top: 3px;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.analysisDash__scopeOut {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── Questions — one hairline divider between rows, no card, no badge ── */
+
+.analysisDash__questionList {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+}
+
+.analysisDash__questionItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-padding-sm) 0;
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.analysisDash__questionItem:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.analysisDash__questionRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--ds-general-gap-sm);
+  min-width: 0;
+}
+
+.analysisDash__questionText {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--ds-general-color-foreground);
+}
+
+.analysisDash__itemAction {
+  flex-shrink: 0;
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  padding: 0;
+  color: var(--ds-general-color-accent);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.analysisDash__itemAction:hover {
+  text-decoration: underline;
+}
+
+.analysisDash__itemAction:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+/* ── Inline question resolution — answered in place, never in a composer ── */
+
+.analysisDash__resolver {
+  display: flex;
+  gap: var(--ds-general-gap-sm);
+}
+
+.analysisDash__resolverInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  padding: var(--ds-general-padding-2xs) var(--ds-general-padding-sm);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.analysisDash__resolverInput:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.analysisDash__resolverSubmit {
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-primary);
+  color: var(--ds-general-color-primary-foreground);
+  padding: var(--ds-general-padding-2xs) var(--ds-general-padding-md);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.analysisDash__resolverSubmit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.analysisDash__resolverSubmit:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.analysisDash__resolved {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-xs);
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.analysisDash__resolved svg {
+  flex-shrink: 0;
+  color: var(--ds-general-color-foreground);
+}
+
+.analysisDash__resolvedAnswer {
+  color: var(--ds-general-color-foreground);
+  font-weight: 600;
+}
+
+/* ── Full analysis disclosure ── */
+
+.analysisDash__full {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.analysisDash__fullBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+}
+
+.analysisDash__fullBlock p {
+  margin: 0;
+}
+
+.analysisDash__fullLabel {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.analysisDash__fullProse {
+  white-space: pre-line;
+}
+
+.analysisDash__fullList {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+}
+
+.analysisDash__raw {
+  white-space: pre-line;
+  color: var(--ds-general-color-muted-foreground);
+}

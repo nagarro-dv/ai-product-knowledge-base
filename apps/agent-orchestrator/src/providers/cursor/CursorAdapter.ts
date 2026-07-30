@@ -18,8 +18,18 @@ export type CursorAdapterConfig = {
 };
 
 export class CursorAdapter implements AiProviderAdapter {
-  readonly id = 'cursor';
-  readonly label = 'Cursor';
+  readonly id = 'cursor:api-key';
+  readonly providerId = 'cursor';
+  readonly providerLabel = 'Cursor';
+  readonly label = 'Cursor (API key)';
+  readonly authMethod = {
+    id: 'api-key',
+    label: 'Managed by organisation',
+    kind: 'api-key',
+    source: 'organisation',
+    description: 'Uses a Cursor API key configured centrally by your workspace admin. Billed to the organisation.',
+  } as const;
+  readonly capabilities = { localRepoEdits: true, streaming: true, mcp: true } as const;
 
   private readonly apiKey: string;
   private readonly requestedModel: string;

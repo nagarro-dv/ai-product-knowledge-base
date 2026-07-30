@@ -1,4 +1,5 @@
 import type { SDKMessage, TextBlock, ToolUseBlock } from '@cursor/sdk';
+import type { NormalizedEvent } from '../types.js';
 
 function truncate(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max)}…`;
@@ -8,8 +9,8 @@ function isTextBlock(block: TextBlock | ToolUseBlock): block is TextBlock {
   return block.type === 'text';
 }
 
-/** Maps one SDK stream message to small JSON payloads for the browser (SSE `data:` lines). */
-export function sdkMessageToSsePayloads(message: SDKMessage): Record<string, unknown>[] {
+/** Maps one SDK stream message to normalized events for the browser (SSE `data:` lines). */
+export function sdkMessageToSsePayloads(message: SDKMessage): NormalizedEvent[] {
   switch (message.type) {
     case 'thinking':
       return message.text.trim()

@@ -2,41 +2,128 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  /* Shared elevation recipe for surfaces raised off the page canvas — used
+     across the Accelerator and Settings so both halves of the product read
+     as the same system instead of one feeling flat next to the other. */
+  --elev-xs: 0 1px 2px color-mix(in srgb, var(--ds-general-color-foreground) 6%, transparent);
+  --elev-sm:
+    0 1px 2px color-mix(in srgb, var(--ds-general-color-foreground) 6%, transparent),
+    0 3px 10px color-mix(in srgb, var(--ds-general-color-foreground) 5%, transparent);
+  --elev-md:
+    0 2px 4px color-mix(in srgb, var(--ds-general-color-foreground) 7%, transparent),
+    0 10px 24px color-mix(in srgb, var(--ds-general-color-foreground) 8%, transparent);
+
+  /* Shared motion system. Before this, transition durations were picked ad
+     hoc per component (100/150/160/180/200/400ms, all on flat `ease`) —
+     scattered enough that no two interactions moved at quite the same
+     speed. One duration scale plus two considered curves, used everywhere:
+     --ease-out for anything appearing or settling into place (reveals,
+     entrances — decelerates hard, never overshoots), --ease-standard for
+     anything reversible (hover, toggle, focus — symmetric, never sluggish). */
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 280ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.app-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 56px;
+  padding: 0 var(--ds-general-gap-2xl);
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.app-topbar__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  border: none;
+  background: transparent;
+  padding: var(--ds-general-gap-xs) var(--ds-general-gap-sm);
+  margin-left: calc(-1 * var(--ds-general-gap-sm));
+  border-radius: var(--ds-general-radius-rounded-md);
+  color: var(--ds-general-color-foreground);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.app-topbar__brand:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.app-topbar__brand:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+/* The one deliberately saturated surface in the whole shell — everything
+   else in the product speaks in neutrals, so this tile is where the brand
+   actually shows up. A gray placeholder here read as "nobody designed this
+   yet"; a small confident block of the real accent color reads as owned. */
+.app-topbar__logo {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: linear-gradient(155deg, var(--ds-general-color-primary-hover) 0%, var(--ds-general-color-primary) 100%);
+  color: var(--ds-general-color-primary-foreground);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 12%, transparent);
+}
+
+.app-topbar__title {
+  font-family: var(--ds-general-typography-font-family-headings);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ds-general-color-foreground);
+}
+
+.app-topbar__settings {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  border: none;
+  background: transparent;
+  padding: var(--ds-general-gap-sm) var(--ds-general-gap-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+}
+
+.app-topbar__settings:hover {
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+.app-topbar__settings.is-active {
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+.app-topbar__settings:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
 }
 
 .app-body {
-  --app-nav-width: 120px;
-  display: block;
-  min-height: 100vh;
-}
-
-.app-body--with-context {
-  --app-nav-width: 360px;
-}
-
-.app-nav-stack {
-  position: fixed;
-  inset: 0 auto 0 0;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
-  width: var(--app-nav-width);
-  height: 100vh;
-  z-index: 1000;
-  transition: width 0.32s cubic-bezier(0.33, 1, 0.68, 1);
-}
-
-.app-body--flowsContextCollapsed {
-  --app-nav-width: 120px;
-}
-
-.app-nav-stack--flowsContextCollapsed .app-context-sidebar--flowsCollapsed {
-  width: 0;
-  min-width: 0;
-  padding-left: 0;
-  padding-right: 0;
-  opacity: 0;
-  overflow: hidden;
-  pointer-events: none;
-  border-right-width: 0;
+  flex-direction: column;
 }
 
 /* Shared control styles across playground forms. */
@@ -87,138 +174,6 @@
     0.3rem 0.3rem;
   background-repeat: no-repeat;
   padding-right: 1.6rem;
-}
-
-.app-icon-sidebar {
-  width: 120px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  padding: var(--ds-general-gap-2xl) var(--ds-general-gap-xl);
-  border-right: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-  height: 100%;
-  /* Must stay visible: overflow-y:auto on a parent clips horizontal overflow of
-     absolutely positioned tooltips (CSS treats the other axis as non-visible too). */
-  overflow: visible;
-}
-
-.app-icon-sidebar__title {
-  margin: 0 0 32px;
-  padding: 0 0.15rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ds-general-color-muted-foreground);
-  text-align: center;
-}
-
-.app-icon-sidebar__brandmark {
-  margin: 0 0 0.5rem;
-  padding: 0 0.15rem;
-  display: flex;
-  justify-content: center;
-}
-
-.app-icon-sidebar__logo {
-  width: 48px;
-  height: 48px;
-  border-radius: var(--ds-general-radius-rounded-lg);
-  background: var(--ds-general-color-muted);
-  color: var(--ds-general-color-foreground);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.75rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-}
-
-.app-icon-sidebar__nav {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  flex: 1;
-  min-height: 0;
-  gap: 0.45rem;
-}
-
-.app-icon-sidebar__group {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
-}
-
-.app-icon-sidebar__group--bottom {
-  margin-top: auto;
-}
-
-.app-icon-sidebar__linkWrap {
-  position: relative;
-  display: inline-flex;
-  z-index: 0;
-}
-
-.app-icon-sidebar__linkWrap:hover,
-.app-icon-sidebar__linkWrap:focus-within {
-  z-index: 30;
-}
-
-.app-icon-sidebar__link {
-  width: 64px;
-  height: 64px;
-  border: none;
-  border-radius: var(--ds-general-radius-rounded-lg);
-  background: transparent;
-  color: var(--ds-general-color-foreground);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.app-icon-sidebar__link:hover {
-  background: var(--ds-general-color-muted);
-}
-
-.app-icon-sidebar__link.is-active {
-  color: var(--ds-general-color-foreground);
-  background: var(--ds-general-color-muted);
-}
-
-.app-icon-sidebar__link:focus-visible {
-  outline: 2px solid var(--ds-general-color-border);
-  outline-offset: 1px;
-}
-
-.app-icon-sidebar__linkTooltip {
-  position: absolute;
-  left: calc(100% + var(--ds-general-gap-md));
-  top: 50%;
-  transform: translateY(-50%);
-  opacity: 0;
-  pointer-events: none;
-  z-index: 20;
-  transition: opacity 120ms ease;
-}
-
-.app-icon-sidebar__linkWrap:hover .app-icon-sidebar__linkTooltip,
-.app-icon-sidebar__linkWrap:focus-within .app-icon-sidebar__linkTooltip {
-  opacity: 1;
-}
-
-.app-icon-sidebar__linkTooltip .ds-tooltip {
-  padding: var(--ds-general-gap-sm) var(--ds-general-gap-md);
-}
-
-.app-icon-sidebar__linkTooltip .ds-tooltip__label {
-  font-size: 0.875rem;
-  line-height: 1.25rem;
-  white-space: nowrap;
 }
 
 .app-context-sidebar {
@@ -377,20 +332,16 @@
 }
 
 .app-main-column {
-  margin-left: var(--app-nav-width);
-  width: calc(100vw - var(--app-nav-width));
+  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
-  height: 100vh;
-  min-height: 100vh;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: 1.5rem 1.75rem 2rem;
   background: var(--ds-general-color-background);
   box-sizing: border-box;
   overflow: auto;
-  transition:
-    margin-left 0.32s cubic-bezier(0.33, 1, 0.68, 1),
-    width 0.32s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 .app-main-column--flowsFull {
@@ -433,4 +384,48 @@
   padding: 0.05rem 0.25rem;
   border-radius: var(--ds-general-radius-rounded-sm);
   background: var(--ds-general-color-muted);
+}
+
+.app-jiraBanner {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  margin: var(--ds-general-gap-lg) var(--ds-general-gap-2xl) 0;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.app-jiraBanner--success {
+  border-color: var(--ds-general-color-success-border);
+  background: var(--ds-general-color-success-muted);
+  color: var(--ds-general-color-success-foreground);
+}
+
+.app-jiraBanner--error {
+  border-color: var(--ds-general-color-warning-border);
+  background: var(--ds-general-color-warning-muted);
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.app-jiraBanner span {
+  flex: 1 1 auto;
+}
+
+.app-jiraBanner__dismiss {
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.app-jiraBanner__dismiss:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
 }

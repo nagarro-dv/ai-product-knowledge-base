@@ -1,0 +1,29 @@
+/* ── Refine — a real, findable secondary action, not a whisper. Same visual
+   weight as "Add source" elsewhere in the product, not a muted ghost link.
+   Expanded, it reuses the AiAgentInput composer (see AiAgentInput.css) for
+   sizing and the built-in "Add source" affordance, so this file only styles
+   the surrounding card and its header. ─────────────────────────────────── */
+
+.accelerator__refineBox {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  padding: var(--ds-general-padding-lg);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-xs);
+}
+
+.accelerator__refineBoxHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+}
+
+.accelerator__refineBoxTitle {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+}

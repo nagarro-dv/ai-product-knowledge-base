@@ -27,36 +27,57 @@
   left: 0;
 }
 
+.aiAttachment--tag {
+  max-width: 240px;
+  min-width: 0;
+}
+
 .aiAttachment__tag {
   display: inline-flex;
   align-items: center;
   gap: var(--ds-general-gap-xs);
-  min-height: 32px;
-  border-radius: var(--ds-general-radius-rounded-md);
-  padding: 0 var(--ds-general-gap-sm) 0 var(--ds-general-gap-md);
-  background: var(--ds-general-color-muted);
+  min-width: 0;
+  min-height: 30px;
+  border-radius: var(--ds-general-radius-full);
+  padding: 0 var(--ds-general-gap-xs) 0 var(--ds-general-gap-sm);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
 }
 
 .aiAttachment.is-hovered .aiAttachment__tag {
-  background: var(--ds-general-color-muted-alt-1);
+  background: var(--ds-general-color-muted);
 }
 
 .aiAttachment__tagIcon {
   display: inline-flex;
   flex-shrink: 0;
-  width: 20px;
-  height: 20px;
+  width: 16px;
+  height: 16px;
   align-items: center;
   justify-content: center;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiAttachment__tagType {
+  flex-shrink: 0;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ds-general-color-muted-foreground);
 }
 
 .aiAttachment__tagValue {
   margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--ds-general-typography-font-family-body);
-  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
   font-style: normal;
   font-weight: 600;
-  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
   color: var(--ds-general-color-foreground);
 }
 
@@ -88,6 +109,7 @@
   background: transparent;
   color: var(--ds-general-color-foreground);
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .aiAttachment__tagClose:hover {
@@ -140,6 +162,7 @@
   background: transparent;
   color: var(--ds-general-color-foreground);
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
 }
 
 .aiAttachment__sourceAction:hover {

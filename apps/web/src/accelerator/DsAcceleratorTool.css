@@ -1,462 +1,869 @@
+/* .app-shell (App.css) only sets min-height: 100vh, not height — so percentage
+   heights through .app-body never resolve to a definite value, and
+   overflow: hidden below silently fails to clip once content is taller than
+   one viewport (the whole document grows and scrolls instead). Anchoring to
+   the viewport directly, minus the app topbar's fixed 56px, gives this
+   component a genuinely definite, self-contained height so its own internal
+   scroll areas (.accelerator__stageBody) actually bound correctly. */
 .accelerator {
-  height: 100%;
-  min-height: 100%;
-  padding: 18px;
+  height: calc(100vh - 56px);
+  min-height: 0;
+  padding: var(--ds-general-padding-3xl);
   box-sizing: border-box;
   overflow: hidden;
-  background: var(--ds-general-color-background);
-  border-radius: var(--ds-general-radius-rounded-xl, 20px);
+  /* --ds-general-color-background (#f9fafb) is the quiet page canvas here —
+     --ds-general-color-canvas is actually this system's WHITE surface token,
+     despite the name. Content lives on elevated white (canvas) surfaces
+     above this gray page, which is what gives every card its depth. Flat
+     white-on-white is the single biggest "wireframe" tell. */
+  background-color: var(--ds-general-color-background);
+  /* The same "design canvas" dot grid used deep in the flow for direction
+     previews (see ResponsivePreviewStage.css) — brought forward to the
+     shell itself so the product reads as a design tool from the very first
+     screen, not three steps in. Wide spacing and low contrast: texture, not
+     decoration — it should recede the moment real content sits on it. */
+  background-image: radial-gradient(circle, var(--ds-general-color-border-alt-1) 1px, transparent 1px);
+  background-size: 28px 28px;
+  border-radius: var(--ds-general-radius-rounded-xl);
+}
+
+/* Shared elevation recipe for surfaces raised off the canvas. */
+.accelerator {
+  --elev-xs: 0 1px 2px color-mix(in srgb, var(--ds-general-color-foreground) 6%, transparent);
+  --elev-sm:
+    0 1px 2px color-mix(in srgb, var(--ds-general-color-foreground) 6%, transparent),
+    0 3px 10px color-mix(in srgb, var(--ds-general-color-foreground) 5%, transparent);
+  --elev-md:
+    0 2px 4px color-mix(in srgb, var(--ds-general-color-foreground) 7%, transparent),
+    0 10px 24px color-mix(in srgb, var(--ds-general-color-foreground) 8%, transparent);
 }
 
 .accelerator__window {
   height: 100%;
   width: min(100%, 1680px);
   margin: 0 auto;
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  gap: var(--ds-general-gap-xl);
 }
 
-.accelerator__window--intake {
-  grid-template-rows: minmax(0, 1fr);
+/* Intake's own screen fills the window exactly as the old single grid row
+   did, so its internal `justify-content: flex-start` (top-aligned, not
+   centered — see .accelerator__startScreen) keeps behaving unchanged. */
+.accelerator__window--intake .accelerator__startScreen {
+  flex: 1 1 auto;
 }
+
+/* ── Intake ─────────────────────────────────────────────────────────────── */
 
 .accelerator__startScreen {
   min-height: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  /* Top-aligned with an intentional offset, not vertically centered — a
+     centered hero leaves a large dead band above it on tall viewports and
+     reads as unfinished rather than composed. */
+  justify-content: flex-start;
   align-items: center;
-  gap: 14px;
-  padding: 1rem;
+  gap: var(--ds-general-gap-xl);
+  padding: clamp(2rem, 9vh, 5.5rem) var(--ds-general-padding-2xl) var(--ds-general-padding-2xl);
 }
 
 .accelerator__startContent {
   width: 100%;
-  max-width: 1000px;
+  max-width: 820px;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center;
-  gap: 1.75rem;
+  align-items: stretch;
+  gap: var(--ds-general-gap-xl);
+}
+
+/* The intake screen is the one moment every single run passes through —
+   worth a deliberate, once-per-visit arrival instead of the whole hero
+   snapping in at once.
+
+   Deliberately applied to `.accelerator__startIntro` ONLY (the heading
+   block), not to `.accelerator__startInput` or `.accelerator__optionsRow`
+   — both of those are ancestors of interactive popovers (the composer's
+   "Add source" dropdown, and <ProviderPicker>'s own dropdown). Turns out
+   ANY element with a CSS `animation` attached becomes its own stacking
+   context for as long as that animation stays attached — which, under
+   `fill-mode: both`, is forever, even once it's just sitting still at
+   `opacity: 1`. Two sibling stacking contexts both at `z-index: auto`
+   then stack by DOM order, not by their descendants' real z-index — so
+   `.accelerator__optionsRow` (later in the DOM) started painting over
+   `.accelerator__startInput`'s entire subtree, dropdown (z-index: 4) and
+   all, regardless of that z-index value. Confirmed via elementFromPoint
+   at the overlap: the provider trigger button, not the dropdown, was on
+   top. This is the second distinct stacking bug this one animation has
+   caused (the first was a `transform` breaking `position: fixed`
+   containment) — rather than keep patching new stacking-context corners,
+   the animation only lives on the one group with no interactive
+   descendants. */
+@keyframes accelerator-start-rise {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.accelerator__startIntro {
+  animation: accelerator-start-rise var(--dur-slow) var(--ease-out) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accelerator__startIntro {
+    animation: none;
+  }
 }
 
 .accelerator__startIntro {
   width: 100%;
   display: grid;
   justify-items: start;
-  gap: 0.375rem;
-}
-
-.accelerator__startLogo {
-  width: min(150px, 58vw);
-  height: auto;
+  gap: var(--ds-general-gap-sm);
 }
 
 .accelerator__startHint {
   max-width: 720px;
   text-align: left;
   margin: 0;
+  color: var(--ds-general-color-muted-foreground);
 }
 
 .accelerator__startInput {
   width: 100%;
 }
 
-.accelerator__mockDataRow {
-  width: 100%;
-  display: grid;
-  gap: 0.25rem;
-  padding: 0.5rem 0 0.25rem;
-  border-bottom: 1px solid var(--ds-general-color-border);
-  margin-bottom: 0.25rem;
+.accelerator__srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
-.accelerator__skillsSelector {
-  visibility: hidden;
-  width: 100%;
-  display: grid;
-  gap: 0.375rem;
+/* ── Compact Storybook / Design System status line (intake) ──────────────
+   Reassurance about what design system this run modifies, not an advert
+   for the Storybook integration — the same weight class as a repo/branch
+   switcher in Linear, Vercel, or GitHub. */
+
+.accelerator__dsStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  padding: 2px var(--ds-general-gap-2xs);
+  border-radius: var(--ds-general-radius-rounded-sm);
+  cursor: pointer;
+  color: var(--ds-general-color-muted-foreground);
+  transition: color var(--dur-fast) var(--ease-standard);
 }
 
-.accelerator__skillsHeader {
+.accelerator__dsStatus:hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.accelerator__dsStatus:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.accelerator__dsStatusDot {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-success-foreground);
+}
+
+.accelerator__dsStatus--warning .accelerator__dsStatusDot {
+  background: var(--ds-general-color-warning-foreground);
+}
+
+.accelerator__dsStatusText strong {
+  color: var(--ds-general-color-foreground);
+  font-weight: 600;
+}
+
+.accelerator__optionsRow {
+  width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: var(--ds-general-gap-xl);
+  flex-wrap: wrap;
 }
 
-.accelerator__skillsDropdown {
-  display: grid;
-  gap: 0.25rem;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 0.5rem;
-  border: 1px solid var(--ds-general-color-border);
-  border-radius: var(--ds-general-radius-rounded-md, 8px);
-  background: var(--ds-general-color-canvas);
+.accelerator__optionsGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-xs);
+  flex-wrap: wrap;
 }
 
-.accelerator__skillsOption {
-  width: 100%;
-}
-
-.accelerator__variantCollection {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.5rem;
-}
-
-.accelerator__variantCollectionItem {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.accelerator__header {
+/* A recoverable, low-severity notice — the app already fell back to a
+   working default, so this reads as a quiet heads-up, not an alarm. Icon +
+   warning-toned text, no box: matches .analysisDash__unstructured's idiom
+   elsewhere in the product for "worth knowing, not worth stopping you". */
+.accelerator__inlineWarning {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-canvas);
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  margin: 0;
+  color: var(--ds-general-color-warning-foreground);
 }
 
-.accelerator__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
+.accelerator__inlineWarning svg {
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
-.accelerator__brand img {
-  width: 86px;
-  height: auto;
+.accelerator__errorCard {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border: 1px solid var(--ds-general-color-destructive-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-destructive-muted);
 }
 
-.accelerator__headerMeta {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+.accelerator__errorCard p {
+  margin: 0;
 }
+
+/* ── Run header ─────────────────────────────────────────────────────────── */
 
 .accelerator__runHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 12px 0;
+  gap: var(--ds-general-gap-2xl);
+  padding: var(--ds-general-padding-md) 0;
+  flex-wrap: wrap;
+  /* Anchors the chrome — content clearly begins below this line. */
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
 }
 
 .accelerator__runBrand {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--ds-general-gap-md);
 }
 
-.accelerator__runLogo {
-  width: 84px;
-  height: auto;
+.accelerator__runBrand p:focus-visible {
+  outline: none;
 }
 
-.accelerator__runStatus {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-}
+/* ── Phase action — the primary CTA attached directly under the content it
+   acts on, instead of stranded in the header fighting for space with status
+   text and Stop. ─────────────────────────────────────────────────────── */
 
-.accelerator__analysisAction {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.accelerator__workspace {
-  min-height: 0;
-  display: grid;
-  gap: 14px;
-}
-
-.accelerator__workspace--three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.accelerator__panel {
-  min-height: 0;
-  display: grid;
-  gap: 0.75rem;
-  grid-template-rows: auto minmax(0, 1fr);
-  border-radius: var(--ds-general-radius-rounded-sm, 4px);
-  border: none;
-  background: var(--ds-general-color-canvas);
-  box-shadow: none;
-}
-
-.accelerator__panelHeader {
-  min-height: 52px;
-  padding: 12px 20px 8px;
+.accelerator__phaseAction {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-xs);
 }
 
-.accelerator__panelHeader h2,
-.accelerator__panelBody p {
+.accelerator__inlineError {
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+/* ── Shell: persistent tab bar + one stage panel ───────────────────────────
+   Replaces the old single scrolling document body. The tab bar never
+   scrolls away, so "where am I" never depends on scroll position — and
+   unlike the old forward-only rail, every unlocked tab stays clickable for
+   the rest of the run. Each stage still gets its own shape
+   (loading/review/compare/build/error keep their own layouts below) — the
+   fix is giving that per-stage intent real chrome instead of one shared
+   column. */
+
+.accelerator__shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
+}
+
+/* The active tab's content sits on its own raised sheet, not directly on the
+   gray page canvas — the single biggest lever for "this is a considered
+   product" over "this is a flat AI-tool wireframe". The tab bar stays
+   outside it, in the gray margin above, like tabs above a document. */
+.accelerator__stagePanel {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: var(--ds-general-padding-2xl) var(--ds-general-padding-2xl) 0;
+  border-radius: var(--ds-general-radius-rounded-xl);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-sm);
+}
+
+/* Pinned above the scrolling body — this stage's title + grounding sources
+   + the AI-activity disclosure, none of which should ever scroll out of
+   view while reading a long analysis or a wide comparison grid. */
+.accelerator__stageHeader {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  padding-bottom: var(--ds-general-padding-lg);
+  margin-bottom: var(--ds-general-gap-xl);
+  border-bottom: 1px solid var(--ds-general-color-border);
+}
+
+.accelerator__stageHeader h2 {
   margin: 0;
 }
 
-.accelerator__panelTitle {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-}
-
-.accelerator__panelTitle--spread {
-  width: 100%;
-  justify-content: space-between;
-}
-
-.accelerator__panelBody {
+.accelerator__stageBody {
   min-height: 0;
-  overflow: auto;
-  display: grid;
-  align-content: start;
-  gap: 12px;
-  padding: 0 20px 20px;
-}
-
-.accelerator__buttonWithIcon {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.accelerator__spin {
-  animation: accelerator-spin 1.2s linear infinite;
-}
-
-.accelerator__actions {
+  flex: 1 1 auto;
+  overflow-y: auto;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xl);
+  padding-bottom: var(--ds-general-padding-3xl);
 }
 
-.accelerator__sourceMenu {
-  position: relative;
-}
-
-.accelerator__inlineWarning {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-}
-
-.accelerator__inlineWarning--danger {
-  border-color: var(--ds-general-color-destructive-border);
-  background: var(--ds-general-color-destructive-muted);
-}
-
-.accelerator__sourceMenuList {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  min-width: 220px;
-  display: grid;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 10px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-canvas);
-  box-shadow: 0 12px 24px rgb(0 0 0 / 12%);
-  z-index: 40;
-}
-
-.accelerator__sourceMenuList button {
-  min-height: 34px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  text-align: left;
-  padding: 0 10px;
-  background: var(--ds-general-color-canvas);
-  color: var(--ds-general-color-foreground);
-  font: var(--vds-typography-paragraph-14-font-weight) var(--vds-typography-paragraph-14-font-size) /
-    var(--vds-typography-paragraph-14-line-height) var(--vds-typography-paragraph-14-font-family);
-  
-}
-
-.accelerator__sourceMenuList button:hover {
-  border-color: var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-}
-
-.accelerator__sources {
-  display: grid;
-  gap: 8px;
-  border-radius: 10px;
-}
-
-.accelerator__sources--tiles {
-  align-content: start;
-}
-
-.accelerator__sourceItem {
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-}
-
-.accelerator__sourceLabelRow {
+/* Quiet, collapsed-by-default disclosure for the AI's raw activity stream —
+   attached to a stage header instead of sitting as a full-width block at
+   the end of the stage's own content. Supports the stage; isn't the stage. */
+.accelerator__activityDisclosure {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 6px;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
 }
 
-.accelerator__removeSource {
-  justify-self: start;
+.accelerator__activityToggle {
+  align-self: flex-start;
   border: none;
+  background: none;
   padding: 0;
-  background: transparent;
-  color: var(--ds-general-color-foreground);
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
   text-decoration: underline;
   text-underline-offset: 2px;
-  font: var(--vds-typography-paragraph-12-font-weight) var(--vds-typography-paragraph-12-font-size) /
-    var(--vds-typography-paragraph-12-line-height) var(--vds-typography-paragraph-12-font-family);
-  
+  cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard);
 }
+
+.accelerator__activityToggle:hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.accelerator__activityToggle:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.accelerator__responsiveToolbarRow {
+  flex-shrink: 0;
+}
+
+/* Every phase screen enters with a soft rise — one intentional motion,
+   disabled under prefers-reduced-motion at the end of this file. */
+@keyframes accelerator-phase-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.accelerator__loadingScreen,
+.accelerator__understandScreen,
+.accelerator__compareScreen,
+.accelerator__buildScreen,
+.accelerator__errorScreen {
+  animation: accelerator-phase-in var(--dur-slow) var(--ease-out);
+}
+
+/* Loading (analyzing / generating) — calm, centered, nothing to look at
+   that isn't relevant to what's happening right now. */
+.accelerator__loadingScreen {
+  width: 100%;
+  max-width: 480px;
+  margin: clamp(1.5rem, 8vh, 4rem) auto 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--ds-general-gap-lg);
+}
+
+.accelerator__loadingStatus {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+}
+
+/* Understand (analysisReady) — the checkpoint document gets full reading
+   width and undivided attention. */
+.accelerator__understandScreen {
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
+}
+
+/* Compare (directionsReady) — the comparison grid needs the full window
+   width to seat directions genuinely side by side. */
+.accelerator__compareScreen {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+/* Build (implementing / implementationReady) — its own calm, single-focus
+   screen, matching the loading screen's restraint. */
+.accelerator__buildScreen {
+  width: 100%;
+  max-width: 560px;
+  margin: clamp(1.5rem, 8vh, 4rem) auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.accelerator__buildSummary h2,
+.accelerator__buildSummary p {
+  margin: 0;
+}
+
+.accelerator__buildSummary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+}
+
+.accelerator__errorScreen {
+  width: 100%;
+  max-width: 640px;
+  margin: clamp(1.5rem, 8vh, 4rem) auto 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+/* ── Sources — a quiet reference strip of identity badges ─────────────────── */
+
+.accelerator__sourceStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  min-width: 0;
+}
+
+.accelerator__sourceStripLabel {
+  margin: 0;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.accelerator__sourceStripBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-sm);
+}
+
+.accelerator__originalComponent {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+}
+
+/* ── "Before you continue" — a decision zone, not more of the same scroll.
+   Visually separated from the read-only analysis above it, so the
+   hierarchy reads as analysis → decision, not one flat document. ───────── */
+
+.accelerator__reviewNext {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  padding-top: var(--ds-general-padding-xl);
+  /* No border-top here — the "View full analysis" accordion right above
+     this (ghost variant) already draws its own bottom border. A second
+     border-top here read as a doubled hairline, not extra separation. */
+}
+
+.accelerator__reviewNextTitle {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+}
+
+/* An edit to the request, not a chat composer. */
+.accelerator__addContext {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+}
+
+/* Without this, the flex column's default align-items:stretch pulls the
+   trigger button to the full container width, and the button's own
+   centered content then floats in the middle of that empty space — reads
+   as "misplaced," not just narrow. The button should size to its label,
+   left-aligned like everything else on this screen. */
+.accelerator__addContextTrigger {
+  align-self: flex-start;
+}
+
+/* Sticky primary action — mirrors the Directions tab's commit bar so every
+   stage ends the same, unmistakable way: one clear next step, always
+   reachable without hunting for it at the bottom of a scroll. */
+.accelerator__reviewActionBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--ds-general-padding-md) 0;
+  margin-top: var(--ds-general-gap-sm);
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 94%, transparent);
+  backdrop-filter: blur(8px);
+}
+
+/* ── Compare screen top row: sources left, viewport toolbar right ─────────── */
+
+.accelerator__compareTop {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-xl);
+  flex-wrap: wrap;
+}
+
+/* ── Commit bar — selection is light, commitment is unmistakable ──────────
+   Sticky inside the scrolling run body; slides up when a direction is
+   chosen. One primary action, or the blocked-repo explanation exactly
+   where the action would be. */
+
+.accelerator__commitBar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-xl);
+  flex-wrap: wrap;
+  margin-top: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-md) var(--ds-general-padding-lg);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 94%, transparent);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--elev-md);
+  animation: accelerator-commit-in var(--dur-base) var(--ease-out);
+}
+
+@keyframes accelerator-commit-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.accelerator__commitInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.accelerator__commitEyebrow {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.accelerator__commitTitle {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-weight: 600;
+  color: var(--ds-general-color-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.accelerator__commitBlocked {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  flex-wrap: wrap;
+}
+
+.accelerator__commitBlocked p {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accelerator__commitBar {
+    animation: none;
+  }
+}
+
+/* ── Stream ─────────────────────────────────────────────────────────────── */
 
 .accelerator__analysisStream {
   min-height: 0;
   max-height: 300px;
   overflow: auto;
-  padding: 14px;
+  padding: var(--ds-general-padding-xl);
   display: grid;
   align-content: start;
-  gap: 8px;
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
-  mask-image: linear-gradient(to bottom, transparent 0, #000 28px, #000 calc(100% - 28px), transparent 100%);
+  gap: var(--ds-general-gap-sm);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    currentColor 28px,
+    currentColor calc(100% - 28px),
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent 0,
+    currentColor 28px,
+    currentColor calc(100% - 28px),
+    transparent 100%
+  );
 }
 
 .accelerator__analysisStream p {
   margin: 0;
 }
 
+.accelerator__streamLine--thinking {
+  color: var(--ds-general-color-muted-foreground);
+  font-style: italic;
+}
+
+.accelerator__streamLine--tool,
+.accelerator__streamLine--status {
+  color: var(--ds-general-color-muted-foreground);
+}
+
 .accelerator__analysisRunningIndicator {
   position: sticky;
-  bottom: 0;
+  top: 0;
+  z-index: 2;
   display: inline-flex;
   align-items: center;
-  gap: var(--vds-spacing-0-5s);
-  padding: var(--vds-spacing-0-75s) 0.25rem;
-  border-radius: var(--vds-radius-r);
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-2xs) var(--ds-general-padding-sm);
+  border-radius: var(--ds-general-radius-rounded-md);
   border: 1px solid var(--ds-general-color-border);
-  background: color-mix(
-    in srgb,
-    var(--ds-general-color-canvas) 85%,
-    var(--ds-general-color-background) 15%
-  );
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 85%, var(--ds-general-color-background) 15%);
   backdrop-filter: blur(2px);
 }
+
+/* ── Cards ──────────────────────────────────────────────────────────────── */
 
 .accelerator__artifactCard {
   display: grid;
   width: 100%;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: var(--ds-general-color-background);
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-xs);
 }
 
 .accelerator__artifactCard h3 {
   margin: 0;
 }
 
+.accelerator__artifactCard--info {
+  border: 1px solid var(--ds-general-color-informative-border);
+  background: var(--ds-general-color-informative-muted);
+}
+
 .accelerator__artifactCard--warning {
-  border-color: var(--ds-general-color-border);
-  background: color-mix(in srgb, var(--ds-general-color-background) 74%, #f7dca4 26%);
+  border: 1px solid var(--ds-general-color-warning-border);
+  background: var(--ds-general-color-warning-muted);
 }
 
-.accelerator__artifactHeading {
-  display: inline-flex;
+.accelerator__artifactCard--warning:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.accelerator__errorText {
+  white-space: pre-line;
+}
+
+/* ── First-run gate: connect your design system ──────────────────────────── */
+
+.accelerator__gateLoading {
+  display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.accelerator__tasksGrid {
-  display: grid;
-  gap: 8px;
-}
-
-.accelerator__taskCard {
-  display: grid;
-  gap: 6px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-  text-align: left;
-  cursor: pointer;
-}
-
-.accelerator__taskCard:hover {
-  border-color: var(--vds-color-tokens-border-border-default-strong);
-}
-
-.accelerator__taskCard--active {
-  border-color: var(--ds-general-color-foreground);
-  background: color-mix(in srgb, var(--ds-general-color-background) 70%, #e9f0fa 30%);
-}
-
-.accelerator__taskIndex {
-  font: var(--vds-typography-paragraph-10-font-weight) var(--vds-typography-paragraph-10-font-size) /
-    var(--vds-typography-paragraph-10-line-height) var(--vds-typography-paragraph-10-font-family);
-  letter-spacing: var(--vds-typography-paragraph-10-letter-spacing);
-  text-transform: uppercase;
+  justify-content: center;
+  gap: var(--ds-general-gap-sm);
+  min-height: 200px;
   color: var(--ds-general-color-muted-foreground);
 }
 
-.accelerator__analysisDetails {
+.accelerator__gateLoading p {
   margin: 0;
-  border-radius: 10px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-  padding: 10px;
 }
 
-.accelerator__analysisDetails summary {
-  cursor: pointer;
-  list-style: none;
-  margin-bottom: 8px;
-  font: var(--vds-typography-paragraph-12-font-weight) var(--vds-typography-paragraph-12-font-size) /
-    var(--vds-typography-paragraph-12-line-height) var(--vds-typography-paragraph-12-font-family);
-  
-}
-
-.accelerator__planningFooter {
+.accelerator__gate {
   display: flex;
-  justify-content: flex-start;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
 }
 
-.accelerator__panelBody--analysis {
-  align-content: start;
+.accelerator__gateEyebrow {
+  color: var(--ds-general-color-muted-foreground);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.accelerator__panelBody--blank {
+.accelerator__gateConnect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-border);
   background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-sm);
 }
 
-.accelerator__taskList {
-  display: grid;
-  gap: 0.25rem;
-  align-content: start;
+.accelerator__gateConnectRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.accelerator__gateInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 10px var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+}
+
+.accelerator__gateInput:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.accelerator__gateFieldHint {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.accelerator__gateError {
+  margin: 0;
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+.accelerator__gateSteps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  counter-reset: gate-step;
+}
+
+.accelerator__gateSteps li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  counter-increment: gate-step;
+}
+
+.accelerator__gateSteps li::before {
+  content: counter(gate-step);
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--ds-general-radius-full);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+}
+
+.accelerator__dsCardManage {
+  flex-shrink: 0;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--ds-general-color-accent);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.accelerator__dsCardManage:hover {
+  text-decoration: underline;
+}
+
+.accelerator__dsCardManage:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.accelerator__directionsFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+  flex-wrap: wrap;
+}
+
+.accelerator__errorRetry {
+  justify-self: start;
 }
 
 .accelerator__empty {
@@ -464,9 +871,10 @@
   display: grid;
   place-items: center;
   text-align: center;
-  padding: 14px;
-  border-radius: 10px;
+  padding: var(--ds-general-padding-xl);
+  border-radius: var(--ds-general-radius-rounded-lg);
   border: 1px dashed var(--ds-general-color-border);
+  color: var(--ds-general-color-muted-foreground);
 }
 
 .accelerator__empty p {
@@ -477,18 +885,218 @@
   min-height: 72px;
 }
 
-.accelerator__error {
-  min-height: 100%;
-  display: grid;
-  align-content: center;
-  justify-items: start;
-  gap: 12px;
-  padding: 14px;
+/* A one-line answer to "how are these actually different", pulled from each
+   direction's own highlight chips — printed once, up front, instead of
+   making the reader hunt for the difference across two cards. Plain
+   typography — no tinted box, no coloured badge. */
+.accelerator__compareStrip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
 }
 
-.accelerator__error p {
-  margin: 0;
+.accelerator__compareStripLabel {
+  color: var(--ds-general-color-muted-foreground);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
+
+.accelerator__compareStripRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-lg);
+}
+
+.accelerator__compareStripItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--ds-general-gap-xs);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  color: var(--ds-general-color-foreground);
+}
+
+.accelerator__compareStripLetter {
+  font-weight: 700;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── Implementation ─────────────────────────────────────────────────────── */
+
+/* Real side-by-side comparison — this is the concrete fix for directions
+   stacking in a single column despite being called a "comparison". */
+.accelerator__directionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--ds-general-gap-lg);
+  /* Equal-height proposals — footers align, comparison reads as one table. */
+  align-items: stretch;
+}
+
+.accelerator__originalHeading {
+  margin: var(--ds-general-gap-sm) 0 0;
+}
+
+.accelerator__textOnlyNote {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.accelerator__buildingRow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  color: var(--ds-general-color-foreground);
+}
+
+/* ── Success ────────────────────────────────────────────────────────────── */
+
+.accelerator__successScreen {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-xl);
+  padding: var(--ds-general-padding-2xl) var(--ds-general-padding-3xl) var(--ds-general-padding-3xl);
+}
+
+.accelerator__successScreen > div:focus-visible {
+  outline: none;
+}
+
+/* The completion moment gets real chrome — a raised card, not bare text
+   floating on the page canvas. This is the payoff screen; it should look
+   like one. */
+.accelerator__successCard {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-xl);
+  padding: var(--ds-general-padding-2xl);
+  border-radius: var(--ds-general-radius-rounded-2xl);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-md);
+  text-align: center;
+}
+
+/* The applied result, live from the connected Storybook — proof, not a
+   promise. Same story the analysis screen shows "before"; this is "after". */
+.accelerator__appliedPreview {
+  width: 100%;
+}
+
+.accelerator__appliedPreview .responsiveStage__stage {
+  height: 260px;
+}
+
+.accelerator__fileList {
+  width: 100%;
+  display: grid;
+  gap: var(--ds-general-gap-lg);
+  justify-items: center;
+  padding-top: var(--ds-general-padding-lg);
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.accelerator__fileGroup {
+  display: grid;
+  gap: var(--ds-general-gap-sm);
+  justify-items: center;
+}
+
+.accelerator__fileList ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--ds-general-gap-xs);
+}
+
+.accelerator__successActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.accelerator__publishBlock {
+  width: 100%;
+  max-width: 460px;
+}
+
+.accelerator__publishStatus {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.accelerator__publishStatus--success {
+  border-color: var(--ds-general-color-success-border);
+  background: var(--ds-general-color-success-muted);
+}
+
+.accelerator__publishHint {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.accelerator__publishOpenLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ds-general-color-success-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 600;
+}
+
+.accelerator__publishOpenLink:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.accelerator__publishError {
+  margin: 0;
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+.accelerator__publishRetry {
+  border: none;
+  background: none;
+  padding: 0;
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.accelerator__publishRetry:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Markdown helpers (kept for stream/detail rendering) ────────────────── */
+
+.accelerator__markdownInlineCode {
+  display: inline-block;
+  padding: 0 var(--ds-general-padding-4xs);
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: var(--ds-general-color-background);
+  font-family: var(--ds-general-typography-font-family-monospace, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.9em;
+}
+
+/* ── Modal (add-source) ─────────────────────────────────────────────────── */
 
 .accelerator__modalBackdrop {
   position: fixed;
@@ -496,16 +1104,16 @@
   z-index: 80;
   display: grid;
   place-items: center;
-  padding: 20px;
-  background: rgb(0 0 0 / 38%);
+  padding: var(--ds-general-padding-3xl);
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 38%, transparent);
 }
 
 .accelerator__modal {
   width: min(100%, 620px);
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  border-radius: 14px;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-padding-2xl);
+  border-radius: var(--ds-general-radius-rounded-2xl);
   border: 1px solid var(--ds-general-color-border);
   background: var(--ds-general-color-canvas);
 }
@@ -514,287 +1122,7 @@
   margin: 0;
 }
 
-.accelerator__modal--analysis {
-  width: min(100%, 860px);
-  max-height: min(85vh, 900px);
-  overflow: auto;
-}
-
-.accelerator__docResults {
-  max-height: 180px;
-  overflow: auto;
-  display: grid;
-  gap: 4px;
-  padding: 8px;
-  border-radius: 8px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-}
-
-.accelerator__docResults button {
-  min-height: 30px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  text-align: left;
-  padding: 0 8px;
-  background: var(--ds-general-color-canvas);
-  color: var(--ds-general-color-foreground);
-  font: var(--vds-typography-paragraph-12-font-weight) var(--vds-typography-paragraph-12-font-size) /
-    var(--vds-typography-paragraph-12-line-height) var(--vds-typography-paragraph-12-font-family);
-  
-}
-
-.accelerator__docResults button:hover {
-  border-color: var(--ds-general-color-border);
-}
-
-.accelerator__panelActions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.accelerator__markdown {
-  display: grid;
-  gap: 8px;
-}
-
-.accelerator__markdown p,
-.accelerator__markdown h4 {
-  margin: 0;
-}
-
-.accelerator__markdown a {
-  color: var(--ds-general-color-foreground);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-}
-
-.accelerator__markdownInlineCode {
-  display: inline-block;
-  padding: 0 4px;
-  border-radius: 4px;
-  background: var(--ds-general-color-background);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-  font-size: 0.9em;
-}
-
-.accelerator__markdownCodeBlock {
-  margin: 0;
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 8px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-  overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.accelerator__markdownCodeLanguage {
-  color: var(--ds-general-color-muted-foreground);
-  font: var(--vds-typography-paragraph-10-font-weight) var(--vds-typography-paragraph-10-font-size) /
-    var(--vds-typography-paragraph-10-line-height) var(--vds-typography-paragraph-10-font-family);
-  letter-spacing: var(--vds-typography-paragraph-10-letter-spacing);
-  text-transform: uppercase;
-}
-
-.accelerator__markdownCodeBlock code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
-}
-
-.accelerator__markdownList {
-  margin: 0;
-  padding-left: 18px;
-  display: grid;
-  gap: 6px;
-}
-
-.accelerator__markdownTask {
-  display: inline-flex;
-  align-items: flex-start;
-  gap: 8px;
-  list-style: none;
-  margin-left: -18px;
-}
-
-.accelerator__markdownTask input {
-  margin-top: 3px;
-}
-
-.accelerator__markdownBlockquote {
-  margin: 0;
-  padding-left: 10px;
-  border-left: 3px solid var(--ds-general-color-border);
-}
-
-.accelerator__implTaskSummary {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.accelerator__implTaskPopover {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  width: min(360px, 56vw);
-  max-height: 360px;
-  overflow: auto;
-  display: grid;
-  gap: 6px;
-  padding: 10px;
-  border-radius: 12px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-canvas);
-  box-shadow: 0 14px 30px rgb(0 0 0 / 14%);
-  z-index: 60;
-}
-
-.accelerator__workspace--implementation {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.accelerator__workspace--implementationV2 {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.accelerator__workspace--implementationV3 {
-  grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) minmax(0, 1fr);
-}
-
-.accelerator__implementationPanel {
-  border: 1px solid var(--ds-general-color-border);
-}
-
-.accelerator__variantNav {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.accelerator__variantBadges {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.accelerator__variantPanelBody {
-  position: relative;
-  overflow: auto;
-}
-
-.accelerator__implementationStreamPanel {
-  min-height: 0;
-  overflow: hidden;
-}
-
-.accelerator__implementationStreamPanel .accelerator__analysisStream {
-  max-height: none;
-  height: 100%;
-}
-
-.accelerator__variantMeta {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.accelerator__variantCanvas {
-  min-height: 320px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-background);
-}
-
-.accelerator__variantCanvas > * {
-  width: min(540px, 100%);
-}
-
-.accelerator__figmaReferenceFrame {
-  min-height: 320px;
-  border-radius: 10px;
-  border: 1px solid var(--ds-general-color-border);
-  overflow: hidden;
-  background: var(--ds-general-color-background);
-}
-
-.accelerator__figmaReferenceFrame iframe {
-  width: 100%;
-  height: 100%;
-  min-height: 320px;
-  border: 0;
-}
-
-.accelerator__variantPanelBody--draft {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-}
-
-.accelerator__applyingOverlay {
-  position: absolute;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 8px;
-  border: 1px solid var(--ds-general-color-border);
-  background: color-mix(
-    in srgb,
-    var(--ds-general-color-canvas) 84%,
-    var(--ds-general-color-accent) 16%
-  );
-}
-
-.accelerator__applyingOverlay--centered {
-  inset: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  top: 0;
-  border: 0;
-  border-radius: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--ds-general-color-canvas) 0%, transparent) 0%,
-      color-mix(in srgb, var(--ds-general-color-canvas) 72%, transparent) 100%
-    );
-  backdrop-filter: blur(1px);
-}
-
-.accelerator__aiTaskDraftUpdated .aiTask__tile {
-  background: color-mix(
-    in srgb,
-    var(--ds-general-color-accent) 20%,
-    var(--ds-general-color-background) 80%
-  );
-  outline: 1px solid var(--ds-general-color-accent-muted-alt);
-}
-
-.accelerator__successScreen {
-  min-height: 0;
-  display: grid;
-  place-content: center;
-  justify-items: center;
-  gap: 12px;
-  text-align: center;
-  padding: 20px;
-}
+/* ── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 1120px) {
   .accelerator {
@@ -808,14 +1136,17 @@
     min-height: calc(100vh - 32px);
   }
 
-  .accelerator__workspace {
+  .accelerator__directionGrid {
     grid-template-columns: 1fr;
   }
 
-  .accelerator__panel {
-    min-height: 420px;
+  .accelerator__runHeader {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
+
+/* ── Motion ─────────────────────────────────────────────────────────────── */
 
 @keyframes accelerator-spin {
   from {
@@ -823,5 +1154,20 @@
   }
   to {
     transform: rotate(360deg);
+  }
+}
+
+.accelerator__spin {
+  animation: accelerator-spin 1.2s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .accelerator__spin,
+  .accelerator__loadingScreen,
+  .accelerator__understandScreen,
+  .accelerator__compareScreen,
+  .accelerator__buildScreen,
+  .accelerator__errorScreen {
+    animation: none;
   }
 }

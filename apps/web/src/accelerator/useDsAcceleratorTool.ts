@@ -1,25 +1,30 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   cancelAgentJob,
+  fetchAgentProviders,
   getAgentJob,
   postAgentChatStream,
   startAgentJob,
   streamAgentJob,
   type AgentJobStatus,
+  type AgentProvider,
 } from "../agentSseClient";
-import { getComponentEntry } from "../component-registry";
+import { resolveActiveAuthMethod, subscribeAuthPreferences } from "../aiProviders/authPreferences";
+import { fetchIntegrations } from "../integrations/jiraClient";
+import { publishToGithub } from "../integrations/repositoryClient";
 import type { AiAgentInputSendPayload } from "../components/custom/AiAgentInput";
-import { buildMockAnalysisOutput } from "./mock-data";
-import { parseAnalysisOutput, parseChangedFilesFromApplyOutput, slugify } from "./parsers";
-import { buildAnalysisPrompt, buildImplementationPrompt } from "./prompts";
+import { buildDuplicateCorrectionNote, buildTooFewDirectionsCorrectionNote, findNearDuplicatePair } from "./directionQuality";
+import { hasRealDirections, parseAnalysisOutput, parseProposalOutput, parseUnderstanding } from "./parsers";
+import { buildProposalPrompt, buildTextDirectionsPrompt, buildUnderstandingPrompt } from "./prompts";
+import { appendHistory, summarizeContext } from "./runHistory";
+import { discardProposalRun, prepareProposalPreviews, promoteDirection } from "./proposalClient";
 import { extractTicketKey, resolveTaskFolder } from "./task-docs";
 import {
   ACTIVE_JOB_KEY,
   SNAPSHOT_KEY,
   SNAPSHOT_MAX_STREAM_ITEMS,
   STREAM_IDLE_RECONNECT_MS,
-  UNKNOWN_TARGET,
-  extractTaskFromEvent,
+  collectFigmaUrls,
   formatStreamLine,
   mapPayloadSource,
   mergeStreamChunks,
@@ -28,36 +33,44 @@ import {
   safeRemoveSession,
   safeWriteSession,
   toReadableAgentError,
-  toTaskFields,
 } from "./tool-utils";
 import type {
   AnalysisOutput,
-  AnalysisTask,
-  ImplementationTask,
+  Direction,
   PreviewTarget,
+  RunPhase,
   SourceEntry,
   StreamItem,
   ToolState,
+  UnderstandingBrief,
 } from "./types";
 
+function newRunId(): string {
+  return `run-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+/** Bump when the snapshot shape or state semantics change — mismatched snapshots are dropped, not misread. */
+const SNAPSHOT_VERSION = 2;
+
 type SessionSnapshot = {
+  version: number;
   state: ToolState;
   primaryFigma: string;
   primaryTicket: string;
   baseContext: string;
   sources: SourceEntry[];
-  selectedSkillIds: string[];
-  mockDataTest: boolean;
+  understanding: UnderstandingBrief | null;
+  runPhase: RunPhase | null;
   analysis: AnalysisOutput | null;
-  analysisTasks: AnalysisTask[];
-  implementationTasks: ImplementationTask[];
-  selectedSolutionIndex: number;
+  directions: Direction[];
+  runId: string | null;
+  chosenDirectionId: string | null;
   streamItems: StreamItem[];
-  appliedFilePaths: string[];
-  hasAppliedImplementation: boolean;
-  implementationErrorMessage: string | null;
-  implementationStreamOffset: number;
-  implementationJobStatus: AgentJobStatus | null;
+  promotedFiles: string[];
+  hasPromoted: boolean;
+  promoteErrorMessage: string | null;
+  generationStreamOffset: number;
+  generationJobStatus: AgentJobStatus | null;
 };
 
 export function useDsAcceleratorTool() {
@@ -66,35 +79,87 @@ export function useDsAcceleratorTool() {
   const [primaryTicket, setPrimaryTicket] = useState("");
   const [baseContext, setBaseContext] = useState("");
   const [sources, setSources] = useState<SourceEntry[]>([]);
-  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>([]);
-  const [mockDataTest, setMockDataTest] = useState(false);
-  const [skillsDropdownOpen, setSkillsDropdownOpen] = useState(false);
+  const [understanding, setUnderstanding] = useState<UnderstandingBrief | null>(null);
+  const [runPhase, setRunPhase] = useState<RunPhase | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisOutput | null>(null);
-  const [analysisTasks, setAnalysisTasks] = useState<AnalysisTask[]>([]);
-  const [implementationTasks, setImplementationTasks] = useState<ImplementationTask[]>([]);
-  const [selectedSolutionIndex, setSelectedSolutionIndex] = useState(0);
+  const [directions, setDirections] = useState<Direction[]>([]);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [chosenDirectionId, setChosenDirectionId] = useState<string | null>(null);
   const [streamItems, setStreamItems] = useState<StreamItem[]>([]);
   const [isBusy, setIsBusy] = useState(false);
   const [liveStatus, setLiveStatus] = useState("Idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [intakeErrorMessage, setIntakeErrorMessage] = useState<string | null>(null);
-  const [implementationErrorMessage, setImplementationErrorMessage] = useState<string | null>(null);
-  const [hasAppliedImplementation, setHasAppliedImplementation] = useState(false);
-  const [isApplyingConfirmedChanges, setIsApplyingConfirmedChanges] = useState(false);
-  const [appliedFilePaths, setAppliedFilePaths] = useState<string[]>([]);
-  const [implementationJobId, setImplementationJobId] = useState<string | null>(null);
-  const [implementationJobStatus, setImplementationJobStatus] = useState<AgentJobStatus | null>(null);
-  const [implementationStreamOffset, setImplementationStreamOffset] = useState(-1);
-  const [taskListOpen, setTaskListOpen] = useState(false);
+  const [promoteErrorMessage, setPromoteErrorMessage] = useState<string | null>(null);
+  const [hasPromoted, setHasPromoted] = useState(false);
+  const [isPromoting, setIsPromoting] = useState(false);
+  const [promotedFiles, setPromotedFiles] = useState<string[]>([]);
+  const [publishBranch, setPublishBranch] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<{ prUrl: string; prNumber: number } | null>(null);
+  const [publishErrorMessage, setPublishErrorMessage] = useState<string | null>(null);
+  const [generationJobId, setGenerationJobId] = useState<string | null>(null);
+  const [generationJobStatus, setGenerationJobStatus] = useState<AgentJobStatus | null>(null);
+  const [generationStreamOffset, setGenerationStreamOffset] = useState(-1);
+  const [providers, setProviders] = useState<AgentProvider[]>([]);
+  const [selectedProvider, setSelectedProvider] = useState("");
+  const [providersLoading, setProvidersLoading] = useState(true);
+  const [providersError, setProvidersError] = useState<string | null>(null);
+  const [authPreferenceVersion, setAuthPreferenceVersion] = useState(0);
 
   const analysisStreamRef = useRef<HTMLDivElement | null>(null);
-  const implementationStreamRef = useRef<HTMLDivElement | null>(null);
-  const skillsDropdownRef = useRef<HTMLDivElement | null>(null);
-  const analysisAbortRef = useRef<AbortController | null>(null);
-  const implementationAbortRef = useRef<AbortController | null>(null);
-  const implementationTimerRef = useRef<number | null>(null);
-  const streamedTaskKeysRef = useRef<Set<string>>(new Set());
+  const generationAbortRef = useRef<AbortController | null>(null);
   const isHydratingFromSnapshotRef = useRef(false);
+  const pendingDiscardRunIdRef = useRef<string | null>(null);
+
+  useEffect(() => subscribeAuthPreferences(() => setAuthPreferenceVersion((v) => v + 1)), []);
+
+  const activeProvider = useMemo(
+    () => providers.find((p) => p.id === selectedProvider),
+    [providers, selectedProvider],
+  );
+  // authPreferenceVersion re-derives the active method when the user changes
+  // their choice on the AI Providers page.
+  const activeAuthMethod = useMemo(
+    () => resolveActiveAuthMethod(activeProvider),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [activeProvider, authPreferenceVersion],
+  );
+  const activeProviderConnectedMethods = useMemo(
+    () => activeProvider?.authMethods?.filter((method) => method.ok).length ?? 0,
+    [activeProvider],
+  );
+  /** Only agentic runtimes (Claude Code, Cursor) can read/write real files — everything else is text-only. */
+  const activeCanEditFiles = activeAuthMethod?.capabilities?.localRepoEdits ?? false;
+
+  /**
+   * Real code generation needs BOTH a capable engine AND a workspace
+   * repository to point it at — a Storybook (e.g. a public, third-party one)
+   * never implies a writable repo. Without one, everything degrades to the
+   * existing text-only pipeline: honest analysis/directions, no fabricated
+   * code preview, and Apply is separately blocked outright (see canApply).
+   */
+  const [repositoryConnected, setRepositoryConnected] = useState(false);
+  /** 'github' unlocks the post-Apply "Publish to GitHub" action; 'local' and null don't. */
+  const [repositoryKind, setRepositoryKind] = useState<string | null>(null);
+  const [repositoryDefaultBranch, setRepositoryDefaultBranch] = useState<string | null>(null);
+  useEffect(() => {
+    const controller = new AbortController();
+    void fetchIntegrations({ signal: controller.signal })
+      .then((list) => {
+        const repo = list.find((i) => i.id === "repository");
+        setRepositoryConnected(repo?.status === "connected");
+        setRepositoryKind(repo?.status === "connected" ? (repo.kind ?? null) : null);
+        setRepositoryDefaultBranch(repo?.status === "connected" ? (repo.defaultBranch ?? null) : null);
+      })
+      .catch(() => {
+        setRepositoryConnected(false);
+        setRepositoryKind(null);
+        setRepositoryDefaultBranch(null);
+      });
+    return () => controller.abort();
+  }, []);
+  const canGenerateRealCode = activeCanEditFiles && repositoryConnected;
 
   const ticketKey = useMemo(() => extractTicketKey(primaryTicket), [primaryTicket]);
   const taskFolder = useMemo(() => resolveTaskFolder(ticketKey).taskFolder, [ticketKey]);
@@ -102,49 +167,29 @@ export function useDsAcceleratorTool() {
     () => resolvePreviewTarget(sources, baseContext, analysis?.changeIntent ?? null),
     [analysis?.changeIntent, baseContext, sources],
   );
-  const activeSolutions = useMemo(() => analysisTasks.filter((task) => task.active), [analysisTasks]);
-  const selectedSolution =
-    activeSolutions[selectedSolutionIndex] ?? activeSolutions[0] ?? analysisTasks[selectedSolutionIndex] ?? analysisTasks[0];
-  const selectedSolutionName =
-    selectedSolution?.label ??
-    `Solution ${String.fromCharCode(65 + (selectedSolutionIndex % 26))}${selectedSolutionIndex >= 26 ? `-${selectedSolutionIndex + 1}` : ""}`;
-  const solutionCountLabel = `${Math.min(selectedSolutionIndex + 1, Math.max(activeSolutions.length, 1))}/${Math.max(activeSolutions.length, 1)}`;
-  const intentConfidence = analysis?.changeIntent.confidence ?? 0;
-  const blockedByUnknownTarget = resolvedPreviewTarget.id === UNKNOWN_TARGET;
-  const blockedByLowConfidence = intentConfidence < 0.6;
-  const canStartImplementation =
-    state === "analysisReady" &&
-    analysisTasks.some((task) => task.active) &&
-    (mockDataTest || (!blockedByUnknownTarget && !blockedByLowConfidence));
-  const inImplementationFlow =
-    state === "implementing" || state === "implementationReady" || state === "implementationSuccess";
-  const completedImplementationTasks = implementationTasks.filter((task) => task.status === "done").length;
-  const inProgressImplementationTasks = implementationTasks.filter((task) => task.status === "doing").length;
-  const implementationProgressLabel = `${completedImplementationTasks}/${Math.max(implementationTasks.length, 1)} solutions done · ${inProgressImplementationTasks} running`;
+  const chosenDirection = directions.find((d) => d.id === chosenDirectionId) ?? null;
+  const canConfirmChoice = state === "directionsReady" && chosenDirectionId !== null;
+  /**
+   * Choosing a direction and being ALLOWED to apply it are separate gates —
+   * browsing, analysis, and comparing directions never needed a writable
+   * repository, only Apply does.
+   */
+  const canApply = canConfirmChoice && repositoryConnected;
+  const canGenerateDirections = state === "analysisReady" && understanding !== null && !isBusy;
+  const inPromoteFlow = state === "implementing" || state === "implementationReady" || state === "implementationSuccess";
   const showBackHomeArrow = state !== "intake" && !isBusy;
 
   const runStatusLabel = useMemo(() => {
-    if (isApplyingConfirmedChanges) return mockDataTest ? "Mock: finishing…" : "Finishing implementation…";
-    if (state === "analyzing") return "Running analysis…";
-    if (state === "implementing") return `${inProgressImplementationTasks || activeSolutions.length} solution(s) running`;
-    if (state === "implementationReady") {
-      return hasAppliedImplementation ? "Implementation finished. Confirm to continue." : implementationProgressLabel;
-    }
-    if (state === "implementationSuccess") return "Changes applied";
+    if (isPromoting) return "Applying the chosen direction…";
+    if (state === "analyzing") return "Analyzing your request…";
+    if (state === "analysisReady") return "Analysis ready — review it before generating.";
+    if (state === "generating") return "Generating directions…";
+    if (state === "implementationReady") return "Couldn't apply — try again.";
+    if (state === "implementationSuccess") return "Direction applied";
     if (state === "analysisStopped") return "Analysis stopped";
     if (state === "error") return liveStatus;
-    return `${analysisTasks.length} solution${analysisTasks.length === 1 ? "" : "s"}`;
-  }, [
-    activeSolutions.length,
-    analysisTasks.length,
-    hasAppliedImplementation,
-    implementationProgressLabel,
-    inProgressImplementationTasks,
-    isApplyingConfirmedChanges,
-    liveStatus,
-    mockDataTest,
-    state,
-  ]);
+    return `${directions.length} direction${directions.length === 1 ? "" : "s"} generated`;
+  }, [directions.length, isPromoting, liveStatus, state]);
 
   const clearPersistence = useCallback(() => {
     safeRemoveSession(SNAPSHOT_KEY);
@@ -163,12 +208,22 @@ export function useDsAcceleratorTool() {
     });
   }, []);
 
-  const consumeImplementationJob = useCallback(
-    async (jobId: string, startAfter: number) => {
+  /** Best-effort — never blocks the UI. Frees an abandoned run's staged files. */
+  const discardRun = useCallback((id: string | null) => {
+    if (!id) return;
+    void discardProposalRun(id).catch(() => {
+      // best effort
+    });
+  }, []);
+
+  const consumeGenerationJob = useCallback(
+    async (jobId: string, startAfter: number, phase: RunPhase): Promise<string | null> => {
       const controller = new AbortController();
-      implementationAbortRef.current = controller;
+      generationAbortRef.current = controller;
       let after = startAfter;
       let draftOutput = "";
+      let consecutiveDrops = 0;
+      const MAX_CONSECUTIVE_DROPS = 8;
       try {
         while (true) {
           const streamController = new AbortController();
@@ -180,7 +235,8 @@ export function useDsAcceleratorTool() {
               jobId,
               (event) => {
                 after += 1;
-                setImplementationStreamOffset(after);
+                consecutiveDrops = 0;
+                setGenerationStreamOffset(after);
                 if (event.kind === "text_delta" && event.text) draftOutput += event.text;
                 if (event.kind === "status" && event.status) setLiveStatus(event.status);
                 const line = formatStreamLine(event);
@@ -189,44 +245,55 @@ export function useDsAcceleratorTool() {
               { after, signal: streamController.signal },
             );
           } catch (error) {
-            const isAbort = error instanceof DOMException && error.name === "AbortError";
-            if (!isAbort) throw error;
+            // A long job reconnects often (idle timeout, a dropped connection) — anything
+            // that isn't the user explicitly cancelling should be retried, not treated as
+            // fatal. DOMException names vary by browser/cause (AbortError, NetworkError, …),
+            // so we don't gate reconnection on a specific one.
             if (String(streamController.signal.reason ?? "") === "parent-abort") throw error;
-            if (String(streamController.signal.reason ?? "") === "idle-timeout") {
-              appendStream({ kind: "status", text: "No stream updates for 30s. Reconnecting…" });
-            }
+            consecutiveDrops += 1;
+            if (consecutiveDrops > MAX_CONSECUTIVE_DROPS) throw error;
+            appendStream({ kind: "status", text: "Reconnecting…" });
           } finally {
             window.clearTimeout(idleTimeout);
             controller.signal.removeEventListener("abort", abortParentToChild);
           }
           const summary = await getAgentJob(jobId, { signal: controller.signal });
-          setImplementationJobStatus(summary.status);
+          consecutiveDrops = 0;
+          setGenerationJobStatus(summary.status);
           if (summary.status === "queued" || summary.status === "running") continue;
           if (summary.status === "finished") {
-            const output = summary.result?.output?.trim() || draftOutput.trim();
-            setAppliedFilePaths(parseChangedFilesFromApplyOutput(output));
-            setHasAppliedImplementation(true);
-            setImplementationErrorMessage(null);
-            setState("implementationReady");
-            return;
+            return summary.result?.output?.trim() || draftOutput.trim();
           }
-          setImplementationErrorMessage(
-            summary.status === "cancelled"
-              ? "Implementation was stopped because Stop Implementation was clicked."
-              : summary.error || "Implementation failed before completion.",
+          if (summary.status === "cancelled") {
+            if (phase === "directions") {
+              // Stopping direction generation returns to the checkpoint — the
+              // confirmed analysis is still valid, no need to start over.
+              appendStream({ kind: "status", text: "Generation stopped — you're back at the analysis." });
+              setState("analysisReady");
+            } else {
+              setState("analysisStopped");
+            }
+            setLiveStatus("Stopped");
+            return null;
+          }
+          setState("error");
+          setErrorMessage(
+            summary.error ||
+              (phase === "directions"
+                ? "The generation didn't finish. You can try again."
+                : "The analysis didn't finish. You can try again."),
           );
-          setHasAppliedImplementation(false);
-          setState("implementationReady");
-          return;
+          setLiveStatus("Error");
+          return null;
         }
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setImplementationErrorMessage(toReadableAgentError(error));
-        setHasAppliedImplementation(false);
-        setState("implementationReady");
+        if (error instanceof DOMException && error.name === "AbortError") return null;
+        setState("error");
+        setErrorMessage(toReadableAgentError(error));
+        setLiveStatus("Error");
+        return null;
       } finally {
-        implementationAbortRef.current = null;
-        setIsApplyingConfirmedChanges(false);
+        generationAbortRef.current = null;
         setIsBusy(false);
       }
     },
@@ -238,95 +305,155 @@ export function useDsAcceleratorTool() {
       if (analysisStreamRef.current) {
         analysisStreamRef.current.scrollTop = analysisStreamRef.current.scrollHeight;
       }
-      if (implementationStreamRef.current) {
-        implementationStreamRef.current.scrollTop = implementationStreamRef.current.scrollHeight;
-      }
     }, 0);
   }, [streamItems, state]);
 
   useEffect(() => {
-    const max = Math.max(0, activeSolutions.length - 1);
-    setSelectedSolutionIndex((current) => (current > max ? 0 : current));
-  }, [activeSolutions.length]);
-
-  useEffect(() => {
-    if (!skillsDropdownOpen) return;
-    const onDocumentClick = (event: MouseEvent) => {
-      if (!skillsDropdownRef.current?.contains(event.target as Node)) setSkillsDropdownOpen(false);
-    };
-    document.addEventListener("mousedown", onDocumentClick);
-    return () => document.removeEventListener("mousedown", onDocumentClick);
-  }, [skillsDropdownOpen]);
-
-  useEffect(() => {
     return () => {
-      if (implementationTimerRef.current !== null) window.clearTimeout(implementationTimerRef.current);
-      implementationAbortRef.current?.abort();
-      analysisAbortRef.current?.abort();
+      generationAbortRef.current?.abort();
     };
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    void (async () => {
+      try {
+        const list = await fetchAgentProviders({ signal: controller.signal });
+        setProviders(list);
+        const firstHealthy = list.find((p) => p.ok) ?? list[0];
+        if (firstHealthy) setSelectedProvider(firstHealthy.id);
+        setProvidersError(null);
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setProvidersError("We couldn't load the AI engines. The default engine will be used.");
+      } finally {
+        setProvidersLoading(false);
+      }
+    })();
+    return () => controller.abort();
   }, []);
 
   useEffect(() => {
     const rawSnapshot = safeReadSession(SNAPSHOT_KEY);
     const rawJobId = safeReadSession(ACTIVE_JOB_KEY);
-    if (!rawSnapshot && !rawJobId) return;
-    let restoredOffset = -1;
-    if (rawSnapshot) {
-      try {
-        const snapshot = JSON.parse(rawSnapshot) as SessionSnapshot;
-        isHydratingFromSnapshotRef.current = true;
-        setState(snapshot.state);
-        setPrimaryFigma(snapshot.primaryFigma);
-        setPrimaryTicket(snapshot.primaryTicket);
-        setBaseContext(snapshot.baseContext);
-        setSources(snapshot.sources);
-        setSelectedSkillIds(snapshot.selectedSkillIds);
-        setMockDataTest(snapshot.mockDataTest);
-        setAnalysis(snapshot.analysis);
-        setAnalysisTasks(snapshot.analysisTasks);
-        setImplementationTasks(snapshot.implementationTasks);
-        setSelectedSolutionIndex(snapshot.selectedSolutionIndex);
-        setStreamItems(snapshot.streamItems);
-        setAppliedFilePaths(snapshot.appliedFilePaths);
-        setHasAppliedImplementation(snapshot.hasAppliedImplementation);
-        setImplementationErrorMessage(snapshot.implementationErrorMessage);
-        setImplementationStreamOffset(snapshot.implementationStreamOffset);
-        setImplementationJobStatus(snapshot.implementationJobStatus);
-        restoredOffset = Number.isFinite(snapshot.implementationStreamOffset) ? snapshot.implementationStreamOffset : -1;
-      } catch {
-        clearPersistence();
-      } finally {
-        isHydratingFromSnapshotRef.current = false;
-      }
+    if (!rawSnapshot) {
+      // A job id without a snapshot has no phase context — unrecoverable.
+      if (rawJobId) clearPersistence();
+      return;
     }
-    if (!rawJobId) return;
-    setImplementationJobId(rawJobId);
+    let restoredOffset = -1;
+    let restoredRunId: string | null = null;
+    let restoredPhase: RunPhase = "understanding";
+    let restoredState: ToolState = "intake";
+    try {
+      const snapshot = JSON.parse(rawSnapshot) as SessionSnapshot;
+      if (snapshot.version !== SNAPSHOT_VERSION) {
+        clearPersistence();
+        return;
+      }
+      isHydratingFromSnapshotRef.current = true;
+      restoredState = snapshot.state;
+      if ((restoredState === "analyzing" || restoredState === "generating") && !rawJobId) {
+        // A run was in flight but there's no job to resume (stopped locally, a
+        // chat-stream run, or expired) — land on the nearest stable screen
+        // instead of a spinner nobody will ever resolve.
+        restoredState = snapshot.understanding ? "analysisReady" : "intake";
+      }
+      setState(restoredState);
+      setPrimaryFigma(snapshot.primaryFigma);
+      setPrimaryTicket(snapshot.primaryTicket);
+      setBaseContext(snapshot.baseContext);
+      setSources(snapshot.sources);
+      setUnderstanding(snapshot.understanding);
+      setRunPhase(snapshot.runPhase);
+      setAnalysis(snapshot.analysis);
+      setDirections(snapshot.directions);
+      setRunId(snapshot.runId);
+      setChosenDirectionId(snapshot.chosenDirectionId);
+      setStreamItems(snapshot.streamItems);
+      setPromotedFiles(snapshot.promotedFiles);
+      setHasPromoted(snapshot.hasPromoted);
+      setPromoteErrorMessage(snapshot.promoteErrorMessage);
+      setGenerationStreamOffset(snapshot.generationStreamOffset);
+      setGenerationJobStatus(snapshot.generationJobStatus);
+      restoredOffset = Number.isFinite(snapshot.generationStreamOffset) ? snapshot.generationStreamOffset : -1;
+      restoredRunId = snapshot.runId;
+      restoredPhase = snapshot.runPhase ?? "understanding";
+    } catch {
+      clearPersistence();
+      return;
+    } finally {
+      isHydratingFromSnapshotRef.current = false;
+    }
+    if (!rawJobId) {
+      // No job to resume, but if we landed straight into a state where
+      // directions/previews are on screen, the staged preview files may be
+      // stale or gone (the server sweeps any staging dir older than 2h) or
+      // were never prepared this session (e.g. a snapshot restored after a
+      // full reload). Re-running prepare is cheap — it only re-copies
+      // already-generated files, no AI call — and keeps previews honest
+      // instead of leaving a previewModulePath that 404s in the iframe.
+      if (
+        restoredRunId &&
+        (restoredState === "directionsReady" || restoredState === "implementing" || restoredState === "implementationReady")
+      ) {
+        void prepareProposalPreviews(restoredRunId).catch(() => {
+          // Best-effort — an individual preview iframe will report its own load error if this fails.
+        });
+      }
+      return;
+    }
+    setGenerationJobId(rawJobId);
     void (async () => {
       setIsBusy(true);
       try {
         const summary = await getAgentJob(rawJobId);
-        setImplementationJobStatus(summary.status);
+        setGenerationJobStatus(summary.status);
+        const finishPhase = async (output: string) => {
+          if (restoredPhase === "directions") {
+            if (restoredRunId) {
+              try {
+                await prepareProposalPreviews(restoredRunId);
+              } catch {
+                // best effort — previews will show their own load error instead
+              }
+            }
+            const parsed = parseProposalOutput(output, restoredRunId ?? "");
+            if (!hasRealDirections(parsed.directions)) {
+              setState("error");
+              setErrorMessage("The AI didn't return any usable directions for this request. Try again, or add more detail and generate again.");
+              setLiveStatus("Error");
+              return;
+            }
+            setAnalysis(parsed);
+            setDirections(parsed.directions);
+            setState("directionsReady");
+          } else {
+            setUnderstanding(parseUnderstanding(output));
+            setState("analysisReady");
+          }
+        };
         if (summary.status === "queued" || summary.status === "running") {
-          setState("implementing");
-          await consumeImplementationJob(rawJobId, restoredOffset);
+          setState(restoredPhase === "directions" ? "generating" : "analyzing");
+          const output = await consumeGenerationJob(rawJobId, restoredOffset, restoredPhase);
+          if (output) await finishPhase(output);
           return;
         }
         if (summary.status === "finished") {
-          setAppliedFilePaths(parseChangedFilesFromApplyOutput(summary.result?.output?.trim() || ""));
-          setHasAppliedImplementation(true);
-          setImplementationErrorMessage(null);
-          setState("implementationReady");
+          await finishPhase(summary.result?.output?.trim() || "");
           return;
         }
-        setImplementationErrorMessage(
-          summary.status === "cancelled"
-            ? "Implementation was stopped. You can retry the run."
-            : summary.error || "Implementation failed.",
-        );
-        setState("implementationReady");
+        if (summary.status === "cancelled") {
+          // A cancelled directions job returns to the checkpoint — the confirmed
+          // analysis is still valid. Only a cancelled analysis is a dead stop.
+          setState(restoredPhase === "directions" ? "analysisReady" : "analysisStopped");
+          return;
+        }
+        setState("error");
+        setErrorMessage(summary.error || "The run didn't finish.");
       } catch {
         clearPersistence();
-        setImplementationJobId(null);
+        setGenerationJobId(null);
       } finally {
         setIsBusy(false);
       }
@@ -336,94 +463,89 @@ export function useDsAcceleratorTool() {
 
   useEffect(() => {
     if (isHydratingFromSnapshotRef.current) return;
+    // Persist across the whole mid-journey band — a reload at the checkpoint
+    // or the direction comparison must not silently discard the run.
     const recoverable =
-      state === "implementing" || state === "implementationReady" || state === "implementationSuccess";
-    if (!recoverable && !implementationJobId) {
+      state === "analyzing" || state === "analysisReady" || state === "generating" || state === "directionsReady";
+    if (!recoverable && !generationJobId) {
       if (state === "intake") clearPersistence();
       return;
     }
     const snapshot: SessionSnapshot = {
+      version: SNAPSHOT_VERSION,
       state,
       primaryFigma,
       primaryTicket,
       baseContext,
       sources,
-      selectedSkillIds,
-      mockDataTest,
+      understanding,
+      runPhase,
       analysis,
-      analysisTasks,
-      implementationTasks,
-      selectedSolutionIndex,
+      directions,
+      runId,
+      chosenDirectionId,
       streamItems: streamItems.slice(-SNAPSHOT_MAX_STREAM_ITEMS),
-      appliedFilePaths,
-      hasAppliedImplementation,
-      implementationErrorMessage,
-      implementationStreamOffset,
-      implementationJobStatus,
+      promotedFiles,
+      hasPromoted,
+      promoteErrorMessage,
+      generationStreamOffset,
+      generationJobStatus,
     };
     if (!safeWriteSession(SNAPSHOT_KEY, JSON.stringify(snapshot))) clearPersistence();
-    if (implementationJobId) safeWriteSession(ACTIVE_JOB_KEY, implementationJobId);
+    if (generationJobId) safeWriteSession(ACTIVE_JOB_KEY, generationJobId);
   }, [
     analysis,
-    analysisTasks,
-    appliedFilePaths,
     baseContext,
+    chosenDirectionId,
     clearPersistence,
-    hasAppliedImplementation,
-    implementationErrorMessage,
-    implementationJobId,
-    implementationJobStatus,
-    implementationStreamOffset,
-    implementationTasks,
-    mockDataTest,
+    directions,
+    generationJobId,
+    generationJobStatus,
+    generationStreamOffset,
+    hasPromoted,
     primaryFigma,
     primaryTicket,
-    selectedSkillIds,
-    selectedSolutionIndex,
+    promoteErrorMessage,
+    promotedFiles,
+    runId,
+    runPhase,
     sources,
     state,
     streamItems,
+    understanding,
   ]);
 
-  const runAnalysis = async (prompt: string): Promise<string | null> => {
+  /** Chat-stream runner for text-only engines. Returns output text, or null after handling stop/error itself. */
+  const runChatPhase = async (prompt: string, phase: RunPhase, figmaUrls: string[] = []): Promise<string | null> => {
     setIsBusy(true);
-    setLiveStatus("Analyzing…");
     let draftText = "";
     const controller = new AbortController();
-    analysisAbortRef.current = controller;
+    generationAbortRef.current = controller;
     try {
       const done = await postAgentChatStream(
-        { messages: [{ role: "user", content: prompt }] },
+        {
+          messages: [{ role: "user", content: prompt }],
+          ...(selectedProvider && { provider: selectedProvider }),
+          ...(selectedProvider && activeAuthMethod && { authMethod: activeAuthMethod.id }),
+          ...(figmaUrls.length > 0 && { figmaUrls }),
+        },
         (event) => {
           if (event.kind === "text_delta" && event.text) draftText += event.text;
           if (event.kind === "status" && event.status) setLiveStatus(event.status);
-          const taskText = extractTaskFromEvent(event);
-          if (taskText) {
-            const key = taskText.toLowerCase();
-            if (!streamedTaskKeysRef.current.has(key)) {
-              streamedTaskKeysRef.current.add(key);
-              const fields = toTaskFields(taskText);
-              setAnalysisTasks((current) => [
-                ...current,
-                {
-                  id: `live-task-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
-                  label: fields.title,
-                  description: fields.description,
-                  active: true,
-                },
-              ]);
-            }
-          }
           const line = formatStreamLine(event);
           if (line) appendStream(line);
         },
         { signal: controller.signal },
       );
-      setLiveStatus(done.status || "Analysis ready");
       return done.output?.trim() || draftText.trim();
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
-        setState("analysisStopped");
+        if (phase === "directions") {
+          appendStream({ kind: "status", text: "Generation stopped — you're back at the analysis." });
+          setState("analysisReady");
+        } else {
+          setState("analysisStopped");
+        }
         setLiveStatus("Stopped");
         return null;
       }
@@ -432,59 +554,277 @@ export function useDsAcceleratorTool() {
       setLiveStatus("Error");
       return null;
     } finally {
-      analysisAbortRef.current = null;
+      generationAbortRef.current = null;
       setIsBusy(false);
     }
   };
 
-  const executeAnalysis = async (nextSources: SourceEntry[], context: string, figma: string, ticket: string) => {
+  /** Job runner for agentic engines. Returns output text, or null after handling stop/error itself. */
+  const runJobPhase = async (prompt: string, phase: RunPhase, figmaUrls: string[] = []): Promise<string | null> => {
+    setIsBusy(true);
+    try {
+      const { jobId } = await startAgentJob({
+        messages: [{ role: "user", content: prompt }],
+        ...(selectedProvider && { provider: selectedProvider }),
+        ...(selectedProvider && activeAuthMethod && { authMethod: activeAuthMethod.id }),
+        ...(figmaUrls.length > 0 && { figmaUrls }),
+      });
+      setGenerationJobId(jobId);
+      setGenerationJobStatus("queued");
+      setGenerationStreamOffset(-1);
+      safeWriteSession(ACTIVE_JOB_KEY, jobId);
+      return await consumeGenerationJob(jobId, -1, phase);
+    } catch (error) {
+      setGenerationJobId(null);
+      setState("error");
+      setErrorMessage(toReadableAgentError(error));
+      setLiveStatus("Error");
+      setIsBusy(false);
+      return null;
+    } finally {
+      safeRemoveSession(ACTIVE_JOB_KEY);
+    }
+  };
+
+  /**
+   * Phase 1 — analysis only. Read-capable for agentic engines but forbidden
+   * from writing; ends at the checkpoint (`analysisReady`) where the user
+   * reviews the AI's understanding before any implementation time is spent.
+   */
+  const executeUnderstanding = async (nextSources: SourceEntry[], context: string, figma: string, ticket: string) => {
+    // Any staged directions from a previous run are now stale — free them.
+    discardRun(runId);
+    setRunId(null);
+    setGenerationJobId(null);
     setState("analyzing");
+    setRunPhase("understanding");
     setStreamItems([]);
+    setUnderstanding(null);
     setAnalysis(null);
-    setAnalysisTasks([]);
-    streamedTaskKeysRef.current = new Set();
+    setDirections([]);
+    setChosenDirectionId(null);
+    setHasPromoted(false);
+    setPromotedFiles([]);
+    setPromoteErrorMessage(null);
     setErrorMessage(null);
     setIntakeErrorMessage(null);
-    if (mockDataTest) {
-      setIsBusy(true);
-      setLiveStatus("Mock: loading sample data…");
-      await new Promise((resolve) => window.setTimeout(resolve, 320));
-      const mock = buildMockAnalysisOutput();
-      setAnalysis(mock);
-      setAnalysisTasks(mock.tasks);
-      appendStream({ kind: "status", text: "Mock mode: agent calls are skipped." });
-      setState("analysisReady");
-      setLiveStatus("Mock: ready");
-      setIsBusy(false);
-      return;
-    }
+    setLiveStatus("Analyzing your request…");
+
     const componentSource = nextSources.find((source) => source.kind === "component");
-    const componentEntry = componentSource?.componentId ? getComponentEntry(componentSource.componentId) : undefined;
-    const prompt = buildAnalysisPrompt({
+    const figmaUrls = collectFigmaUrls(nextSources, figma);
+    const figmaMcpAvailable = figmaUrls.length > 0 && Boolean(activeAuthMethod?.mcpServers?.includes("figma"));
+    const prompt = buildUnderstandingPrompt({
       primaryFigma: figma,
       primaryTicket: ticket,
       baseContext: context,
       sources: nextSources,
-      selectedSkillIds,
-      selectedComponentId: componentSource?.componentId,
-      selectedComponentLabel: componentEntry?.title ?? componentSource?.value,
+      selectedComponentId: componentSource?.storybook?.componentPath,
+      selectedComponentLabel: componentSource?.value,
+      canReadRepo: canGenerateRealCode,
+      figmaMcpAvailable,
     });
-    const output = await runAnalysis(prompt);
+    const output = canGenerateRealCode
+      ? await runJobPhase(prompt, "understanding", figmaUrls)
+      : await runChatPhase(prompt, "understanding", figmaUrls);
     if (!output) return;
-    const parsed = parseAnalysisOutput(output);
-    setAnalysis(parsed);
-    setAnalysisTasks((current) =>
-      parsed.tasks.map((task) => {
-        const existing = current.find((candidate) => candidate.label.toLowerCase() === task.label.toLowerCase());
-        return { ...task, active: existing?.active ?? task.active, description: existing?.description ?? task.description };
-      }),
-    );
+    setUnderstanding(parseUnderstanding(output));
     setState("analysisReady");
+    setLiveStatus("Analysis ready");
+  };
+
+  /**
+   * Phase 2 — direction generation, only reachable after the user confirmed
+   * the understanding at the checkpoint. Seeds the prompt with the approved
+   * brief so the engine builds on the reviewed interpretation instead of
+   * re-deriving its own.
+   */
+  const executeDirections = async (amendment?: string, nextSources?: SourceEntry[]) => {
+    if (!understanding) return;
+    // Callers that just merged a new source (e.g. handleRefine attaching one
+    // via Refine) pass it explicitly rather than relying on the `sources`
+    // state — setSources() called moments earlier in the same tick hasn't
+    // committed yet, so the closure below would still see the stale value.
+    const sourcesForRun = nextSources ?? sources;
+    let context = baseContext;
+    const trimmedAmendment = amendment?.trim() ?? "";
+    if (trimmedAmendment) {
+      context = context.trim() ? `${context.trim()}\n\nAlso: ${trimmedAmendment}` : trimmedAmendment;
+      setBaseContext(context);
+    }
+
+    discardRun(runId);
+    setGenerationJobId(null);
+    setState("generating");
+    setRunPhase("directions");
+    setStreamItems([]);
+    setDirections([]);
+    setChosenDirectionId(null);
+    setHasPromoted(false);
+    setPromotedFiles([]);
+    setPromoteErrorMessage(null);
+    setErrorMessage(null);
+
+    const componentSource = sourcesForRun.find((source) => source.kind === "component");
+    const figmaUrls = collectFigmaUrls(sourcesForRun, primaryFigma);
+    const figmaMcpAvailable = figmaUrls.length > 0 && Boolean(activeAuthMethod?.mcpServers?.includes("figma"));
+    const shared = {
+      primaryFigma,
+      primaryTicket,
+      baseContext: context,
+      sources: sourcesForRun,
+      selectedComponentId: componentSource?.storybook?.componentPath,
+      selectedComponentLabel: componentSource?.value,
+    };
+
+    // Max 3 generation attempts: a first pass, and — only if that pass
+    // returns fewer than 2 directions or two that read as the same solution
+    // twice — up to two automatic retries with a specific correction. The
+    // product requires at least 2 genuinely different directions for every
+    // request; there is no collapse-to-one fallback. If every attempt still
+    // fails the check, the run ends in an error state rather than presenting
+    // a single direction or a fake comparison. See directionQuality.ts for
+    // what "too few" and "the same solution twice" mean here — this is the
+    // actual enforcement gate; the prompt instructions alone (asking the
+    // model to self-differentiate) are not trusted on their own.
+    const MAX_DIRECTION_ATTEMPTS = 3;
+    const TOO_FEW_ERROR_MESSAGE =
+      "The AI couldn't produce two genuinely different design directions for this request after several attempts. Try again, or add more detail to help it explore different approaches.";
+
+    if (!canGenerateRealCode) {
+      setRunId(null);
+      let correctionNote: string | undefined;
+      for (let attempt = 1; attempt <= MAX_DIRECTION_ATTEMPTS; attempt += 1) {
+        setLiveStatus(attempt === 1 ? "Generating directions…" : "First pass wasn't a real comparison — regenerating…");
+        const output = await runChatPhase(
+          buildTextDirectionsPrompt({ ...shared, confirmedBrief: understanding, figmaMcpAvailable, correctionNote }),
+          "directions",
+          figmaUrls,
+        );
+        if (!output) return;
+        const parsed = parseAnalysisOutput(output);
+        if (!hasRealDirections(parsed.directions)) {
+          setState("error");
+          setErrorMessage("The AI didn't return any usable directions for this request. Try again, or add more detail and generate again.");
+          setLiveStatus("Error");
+          return;
+        }
+        const tooFew = parsed.directions.length < 2;
+        const duplicate = tooFew ? null : findNearDuplicatePair(parsed.directions);
+        if (!tooFew && !duplicate) {
+          setAnalysis(parsed);
+          setDirections(parsed.directions);
+          setState("directionsReady");
+          return;
+        }
+        if (attempt === MAX_DIRECTION_ATTEMPTS) {
+          setState("error");
+          setErrorMessage(TOO_FEW_ERROR_MESSAGE);
+          setLiveStatus("Error");
+          return;
+        }
+        correctionNote = tooFew ? buildTooFewDirectionsCorrectionNote(parsed.directions.length) : buildDuplicateCorrectionNote(duplicate!);
+        appendStream({
+          kind: "status",
+          text: tooFew
+            ? "Only one direction was produced — regenerating a genuinely different second option."
+            : "The two directions were too similar to be a real comparison — regenerating a clearer alternative.",
+        });
+      }
+      return;
+    }
+
+    let correctionNote: string | undefined;
+    let previousAttemptRunId: string | null = null;
+    for (let attempt = 1; attempt <= MAX_DIRECTION_ATTEMPTS; attempt += 1) {
+      if (previousAttemptRunId) discardRun(previousAttemptRunId);
+      const attemptRunId = newRunId();
+      previousAttemptRunId = attemptRunId;
+      setRunId(attemptRunId);
+      setLiveStatus(
+        attempt === 1
+          ? "Generating directions from your confirmed analysis…"
+          : "First pass wasn't a real comparison — regenerating…",
+      );
+      const output = await runJobPhase(
+        buildProposalPrompt({ runId: attemptRunId, ...shared, confirmedBrief: understanding, figmaMcpAvailable, correctionNote }),
+        "directions",
+        figmaUrls,
+      );
+      if (!output) return;
+      try {
+        // Fills in unmodified sibling files (./DsTypography, ./Badge.css, …) so the preview
+        // iframe's relative imports resolve — best effort; a failure here shouldn't hide
+        // otherwise-valid directions, previews will just show their own load error instead.
+        await prepareProposalPreviews(attemptRunId);
+      } catch {
+        appendStream({ kind: "status", text: "Some previews may not load — preparing the staging files failed." });
+      }
+      const parsed = parseProposalOutput(output, attemptRunId);
+      if (!hasRealDirections(parsed.directions)) {
+        setState("error");
+        setErrorMessage("The AI didn't return any usable directions for this request. Try again, or add more detail and generate again.");
+        setLiveStatus("Error");
+        return;
+      }
+      const tooFew = parsed.directions.length < 2;
+      const duplicate = tooFew ? null : findNearDuplicatePair(parsed.directions);
+      if (!tooFew && !duplicate) {
+        setAnalysis(parsed);
+        setDirections(parsed.directions);
+        setState("directionsReady");
+        return;
+      }
+      if (attempt === MAX_DIRECTION_ATTEMPTS) {
+        setState("error");
+        setErrorMessage(TOO_FEW_ERROR_MESSAGE);
+        setLiveStatus("Error");
+        return;
+      }
+      correctionNote = tooFew ? buildTooFewDirectionsCorrectionNote(parsed.directions.length) : buildDuplicateCorrectionNote(duplicate!);
+      appendStream({
+        kind: "status",
+        text: tooFew
+          ? "Only one direction was produced — regenerating a genuinely different second option."
+          : "The two directions were too similar to be a real comparison — regenerating a clearer alternative.",
+      });
+    }
+  };
+
+  /**
+   * Blocks a run before it starts when it would reference a Figma source the
+   * selected engine can't actually inspect — either because the engine has no
+   * Figma MCP wiring at all, or because the MCP connection itself isn't
+   * signed in right now. Checked fresh (not from mount-time state) so a
+   * Connect completed on the Workspace page in another tab is picked up
+   * immediately. Returns a user-facing message to block on, or null when
+   * it's safe to proceed. Must be called from every path that can introduce
+   * a Figma source before it reaches executeUnderstanding/executeDirections —
+   * those only trust the caller, they never re-check connection status.
+   */
+  const checkFigmaReadiness = async (candidateSources: SourceEntry[], primaryFigmaUrl: string): Promise<string | null> => {
+    const figmaUrlsInRequest = collectFigmaUrls(candidateSources, primaryFigmaUrl);
+    if (figmaUrlsInRequest.length === 0 || !activeAuthMethod?.mcpServers?.includes("figma")) return null;
+    try {
+      const list = await fetchIntegrations();
+      const figma = list.find((i) => i.id === "figma");
+      if (figma?.status !== "connected") {
+        return figma?.status === "needs-auth"
+          ? "Figma is registered but not signed in — go to Settings → Workspace and connect Figma before analyzing this source."
+          : "Connect Figma in Settings → Workspace first so the AI can actually inspect this frame, not just the link.";
+      }
+      return null;
+    } catch {
+      return "Couldn't check whether Figma is connected — make sure the assistant service is running, then try again.";
+    }
   };
 
   const handleAiAgentInputSend = async (payload: AiAgentInputSendPayload) => {
+    if (providersLoading) {
+      setIntakeErrorMessage("The AI engines are still loading — try again in a moment.");
+      return;
+    }
     if (!payload.message.trim() && payload.sources.length === 0) {
-      setIntakeErrorMessage("Describe the problem or add at least one source to start analysis.");
+      setIntakeErrorMessage("Describe the change or add at least one source to get started.");
       return;
     }
     const figmaSources = payload.sources.filter((source) => source.kind === "figma");
@@ -515,6 +855,11 @@ export function useDsAcceleratorTool() {
         taskFolder: resolution.taskFolder ?? undefined,
       });
     }
+    const figmaError = await checkFigmaReadiness(resolvedSources, nextPrimaryFigma);
+    if (figmaError) {
+      setIntakeErrorMessage(figmaError);
+      return;
+    }
     setPrimaryFigma(nextPrimaryFigma.trim());
     setPrimaryTicket(nextPrimaryTicket.trim());
     setBaseContext(payload.message.trim());
@@ -526,263 +871,324 @@ export function useDsAcceleratorTool() {
       nextPrimaryTicket.trim() && nextTicketResolution.taskFolder
         ? `${nextPrimaryTicket.trim()} (task: docs/tasks/${nextTicketResolution.taskFolder})`
         : nextPrimaryTicket.trim();
-    await executeAnalysis(resolvedSources, payload.message.trim(), nextPrimaryFigma.trim(), ticketLabel);
+    await executeUnderstanding(resolvedSources, payload.message.trim(), nextPrimaryFigma.trim(), ticketLabel);
   };
 
-  const runImplementationApply = async () => {
-    if (!analysis || isApplyingConfirmedChanges) return;
-    if (mockDataTest) {
-      setIsApplyingConfirmedChanges(true);
-      setIsBusy(true);
-      appendStream({ kind: "status", text: "Mock mode: repository write skipped." });
-      await new Promise((resolve) => window.setTimeout(resolve, 280));
-      setAppliedFilePaths([]);
-      setHasAppliedImplementation(true);
-      setState("implementationReady");
-      setIsApplyingConfirmedChanges(false);
-      setIsBusy(false);
+  /**
+   * A conversation turn at the checkpoint — the designer answers the AI's open
+   * questions or adds context WITHOUT rewriting the original request. The
+   * clarification is appended to the original base context (never replaces it)
+   * and the analysis re-runs with everything it had before plus the new input.
+   */
+  const handleClarify = async (payload: AiAgentInputSendPayload) => {
+    const clarification = payload.message.trim();
+    if (!clarification && payload.sources.length === 0) return;
+    const newSources = payload.sources.map(mapPayloadSource);
+    const mergedSources = [
+      ...sources,
+      ...newSources.filter((next) => !sources.some((existing) => existing.id === next.id)),
+    ];
+    // A clarification can attach a new Figma source just like the initial
+    // send — must be gated the same way, or an unauthenticated MCP server
+    // gets claimed as available and the model hits a real tool failure mid-run.
+    const figmaError = await checkFigmaReadiness(mergedSources, primaryFigma);
+    if (figmaError) {
+      setIntakeErrorMessage(figmaError);
       return;
     }
-    const selectedSolutions = analysisTasks.filter((task) => task.active).map((task) => ({ title: task.label }));
-    const targetEntry = getComponentEntry(resolvedPreviewTarget.id);
-    setIsApplyingConfirmedChanges(true);
-    setIsBusy(true);
-    setImplementationErrorMessage(null);
-    setAppliedFilePaths([]);
-    setLiveStatus("Finishing implementation…");
-    try {
-      const { jobId } = await startAgentJob({
-        messages: [
-          {
-            role: "user",
-            content: buildImplementationPrompt({
-              targetComponentId: resolvedPreviewTarget.id,
-              targetComponentLabel: targetEntry?.title ?? resolvedPreviewTarget.label,
-              targetReason: resolvedPreviewTarget.reason,
-              changeIntent: analysis.changeIntent,
-              selectedSolutions,
-              sources,
-              context: baseContext,
-              selectedSkillIds,
-              taskFolder,
-            }),
-          },
-        ],
-      });
-      setImplementationJobId(jobId);
-      setImplementationJobStatus("queued");
-      setImplementationStreamOffset(-1);
-      safeWriteSession(ACTIVE_JOB_KEY, jobId);
-      await consumeImplementationJob(jobId, -1);
-    } catch (error) {
-      setImplementationJobId(null);
-      setImplementationJobStatus("error");
-      setImplementationErrorMessage(toReadableAgentError(error));
-      setHasAppliedImplementation(false);
-      setState("implementationReady");
-      setIsApplyingConfirmedChanges(false);
-      setIsBusy(false);
-    }
-  };
-
-  const runImplementationStepAtIndex = (taskIds: string[], index: number) => {
-    if (index >= taskIds.length) {
-      implementationTimerRef.current = null;
-      void runImplementationApply();
-      return;
-    }
-    const runningTaskId = taskIds[index]!;
-    setSelectedSolutionIndex(index);
-    setImplementationTasks((current) =>
-      current.map((task) => (task.id === runningTaskId ? { ...task, status: "doing" } : task)),
-    );
-    const runningTask = analysisTasks.filter((task) => task.active)[index];
-    if (mockDataTest && runningTask) {
-      appendStream({ kind: "status", text: `Implementing ${runningTask.label}…` });
-    }
-    implementationTimerRef.current = window.setTimeout(() => {
-      setImplementationTasks((current) =>
-        current.map((task) => (task.id === runningTaskId ? { ...task, status: "done" } : task)),
-      );
-      if (mockDataTest && runningTask) {
-        appendStream({ kind: "status", text: `${runningTask.label} implemented.` });
-      }
-      runImplementationStepAtIndex(taskIds, index + 1);
-    }, 220);
-  };
-
-  const handleStartImplementation = () => {
-    if (analysisTasks.length === 0) return;
-    if (implementationTimerRef.current !== null) {
-      window.clearTimeout(implementationTimerRef.current);
-      implementationTimerRef.current = null;
-    }
-    const tasksForRun = analysisTasks
-      .filter((task) => task.active)
-      .map((task, index) => ({
-        id: `impl-${index + 1}-${slugify(task.label, `task-${index + 1}`)}`,
-        title: task.label,
-        status: "to-do" as const,
-      }));
-    setImplementationTasks(tasksForRun);
-    setSelectedSolutionIndex(0);
-    setImplementationErrorMessage(null);
-    setHasAppliedImplementation(false);
-    setImplementationJobId(null);
-    setImplementationJobStatus(null);
-    setImplementationStreamOffset(-1);
-    setAppliedFilePaths([]);
-    setState("implementing");
-    setIsBusy(true);
-    runImplementationStepAtIndex(
-      tasksForRun.map((task) => task.id),
-      0,
-    );
-  };
-
-  const stopImplementationRun = async () => {
-    implementationAbortRef.current?.abort("manual-stop");
-    if (implementationTimerRef.current !== null) {
-      window.clearTimeout(implementationTimerRef.current);
-      implementationTimerRef.current = null;
-    }
-    if (implementationJobId && (implementationJobStatus === "running" || implementationJobStatus === "queued")) {
-      try {
-        await cancelAgentJob(implementationJobId);
-      } catch {
-        // best effort
-      }
-    }
-    clearPersistence();
-    setImplementationJobId(null);
-    setImplementationJobStatus("cancelled");
-    setImplementationStreamOffset(-1);
-    setIsApplyingConfirmedChanges(false);
-    setIsBusy(false);
-    setHasAppliedImplementation(false);
-    setImplementationErrorMessage("Implementation was stopped. You can retry the run.");
-    setState("implementationReady");
-  };
-
-  const handleConfirmImplementationChanges = async () => {
-    if (isApplyingConfirmedChanges) return;
-    if (hasAppliedImplementation) {
-      safeRemoveSession(ACTIVE_JOB_KEY);
-      setState("implementationSuccess");
-      return;
-    }
-    if (implementationTasks.length > 0 && implementationTasks.every((task) => task.status === "done")) {
-      await runImplementationApply();
-      return;
-    }
-    handleStartImplementation();
+    setIntakeErrorMessage(null);
+    const mergedContext = clarification
+      ? `${baseContext.trim()}\n\nClarification from the designer: ${clarification}`.trim()
+      : baseContext;
+    setBaseContext(mergedContext);
+    setSources(mergedSources);
+    await executeUnderstanding(mergedSources, mergedContext, primaryFigma, primaryTicket);
   };
 
   const handleStopAnalysis = () => {
-    if (isBusy) analysisAbortRef.current?.abort();
+    if (generationJobId) {
+      // Job-backed run: cancel server-side ONLY. consumeGenerationJob observes
+      // the cancelled status and routes to the right state for the phase —
+      // aborting the local consumer here would race that and strand the UI
+      // in a running state nobody resolves.
+      void cancelAgentJob(generationJobId).catch(() => {
+        // best effort
+      });
+      return;
+    }
+    generationAbortRef.current?.abort();
   };
 
-  const handleSolutionStep = (direction: "next" | "prev") => {
-    setSelectedSolutionIndex((current) => {
-      const max = Math.max(0, activeSolutions.length - 1);
-      if (direction === "next") return current >= max ? 0 : current + 1;
-      return current <= 0 ? max : current - 1;
-    });
+  /**
+   * The checkpoint's primary action — the user approved the understanding, generate directions.
+   * `amendment` carries any inline-resolved open questions, folded in the same way
+   * `handleRefine` folds a refinement instruction — no separate re-analysis step.
+   */
+  const handleConfirmUnderstanding = async (amendment?: string) => {
+    if (!canGenerateDirections) return;
+    await executeDirections(amendment);
+  };
+
+  /**
+   * Regenerates directions with a small added instruction and/or a newly
+   * attached source, keeping the confirmed understanding. For corrections
+   * that change the understanding itself, the user goes back to the
+   * checkpoint instead. Mirrors handleClarify's merge pattern.
+   */
+  const handleRefine = async (payload: AiAgentInputSendPayload) => {
+    const instruction = payload.message.trim();
+    if (!instruction && payload.sources.length === 0) return;
+    if (!understanding) return;
+    const newSources = payload.sources.map(mapPayloadSource);
+    const mergedSources = [
+      ...sources,
+      ...newSources.filter((next) => !sources.some((existing) => existing.id === next.id)),
+    ];
+    const figmaError = await checkFigmaReadiness(mergedSources, primaryFigma);
+    if (figmaError) {
+      setIntakeErrorMessage(figmaError);
+      return;
+    }
+    setIntakeErrorMessage(null);
+    setSources(mergedSources);
+    await executeDirections(instruction, mergedSources);
+  };
+
+  /** Returns from the direction comparison to the checkpoint without losing anything. */
+  const handleBackToAnalysis = () => {
+    if (!hasPromoted) discardRun(runId);
+    setRunId(null);
+    setDirections([]);
+    setChosenDirectionId(null);
+    setAnalysis(null);
+    setState("analysisReady");
+    setLiveStatus("Analysis ready");
+  };
+
+  /** Re-runs whichever phase failed/stopped — the "try again" recovery action. */
+  const handleRetryRun = async () => {
+    if (runPhase === "directions" && understanding) {
+      await executeDirections();
+      return;
+    }
+    await executeUnderstanding(sources, baseContext, primaryFigma, primaryTicket);
+  };
+
+  const handleChooseDirection = (directionId: string) => {
+    setChosenDirectionId((current) => (current === directionId ? null : directionId));
+  };
+
+  const updateDirectionPreviewStatus = (directionId: string, status: "ready" | "failed") => {
+    setDirections((current) =>
+      current.map((direction) => (direction.id === directionId ? { ...direction, previewStatus: status } : direction)),
+    );
+  };
+
+  const handleConfirmChoice = async () => {
+    if (isPromoting || !chosenDirectionId || hasPromoted) return;
+
+    if (!runId) {
+      // Text-only engines never generated real files — there's nothing to promote, just mark the run done.
+      setIsPromoting(true);
+      setState("implementing");
+      appendStream({ kind: "status", text: "This engine only produced a text proposal — no files were changed." });
+      await new Promise((resolve) => window.setTimeout(resolve, 280));
+      setPromotedFiles([]);
+      setHasPromoted(true);
+      setState("implementationSuccess");
+      setIsPromoting(false);
+      appendHistory({
+        outcome: "applied",
+        targetLabel: resolvedPreviewTarget.label,
+        contextSummary: summarizeContext(baseContext, directions.map((d) => d.title)),
+        baseContext,
+        sources,
+        directionTitles: directions.map((d) => d.title),
+        appliedFilePaths: [],
+        provider: activeProvider?.label,
+      });
+      return;
+    }
+
+    if (!chosenDirection || chosenDirection.affectedFiles.length === 0) {
+      setPromoteErrorMessage("This direction didn't declare any affected files — nothing to apply.");
+      setState("implementationReady");
+      return;
+    }
+
+    setIsPromoting(true);
+    setState("implementing");
+    setPromoteErrorMessage(null);
+    setLiveStatus("Applying the chosen direction…");
+    try {
+      const { promotedFiles: files, branch } = await promoteDirection(runId, chosenDirectionId, chosenDirection.affectedFiles);
+      setPromotedFiles(files);
+      setPublishBranch(branch);
+      setPublishResult(null);
+      setPublishErrorMessage(null);
+      setHasPromoted(true);
+      setPromoteErrorMessage(null);
+      setState("implementationSuccess");
+      appendHistory({
+        outcome: "applied",
+        targetLabel: resolvedPreviewTarget.label,
+        contextSummary: summarizeContext(baseContext, directions.map((d) => d.title)),
+        baseContext,
+        sources,
+        directionTitles: directions.map((d) => d.title),
+        appliedFilePaths: files,
+        provider: activeProvider?.label,
+      });
+    } catch (error) {
+      setPromoteErrorMessage(toReadableAgentError(error));
+      setHasPromoted(false);
+      setState("implementationReady");
+    } finally {
+      setIsPromoting(false);
+    }
+  };
+
+  /** GitHub-only: commits whatever Apply already wrote on this run's branch, pushes it, and opens (or reuses) a PR. */
+  const handlePublish = async () => {
+    if (isPublishing || !runId || !chosenDirectionId || !chosenDirection) return;
+    setIsPublishing(true);
+    setPublishErrorMessage(null);
+    try {
+      const result = await publishToGithub({
+        runId,
+        directionId: chosenDirectionId,
+        title: chosenDirection.title,
+        description: chosenDirection.summary,
+      });
+      setPublishResult({ prUrl: result.prUrl, prNumber: result.prNumber });
+      setPublishBranch(result.branch);
+    } catch (error) {
+      setPublishErrorMessage(toReadableAgentError(error));
+    } finally {
+      setIsPublishing(false);
+    }
   };
 
   const handleBackHome = () => {
-    analysisAbortRef.current?.abort();
-    implementationAbortRef.current?.abort();
-    if (implementationTimerRef.current !== null) window.clearTimeout(implementationTimerRef.current);
+    if ((state === "error" || state === "analysisStopped") && (baseContext.trim() || sources.length > 0)) {
+      appendHistory({
+        outcome: state === "error" ? "error" : "stopped",
+        targetLabel: resolvedPreviewTarget.label,
+        contextSummary: summarizeContext(baseContext, directions.map((d) => d.title)),
+        baseContext,
+        sources,
+        directionTitles: directions.map((d) => d.title),
+        appliedFilePaths: [],
+        provider: activeProvider?.label,
+      });
+    }
+    if (!hasPromoted) discardRun(runId);
+    generationAbortRef.current?.abort();
     setState("intake");
     setPrimaryFigma("");
     setPrimaryTicket("");
     setBaseContext("");
     setSources([]);
-    setSelectedSkillIds([]);
-    setSkillsDropdownOpen(false);
+    setUnderstanding(null);
+    setRunPhase(null);
     setAnalysis(null);
-    setAnalysisTasks([]);
-    setImplementationTasks([]);
+    setDirections([]);
+    setRunId(null);
+    setChosenDirectionId(null);
     setStreamItems([]);
     setIsBusy(false);
     setErrorMessage(null);
     setIntakeErrorMessage(null);
     setLiveStatus("Idle");
-    setImplementationErrorMessage(null);
-    setHasAppliedImplementation(false);
-    setImplementationJobId(null);
-    setImplementationJobStatus(null);
-    setImplementationStreamOffset(-1);
-    setAppliedFilePaths([]);
-    setIsApplyingConfirmedChanges(false);
-    setSelectedSolutionIndex(0);
+    setPromoteErrorMessage(null);
+    setHasPromoted(false);
+    setPromotedFiles([]);
+    setGenerationJobId(null);
+    setGenerationJobStatus(null);
+    setGenerationStreamOffset(-1);
+    setIsPromoting(false);
     clearPersistence();
-    streamedTaskKeysRef.current = new Set();
   };
 
-  const toggleSkill = (skillId: string, next: boolean) => {
-    setSelectedSkillIds((current) =>
-      next ? Array.from(new Set([...current, skillId])) : current.filter((id) => id !== skillId),
-    );
-  };
-
-  const toggleAnalysisTask = (taskId: string, next: boolean) => {
-    setAnalysisTasks((current) =>
-      current.map((candidate) => (candidate.id === taskId ? { ...candidate, active: next } : candidate)),
-    );
+  /** Repopulates the intake from a history entry — does not replay old generated code. */
+  const restoreFromHistory = (entry: { baseContext: string; sources: SourceEntry[] }) => {
+    handleBackHome();
+    setBaseContext(entry.baseContext);
+    setSources(entry.sources);
   };
 
   const removeSource = (sourceId: string) => {
     setSources((current) => current.filter((source) => source.id !== sourceId));
   };
 
+  // Free an abandoned run's staged files if the tab closes mid-review, without adding a
+  // dependency loop — this ref mirrors the latest runId/hasPromoted for the unmount effect.
+  pendingDiscardRunIdRef.current = hasPromoted ? null : runId;
+  useEffect(() => {
+    return () => {
+      discardRun(pendingDiscardRunIdRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return {
     state,
     baseContext,
     sources,
-    selectedSkillIds,
-    mockDataTest,
-    setMockDataTest,
-    skillsDropdownOpen,
-    setSkillsDropdownOpen,
+    providers,
+    selectedProvider,
+    setSelectedProvider,
+    providersLoading,
+    providersError,
+    activeAuthMethod,
+    activeProviderConnectedMethods,
+    activeCanEditFiles,
+    repositoryConnected,
+    repositoryKind,
+    repositoryDefaultBranch,
+    canGenerateRealCode,
+    understanding,
+    runPhase,
     analysis,
-    analysisTasks,
-    implementationTasks,
+    directions,
+    runId,
+    chosenDirectionId,
+    chosenDirection,
     streamItems,
     errorMessage,
     intakeErrorMessage,
-    implementationErrorMessage,
-    hasAppliedImplementation,
-    isApplyingConfirmedChanges,
-    appliedFilePaths,
-    taskListOpen,
-    setTaskListOpen,
+    promoteErrorMessage,
+    hasPromoted,
+    isPromoting,
+    promotedFiles,
+    publishBranch,
+    isPublishing,
+    publishResult,
+    publishErrorMessage,
+    handlePublish,
     analysisStreamRef,
-    implementationStreamRef,
-    skillsDropdownRef,
     resolvedPreviewTarget,
-    activeSolutions,
-    selectedSolution,
-    selectedSolutionName,
-    solutionCountLabel,
-    canStartImplementation,
-    blockedByUnknownTarget,
-    blockedByLowConfidence,
-    inImplementationFlow,
-    implementationProgressLabel,
+    canConfirmChoice,
+    canApply,
+    canGenerateDirections,
+    inPromoteFlow,
     showBackHomeArrow,
     runStatusLabel,
+    liveStatus,
     handleAiAgentInputSend,
+    handleClarify,
     handleStopAnalysis,
-    handleStartImplementation,
-    stopImplementationRun,
-    handleConfirmImplementationChanges,
-    handleSolutionStep,
+    handleConfirmUnderstanding,
+    handleRefine,
+    handleBackToAnalysis,
+    handleRetryRun,
+    handleChooseDirection,
+    updateDirectionPreviewStatus,
+    handleConfirmChoice,
     handleBackHome,
-    toggleSkill,
-    toggleAnalysisTask,
+    restoreFromHistory,
     removeSource,
+    taskFolder,
   };
 }
 

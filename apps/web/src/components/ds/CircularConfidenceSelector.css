@@ -1,0 +1,175 @@
+/**
+ * Circular Confidence Selector — "Centered Stat Dial" direction.
+ *
+ * Direct token reuse only: every colour below is a straight reference to an
+ * existing token family (no new custom properties are introduced by this
+ * component). Band colours are the design system's existing semantic
+ * progress tokens — the same ones a linear progress bar would use for
+ * error/warning/success states — repurposed here for the ring, handle
+ * border, and value/label text via the `data-band` attribute.
+ *   Ring track          → --ds-progress-linear-color-neutral-background
+ *   Ring fill (by band) → --ds-progress-linear-color-{error|warning|success}-foreground
+ *   Handle fill         → --ds-slider-color-marker
+ *   Focus ring          → --ds-general-shadows-focus-*
+ *   Labels               → --ds-general-typography-*, --ds-slider-color-foreground-label
+ */
+
+.ds-confidence-selector-field {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-slider-dimension-gap, 8px);
+  width: 100%;
+}
+
+.ds-confidence-selector__title {
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-slider-color-foreground-label);
+}
+
+.ds-confidence-selector__helper {
+  margin: 0;
+  max-width: 32ch;
+  text-align: center;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+  color: var(--ds-slider-color-muted-foreground);
+}
+
+/* ── Ring box ───────────────────────────────────────────────────────────── */
+
+.ds-confidence-selector {
+  position: relative;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+}
+
+.ds-confidence-selector--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.ds-confidence-selector__svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.ds-confidence-selector__track {
+  stroke: var(--ds-progress-linear-color-neutral-background);
+}
+
+.ds-confidence-selector__fill {
+  stroke: var(--ds-progress-linear-color-error-foreground);
+  transition:
+    stroke-dasharray 150ms ease,
+    stroke 150ms ease;
+}
+
+/* Band recolouring — same fill element, different existing semantic token. */
+.ds-confidence-selector[data-band="medium"] .ds-confidence-selector__fill {
+  stroke: var(--ds-progress-linear-color-warning-foreground);
+}
+
+.ds-confidence-selector[data-band="high"] .ds-confidence-selector__fill {
+  stroke: var(--ds-progress-linear-color-success-foreground);
+}
+
+/* ── Handle — 24×24 hit target meets WCAG 2.2 SC 2.5.8 (Target Size, Minimum).
+   Its border tracks the band colour so the traffic-light signal reaches the
+   handle itself, not just the arc. ── */
+
+.ds-confidence-selector__handle {
+  position: absolute;
+  box-sizing: border-box;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--ds-general-radius-full, 9999px);
+  background: var(--ds-slider-color-marker);
+  border: 2px solid var(--ds-progress-linear-color-error-foreground);
+  transform: translate(-50%, -50%);
+  cursor: pointer;
+  outline: none;
+  transition:
+    box-shadow 100ms ease,
+    border-color 150ms ease;
+}
+
+.ds-confidence-selector[data-band="medium"] .ds-confidence-selector__handle {
+  border-color: var(--ds-progress-linear-color-warning-foreground);
+}
+
+.ds-confidence-selector[data-band="high"] .ds-confidence-selector__handle {
+  border-color: var(--ds-progress-linear-color-success-foreground);
+}
+
+.ds-confidence-selector__handle:focus-visible {
+  box-shadow: 0 0 0 var(--ds-general-shadows-focus-spread, 3px) var(--ds-general-shadows-focus-ring);
+}
+
+/* ── Value + band label — stacked, centred, always visible ─────────────── */
+
+.ds-confidence-selector__readout {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  pointer-events: none;
+}
+
+.ds-confidence-selector__value {
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-weight: var(--ds-general-typography-paragraph-bold-weight);
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+  color: var(--ds-slider-color-foreground-label);
+  font-variant-numeric: tabular-nums;
+}
+
+.ds-confidence-selector__band-label {
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: var(--ds-general-typography-paragraph-medium-weight);
+  color: var(--ds-progress-linear-color-error-foreground);
+  text-align: center;
+}
+
+.ds-confidence-selector[data-band="medium"] .ds-confidence-selector__band-label {
+  color: var(--ds-progress-linear-color-warning-foreground);
+}
+
+.ds-confidence-selector[data-band="high"] .ds-confidence-selector__band-label {
+  color: var(--ds-progress-linear-color-success-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ds-confidence-selector__fill,
+  .ds-confidence-selector__handle {
+    transition: none;
+  }
+}
+
+/* Very narrow containers (e.g. a stacked mobile card): cap the ring, and
+   drop the band label so only the number remains inside the smaller ring
+   (the label reappears once the ring has room again). */
+@media (max-width: 360px) {
+  .ds-confidence-selector {
+    max-width: 140px;
+  }
+
+  .ds-confidence-selector__band-label {
+    display: none;
+  }
+}

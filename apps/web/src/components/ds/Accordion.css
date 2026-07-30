@@ -90,6 +90,19 @@
   outline: none;
 }
 
+/* ─── Heading wrapper (APG pattern: trigger button lives inside a heading) ───
+ * Resets user-agent heading styles (margin, font-size/weight) so wrapping
+ * the trigger in `<h2>`–`<h6>` for screen-reader heading navigation causes
+ * zero visual change — all type styling still comes from `DsTypography`
+ * on the title/subtitle spans inside the button. */
+
+.ds-accordion__heading {
+  margin: 0;
+  font: inherit;
+  font-weight: inherit;
+  display: block;
+}
+
 /* ─── Trigger button (title row) ─── */
 
 .ds-accordion__trigger {
@@ -184,7 +197,11 @@
   color: var(--ds-accordion-color-chevron);
 }
 
-/* ─── Content slot ─── */
+/* ─── Content slot ───
+ * Stays mounted at all times; visibility is toggled via the native
+ * `hidden` attribute (see Accordion.tsx) rather than mount/unmount, so
+ * `[hidden]` (UA default `display: none`) is intentionally left
+ * unoverridden here. */
 
 .ds-accordion__content {
   width: 100%;

@@ -16,17 +16,35 @@ export type DsBadgeVariant =
 
 export type DsBadgeState = "default" | "hover" | "focus";
 
+export type DsBadgeIconPosition = "left" | "right";
+
 export type DsBadgeProps = {
   children: ReactNode;
   variant?: DsBadgeVariant;
   state?: DsBadgeState;
-  /** Figma boolean property: `showIconLeft` */
+  /**
+   * Single-icon convenience API. Renders one icon before (default) or after the label.
+   * Preferred over `showIconLeft`/`showIconRight` + `leftIcon`/`rightIcon` for the common
+   * "one icon, one side" case.
+   */
+  icon?: ReactNode;
+  /** Where `icon` renders. Defaults to `"left"` (before the label). */
+  iconPosition?: DsBadgeIconPosition;
+  /**
+   * @deprecated Prefer `icon` (with `iconPosition="left"`, the default). Still fully supported
+   * for existing call sites and for the two-icon (`left` + `right`) combination.
+   * Figma boolean property: `showIconLeft`
+   */
   showIconLeft?: boolean;
-  /** Figma boolean property: `showIconRight` */
+  /**
+   * @deprecated Prefer `icon` with `iconPosition="right"`. Still fully supported for existing
+   * call sites and for the two-icon (`left` + `right`) combination.
+   * Figma boolean property: `showIconRight`
+   */
   showIconRight?: boolean;
-  /** Optional swap for the left icon slot (shown when `showIconLeft` is true). */
+  /** @deprecated Prefer `icon`. Optional swap for the left icon slot (shown when `showIconLeft` is true, or implicitly when `icon`/`iconPosition="left"` is used). */
   leftIcon?: ReactNode;
-  /** Optional swap for the right icon slot (shown when `showIconRight` is true). */
+  /** @deprecated Prefer `icon` with `iconPosition="right"`. Optional swap for the right icon slot. */
   rightIcon?: ReactNode;
   className?: string;
 } & Omit<HTMLAttributes<HTMLSpanElement>, "children" | "className">;
@@ -38,11 +56,17 @@ function classNames(...parts: (string | false | undefined)[]): string {
 /**
  * Figma: Badge component set — file 8Ry9Oa2niLBGvoWPo9rLQT, node 488:1944.
  * Axes: Variant × State.
+ *
+ * Icon API: use `icon` (+ optional `iconPosition`) for the common single-icon case.
+ * The legacy `showIconLeft`/`showIconRight`/`leftIcon`/`rightIcon` props remain fully
+ * functional (including the two-icon combination) for existing call sites.
  */
 export function DsBadge({
   children,
   variant = "primary",
   state = "default",
+  icon,
+  iconPosition = "left",
   showIconLeft = false,
   showIconRight = false,
   leftIcon,
@@ -50,8 +74,14 @@ export function DsBadge({
   className,
   ...rest
 }: DsBadgeProps) {
-  const leftIconNode = leftIcon ?? <Plus aria-hidden />;
-  const rightIconNode = rightIcon ?? <Plus aria-hidden />;
+  const hasIconProp = icon !== undefined;
+
+  const resolvedShowIconLeft = showIconLeft || (hasIconProp && iconPosition === "left");
+  const resolvedShowIconRight = showIconRight || (hasIconProp && iconPosition === "right");
+
+  const leftIconNode = leftIcon ?? (hasIconProp && iconPosition === "left" ? icon : undefined) ?? <Plus aria-hidden />;
+  const rightIconNode =
+    rightIcon ?? (hasIconProp && iconPosition === "right" ? icon : undefined) ?? <Plus aria-hidden />;
 
   return (
     <span
@@ -60,15 +90,19 @@ export function DsBadge({
       data-figma-node="488:1944"
       data-variant={variant}
       data-state={state}
-      data-show-icon-left={showIconLeft ? "true" : "false"}
-      data-show-icon-right={showIconRight ? "true" : "false"}
+      data-show-icon-left={resolvedShowIconLeft ? "true" : "false"}
+      data-show-icon-right={resolvedShowIconRight ? "true" : "false"}
       {...rest}
     >
-      {showIconLeft ? <span className="ds-badge__icon ds-badge__icon--left">{leftIconNode}</span> : null}
+      {resolvedShowIconLeft ? (
+        <span className="ds-badge__icon ds-badge__icon--left">{leftIconNode}</span>
+      ) : null}
       <DsTypography as="span" variant="paragraph-mini-bold" color="inherit" className="ds-badge__text">
         {children}
       </DsTypography>
-      {showIconRight ? <span className="ds-badge__icon ds-badge__icon--right">{rightIconNode}</span> : null}
+      {resolvedShowIconRight ? (
+        <span className="ds-badge__icon ds-badge__icon--right">{rightIconNode}</span>
+      ) : null}
     </span>
   );
 }

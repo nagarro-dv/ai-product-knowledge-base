@@ -1,0 +1,210 @@
+.aiModels {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.aiModels__loading,
+.aiModels__error {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  border: 1px solid var(--ds-general-color-border);
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.aiModels__error {
+  border-color: var(--ds-general-color-destructive-border);
+  color: var(--ds-general-color-destructive-foreground);
+}
+
+/* ── List of provider rows ──────────────────────────────────────────────── */
+
+.aiModels__list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  box-shadow: var(--elev-sm);
+  overflow: hidden;
+}
+
+.aiModels__row {
+  border-bottom: 1px solid var(--ds-general-color-border);
+}
+
+.aiModels__row:last-child {
+  border-bottom: none;
+}
+
+.aiModels__rowHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-md) var(--ds-general-padding-lg);
+  border: none;
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.aiModels__row--expanded .aiModels__rowHeader {
+  background: var(--ds-general-color-background);
+}
+
+.aiModels__rowHeader:hover {
+  background: var(--ds-general-color-background);
+}
+
+.aiModels__rowHeader:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: -2px;
+}
+
+.aiModels__avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiModels__avatar--connected {
+  border-color: var(--ds-general-color-success-border);
+  background: var(--ds-general-color-success-muted);
+  color: var(--ds-general-color-success-foreground);
+}
+
+.aiModels__avatar--attention {
+  border-color: var(--ds-general-color-warning-border);
+  background: var(--ds-general-color-warning-muted);
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.aiModels__rowTitle {
+  flex: 0 0 auto;
+  min-width: 96px;
+}
+
+.aiModels__rowStatus {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.aiModels__rowStatus--connected {
+  color: var(--ds-general-color-success-foreground);
+}
+
+.aiModels__rowStatus--attention {
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.aiModels__chevron {
+  flex-shrink: 0;
+  color: var(--ds-general-color-muted-foreground);
+  transition: transform var(--dur-base) var(--ease-standard);
+}
+
+.aiModels__chevron--open {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aiModels__chevron {
+    transition: none;
+  }
+}
+
+/* ── Expanded methods ───────────────────────────────────────────────────── */
+
+.aiModels__methods {
+  display: flex;
+  flex-direction: column;
+  padding: 0 var(--ds-general-padding-lg) var(--ds-general-padding-md);
+  background: var(--ds-general-color-background);
+}
+
+.aiModels__multiHint {
+  margin: var(--ds-general-gap-xs) 0 var(--ds-general-gap-sm);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiModels__methodRow {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-sm) 0;
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.aiModels__methods > .aiModels__methodRow:first-child,
+.aiModels__methods > .aiModels__multiHint + .aiModels__methodRow {
+  border-top: none;
+}
+
+.aiModels__methodIcon--ok {
+  color: var(--ds-general-color-success-foreground);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.aiModels__methodIcon--warn {
+  color: var(--ds-general-color-warning-foreground);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.aiModels__methodIcon--muted {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+  margin-top: 3px;
+}
+
+.aiModels__methodCopy {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.aiModels__methodCopy p {
+  margin: 0;
+}
+
+.aiModels__methodDescription {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiModels__methodAction {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-xs);
+}
+
+.aiModels__activeLabel {
+  color: var(--ds-general-color-success-foreground);
+  font-weight: 600;
+  padding: 0 var(--ds-general-padding-xs);
+}
+
+.aiModels__warningNote {
+  margin: var(--ds-general-gap-sm) 0 0;
+  color: var(--ds-general-color-warning-foreground);
+}

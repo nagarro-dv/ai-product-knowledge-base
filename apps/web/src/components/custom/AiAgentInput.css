@@ -42,17 +42,90 @@
   top: calc(100% + var(--ds-general-gap-xs));
   left: 0;
   z-index: 4;
-  width: 220px;
+  width: 260px;
+  display: grid;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-padding-xs);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--ds-general-color-foreground) 12%, transparent);
+}
+
+.aiAgentInput__dropdown button {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border: 1px solid transparent;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.aiAgentInput__dropdown button:hover {
+  background: var(--ds-general-color-background);
+}
+
+.aiAgentInput__dropdown button:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.aiAgentInput__menuIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiAgentInput__menuCopy {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  min-width: 0;
+}
+
+.aiAgentInput__menuTitle {
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  font-weight: 600;
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+}
+
+.aiAgentInput__menuHint {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
 }
 
 .aiAgentInput__inputShell {
   display: flex;
+  align-items: flex-end;
+  gap: var(--ds-general-gap-md);
   width: 100%;
-  border: 1px solid var(--ds-general-color-border);
-  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-lg);
   background: var(--ds-general-color-canvas);
   padding: var(--ds-general-gap-3xl) var(--ds-general-gap-4xl);
   box-sizing: border-box;
+  /* The primary composer earns real elevation — nothing else on the
+     homepage should read as more prominent than this. */
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ds-general-color-foreground) 4%, transparent),
+    0 12px 32px color-mix(in srgb, var(--ds-general-color-foreground) 8%, transparent);
+  transition: box-shadow var(--dur-base) var(--ease-standard), border-color var(--dur-base) var(--ease-standard);
+}
+
+.aiAgentInput__inputShell:has(.aiAgentInput__textarea:focus-visible) {
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ds-general-color-foreground) 4%, transparent),
+    0 12px 32px color-mix(in srgb, var(--ds-general-color-foreground) 9%, transparent);
+}
+
+.aiAgentInput__sendButton {
+  flex-shrink: 0;
 }
 
 .aiAgentInput__textareaWrap {
@@ -70,7 +143,7 @@
   pointer-events: none;
   z-index: 1;
   opacity: 0;
-  transition: opacity 160ms ease;
+  transition: opacity var(--dur-base) var(--ease-standard);
 }
 
 .aiAgentInput__textareaFade--top {
@@ -125,10 +198,9 @@
   outline: none;
 }
 
-.aiAgentInput__sendCol {
-  display: flex;
-  align-items: flex-end;
-  padding: var(--ds-general-gap-2xs) 0;
+.aiAgentInput__inputShell:has(.aiAgentInput__textarea:focus-visible) {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
 }
 
 .aiAgentInput__modalRoot {
@@ -141,7 +213,7 @@
   position: absolute;
   inset: 0;
   border: none;
-  background: rgb(0 0 0 / 34%);
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 34%, transparent);
 }
 
 .aiAgentInput__modal {
@@ -154,7 +226,7 @@
   border: 1px solid var(--ds-general-color-border);
   background: var(--ds-general-color-canvas);
   padding: var(--ds-general-gap-2xl);
-  box-shadow: 0 12px 24px rgb(0 0 0 / 16%);
+  box-shadow: 0 12px 24px color-mix(in srgb, var(--ds-general-color-foreground) 16%, transparent);
 }
 
 .aiAgentInput__modalTitle {
@@ -171,6 +243,165 @@
   display: flex;
   flex-direction: column;
   gap: var(--ds-general-gap-lg);
+}
+
+.aiAgentInput__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+}
+
+.aiAgentInput__jiraConnectHint {
+  justify-self: start;
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--ds-general-color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  cursor: pointer;
+}
+
+.aiAgentInput__jiraConnectHint:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.aiAgentInput__jiraSetupNote {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  line-height: var(--ds-general-typography-paragraph-mini-line-height);
+}
+
+/* ── Inline Storybook connect (component picker empty state) ─────────────── */
+
+.aiAgentInput__sbConnect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px dashed var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.aiAgentInput__sbConnectTitle {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 600;
+  color: var(--ds-general-color-foreground);
+}
+
+.aiAgentInput__sbConnectHint {
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  line-height: var(--ds-general-typography-paragraph-mini-line-height);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiAgentInput__sbConnectRow {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.aiAgentInput__sbConnectRow .aiAgentInput__fieldInput {
+  flex: 1 1 auto;
+}
+
+.aiAgentInput__sbConnectError {
+  color: var(--ds-general-color-destructive-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  line-height: var(--ds-general-typography-paragraph-mini-line-height);
+}
+
+.aiAgentInput__pickerSource {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-bottom: 2px;
+}
+
+.aiAgentInput__pickerSourceLabel {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.aiAgentInput__pickerSourceName {
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.aiAgentInput__pickerCaption,
+.aiAgentInput__pickerEmpty {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+.aiAgentInput__pickerEmpty {
+  padding: var(--ds-general-padding-sm);
+}
+
+.aiAgentInput__originBadge {
+  margin-left: var(--ds-general-gap-xs);
+  padding: 1px 6px;
+  border-radius: var(--ds-general-radius-full);
+  font-size: 10px;
+  font-weight: 600;
+  vertical-align: middle;
+}
+
+.aiAgentInput__originBadge--storybook {
+  border: 1px solid var(--ds-general-color-accent-border);
+  background: var(--ds-general-color-accent-muted);
+  color: var(--ds-general-color-accent-foreground);
+}
+
+.aiAgentInput__originBadge--builtin {
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiAgentInput__fieldLabel {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: var(--ds-general-typography-paragraph-small-line-height);
+}
+
+.aiAgentInput__fieldInput {
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+}
+
+.aiAgentInput__fieldInput::placeholder {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.aiAgentInput__fieldInput:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
 }
 
 .aiAgentInput__modalLinkField {
@@ -241,10 +472,16 @@
   padding: 8px 10px;
   background: transparent;
   cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .aiAgentInput__componentOption:hover {
   background: var(--ds-general-color-background);
+}
+
+.aiAgentInput__componentOption:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
 }
 
 .aiAgentInput__componentOption--selected {

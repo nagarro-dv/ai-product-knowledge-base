@@ -1,0 +1,101 @@
+/**
+ * CustomAmount — Figma XLKRFXYtGQPPHD9cq4JNn8, node 5935:11606 ("Custom amount/Default").
+ * Direction B — adaptive comfort-tier messaging: the contextual copy block (§6)
+ * switches tone (icon + semantic color) based on whether the live value is
+ * inside or outside the [comfortableMin, comfortableMax] guidance band.
+ *
+ * Layout derived from Figma metadata (all measurements in px at 1× density):
+ *   Widget outer            342 × 291  padding 24px
+ *   Slot inner              294 × 243
+ *   ├─ Container            294 × 243
+ *   │  ├─ TopContainer          294 × 183
+ *   │  │  ├─ Label + Value + Drag helper block  h=89
+ *   │  │  │  ├─ Label           h=20
+ *   │  │  │  ├─ Value           y=28  h=24  (8px gap after label)
+ *   │  │  │  ├─ Drag helper     y=60  h=20  (8px gap after value)
+ *   │  │  │  └─ Divider         y=88  h=1   (8px gap after drag helper)
+ *   │  │  └─ Slider block   y=105 h=78  (16px gap after divider)
+ *   │  │     ├─ Slider          h=30
+ *   │  │     └─ Contextual row  y=46  h=32  (16px gap after slider)
+ *   │  └─ Actions            y=199 h=44  (16px gap after TopContainer)
+ *
+ * Token mapping — no raw colors:
+ *   --ds-general-gap-2xl               16px  ← divider→slider, slider→contextual, body→actions
+ *   --ds-general-color-border                ← divider
+ *   --ds-general-color-foreground            ← label, value
+ *   --ds-general-color-muted-foreground      ← drag helper
+ *   --ds-general-color-success-foreground    ← contextual message + icon, comfortable state
+ *   --ds-general-color-warning-foreground    ← contextual message + icon, outside-range state
+ */
+
+.ds-custom-amount {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── 1. Label ── */
+
+.ds-custom-amount__label {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+}
+
+/* ── 2. Live big value ── */
+
+.ds-custom-amount__value {
+  margin: 8px 0 0;
+  color: var(--ds-general-color-foreground);
+}
+
+/* ── 3. Drag helper ── */
+
+.ds-custom-amount__drag-helper {
+  margin: 8px 0 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── 4. Divider ── */
+
+.ds-custom-amount__divider {
+  height: 1px;
+  background: var(--ds-general-color-border);
+  flex-shrink: 0;
+  margin-top: 8px;
+}
+
+/* ── 5. Slider ── */
+
+.ds-custom-amount__slider {
+  width: 100%;
+  margin-top: var(--ds-general-gap-2xl, 16px);
+}
+
+/* ── 6. Contextual comfortable-range message (dynamic tone) ── */
+
+.ds-custom-amount__contextual {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: var(--ds-general-gap-2xl, 16px);
+  transition: color 150ms ease;
+}
+
+.ds-custom-amount__contextual-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.ds-custom-amount__contextual--comfortable {
+  color: var(--ds-general-color-success-foreground);
+}
+
+.ds-custom-amount__contextual--outside {
+  color: var(--ds-general-color-warning-foreground);
+}
+
+/* ── 7. Apply button ── */
+
+.ds-custom-amount__apply {
+  margin-top: var(--ds-general-gap-2xl, 16px);
+  width: 100%;
+}

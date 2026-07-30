@@ -1,0 +1,173 @@
+/**
+ * DS Credit Score — Circular variant (Direction A)
+ * Full 360° ring alternative to CreditScore.css's semicircular arc gauge.
+ * Ring rendering/colour is owned by ProgressCircle.css (--ds-progress-linear-* tokens);
+ * this file only owns the card shell, header, footer, centered content overlay and the
+ * range labels — matching the original DsCreditScore layout for visual consistency
+ * with the rest of the BFSI product experience.
+ */
+
+/* ── Card shell (matches DsCreditScore) ── */
+
+.ds-credit-score-circular {
+  position: relative;
+  box-sizing: border-box;
+  border-radius: var(--ds-general-radius-rounded-2xl);
+  overflow: clip;
+  background: var(--ds-general-color-background);
+  padding: var(--ds-general-padding-3xl);
+  width: 100%;
+}
+
+.ds-credit-score-circular::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: var(--ds-general-stroke-default, 1px);
+  background: linear-gradient(90deg, #f86368, #fbbf24, #c5ebe4);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.ds-credit-score-circular__inner {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-3xl);
+  width: 100%;
+}
+
+/* ── Header ── */
+
+.ds-credit-score-circular__header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+}
+
+.ds-credit-score-circular__header-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+}
+
+.ds-credit-score-circular__label {
+  color: var(--ds-general-color-muted-foreground);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.ds-credit-score-circular__provider {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px var(--ds-general-gap-md);
+  border-radius: var(--ds-general-radius-full, 9999px);
+  background: var(--ds-badge-color-secondary-background);
+  color: var(--ds-badge-color-secondary-foreground);
+  white-space: nowrap;
+}
+
+/* ── Gauge — square container wrapping DsProgressCircle ── */
+
+.ds-credit-score-circular__gauge {
+  position: relative;
+  width: 100%;
+  max-width: 200px;
+  aspect-ratio: 1 / 1;
+  margin-inline: auto;
+  overflow: visible;
+}
+
+.ds-credit-score-circular__ring {
+  width: 100%;
+  height: 100%;
+}
+
+/* Centered overlay content — real (non-hidden) accessible text */
+
+.ds-credit-score-circular__content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-gap-md);
+  text-align: center;
+}
+
+.ds-credit-score-circular__trend {
+  color: var(--ds-general-color-success-foreground, #1d7f4b);
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+
+.ds-credit-score-circular__number {
+  color: var(--ds-general-color-foreground);
+  font-size: 36px;
+  line-height: 1;
+}
+
+.ds-credit-score-circular__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px var(--ds-general-gap-md);
+  border-radius: var(--ds-general-radius-full, 9999px);
+  white-space: nowrap;
+}
+
+.ds-credit-score-circular__badge--success {
+  background: var(--ds-badge-color-success-background);
+  color: var(--ds-badge-color-success-foreground);
+}
+
+.ds-credit-score-circular__badge--warning {
+  background: var(--ds-badge-color-warning-background);
+  color: var(--ds-badge-color-warning-foreground);
+}
+
+.ds-credit-score-circular__badge--destructive {
+  background: var(--ds-badge-color-destructive-background);
+  color: var(--ds-badge-color-destructive-foreground);
+}
+
+/* Range labels — under the ring, same intent as the arc's min/max endpoints */
+
+.ds-credit-score-circular__range {
+  position: absolute;
+  top: calc(100% + var(--ds-general-gap-sm));
+  left: 0;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.ds-credit-score-circular__range-min,
+.ds-credit-score-circular__range-max {
+  font-size: var(--ds-general-typography-paragraph-mini-font-size, 11px);
+  line-height: 1;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── Footer ── */
+
+.ds-credit-score-circular__updated {
+  margin: 0;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  text-align: center;
+  color: var(--ds-general-color-muted-foreground);
+}
