@@ -21,9 +21,8 @@
 .sourceModal__panel {
   position: relative;
   width: min(480px, calc(100vw - var(--ds-general-gap-4xl)));
-  /* Tall enough that JiraTicketPicker's 380px results box (see JiraTicketPicker.css)
-     fits without the panel itself scrolling on top of the results' own inner scroll —
-     the .jiraPicker__results scrollbar should be the only one that ever appears. */
+  /* A cap, not a size — most bodies (a short form, a folder list) shrink-wrap well
+     below this and just never grow past it on a tall viewport. */
   max-height: min(720px, calc(100vh - 64px));
   overflow: auto;
   display: flex;
@@ -34,6 +33,22 @@
   border-radius: var(--ds-general-radius-rounded-xl);
   background: var(--ds-general-color-canvas);
   box-shadow: var(--elev-md);
+}
+
+/* Opt-in (SourceModalProps.fixedHeight): the panel commits to a real, constant size —
+   the same ceiling already used as everyone else's cap — instead of shrink-wrapping,
+   and .sourceModal__body flexes to fill exactly what's left under the title block. For
+   a body with multiple, differently-shaped states (JiraTicketPicker: browsing a list vs.
+   previewing one ticket), that flexible body is what absorbs the difference between
+   states, rather than the panel changing size or the body reserving invisible space to
+   fake a constant height. */
+.sourceModal__panel--fixedHeight {
+  height: min(720px, calc(100vh - 64px));
+}
+
+.sourceModal__panel--fixedHeight .sourceModal__body {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 /* Title + subtitle read as one tightly-bound block (its own small internal gap), clearly

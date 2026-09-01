@@ -53,22 +53,14 @@ export function JiraTicketPicker({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
   const activeTabRef = useRef<HTMLButtonElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Focus lands somewhere real on open regardless of the default tab — the old
-  // `autoFocus` on the search input only worked when "Search" happened to be selected.
+  // Focus lands somewhere real on open regardless of the default tab — plain `autoFocus`
+  // on the search input only works when "Search" happens to be the default tab, so the
+  // active tab button is focused explicitly here instead.
   useEffect(() => {
     activeTabRef.current?.focus();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // The search field stays mounted (see .jiraPicker__searchField--inactive) so switching
-  // tabs never changes the modal's height — but it should still take focus when the user
-  // actually switches to it, the way a freshly-mounted field would.
-  useEffect(() => {
-    if (tab === "search" && !preview) searchInputRef.current?.focus();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tab]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -131,9 +123,10 @@ export function JiraTicketPicker({
           browsing — replaced as one unit by a single "back" affordance once a specific
           ticket is open, so the layout visibly reflects having moved from "browsing" to
           "reviewing one ticket" (and "Back to results" lives with the other navigation,
-          not inside the content box it's meant to take you out of). Both rows below keep
-          a reserved height regardless of which state is showing, so switching tabs or
-          opening/closing a preview doesn't change the modal's overall height. */}
+          not inside the content box it's meant to take you out of). This row and the
+          search field below it are the only variable-height part of the picker — the
+          modal itself stays a fixed size (SourceModal's fixedHeight), so
+          .jiraPicker__results is what grows or shrinks to absorb the difference. */}
       {!preview ? (
         <div className="jiraPicker__tabs" role="tablist">
           {TABS.map((t) => (
@@ -156,20 +149,18 @@ export function JiraTicketPicker({
         </button>
       )}
 
-      <label
-        className={`jiraPicker__searchField${tab === "search" && !preview ? "" : " jiraPicker__searchField--inactive"}`}
-      >
-        <SearchIcon size={14} aria-hidden />
-        <input
-          ref={searchInputRef}
-          className="jiraPicker__searchInput"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search tickets by title…"
-          tabIndex={tab === "search" && !preview ? 0 : -1}
-          aria-hidden={!(tab === "search" && !preview)}
-        />
-      </label>
+      {tab === "search" && !preview ? (
+        <label className="jiraPicker__searchField">
+          <SearchIcon size={14} aria-hidden />
+          <input
+            className="jiraPicker__searchInput"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search tickets by title…"
+            autoFocus
+          />
+        </label>
+      ) : null}
 
       <div className="jiraPicker__results">
         {preview ? (

@@ -437,6 +437,7 @@ export function AiAgentInput({
           subtitle={SOURCE_MODAL_SUBTITLE[pendingKind]}
           onClose={closeModal}
           footer={{ confirmLabel: SOURCE_MODAL_CONFIRM_LABEL[pendingKind], confirmDisabled: !pendingValid, onConfirm: addSource }}
+          fixedHeight={jiraPickerActive}
           headerAction={
             pendingKind === "component" && sbConnected ? (
               <DsIconButton

@@ -12,8 +12,8 @@
 .standardsPanel__trigger {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
-  gap: var(--ds-general-gap-sm);
+  justify-content: space-between;
+  gap: 0.75rem;
   width: 100%;
   padding: 0;
   border: none;
@@ -23,6 +23,11 @@
   font-size: var(--ds-general-typography-paragraph-small-font-size);
   font-weight: 500;
   color: var(--ds-general-color-muted-foreground);
+}
+
+.standardsPanel__triggerTitle {
+  margin-left: 0;
+  text-align: left;
 }
 
 .standardsPanel__trigger:hover {
@@ -38,8 +43,10 @@
 .standardsPanel__triggerSummary {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
+  justify-content: flex-end;
+  gap: 0.15rem;
   flex-shrink: 0;
+  margin-left: 0;
   color: var(--ds-general-color-muted-foreground);
 }
 

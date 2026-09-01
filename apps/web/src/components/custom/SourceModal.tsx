@@ -49,6 +49,13 @@ export type SourceModalProps = {
    * component picker's search toggle) — kept next to the one control every state
    * shares, rather than buried inside whatever's currently in the body. */
   headerAction?: ReactNode;
+  /** Opt-in: pins the panel to a real, fixed height (instead of shrink-wrapping to
+   * content, capped only by max-height) and makes `.sourceModal__body` flex to fill
+   * whatever's left under the title block — for a body with multiple, differently-
+   * shaped states (the Jira ticket picker: browsing a list vs. previewing one ticket)
+   * whose own flexible content should absorb the difference, rather than the panel
+   * jumping size or the body reserving invisible space to fake a constant height. */
+  fixedHeight?: boolean;
   children: ReactNode;
 };
 
@@ -63,7 +70,7 @@ export type SourceModalProps = {
  * free-dropdown-driven), and keeps its own focus-into-first-field wiring — this component
  * has no way to know which child element should receive focus on open.
  */
-export function SourceModal({ kind, subtitle, onClose, footer, headerAction, children }: SourceModalProps) {
+export function SourceModal({ kind, subtitle, onClose, footer, headerAction, fixedHeight, children }: SourceModalProps) {
   const titleId = `sourceModal-title-${kind}`;
 
   useEffect(() => {
@@ -77,7 +84,7 @@ export function SourceModal({ kind, subtitle, onClose, footer, headerAction, chi
   return (
     <div className="sourceModal__root" role="dialog" aria-modal="true" aria-labelledby={titleId}>
       <button type="button" className="sourceModal__backdrop" onClick={onClose} aria-label="Close" />
-      <div className="sourceModal__panel">
+      <div className={`sourceModal__panel${fixedHeight ? " sourceModal__panel--fixedHeight" : ""}`}>
         <div className="sourceModal__titleBlock">
           <header className="sourceModal__header">
             <DsTypography as="h2" id={titleId} variant="heading-5" className="sourceModal__headerTitle">

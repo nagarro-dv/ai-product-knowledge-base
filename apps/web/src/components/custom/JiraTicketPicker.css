@@ -1,5 +1,11 @@
+/* Flex column (not grid) so its last child, .jiraPicker__results, can flex to fill
+   whatever's left — needs flex:1 itself too, to actually claim the fixed-height space
+   SourceModal's .sourceModal__body (fixedHeight variant) hands it. */
 .jiraPicker {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: var(--ds-general-gap-sm);
 }
 
@@ -50,13 +56,6 @@
   color: var(--ds-general-color-muted-foreground);
 }
 
-/* Kept mounted (not conditionally removed) on every tab, so its height stays reserved —
-   switching tabs, or opening/closing a preview, never changes the modal's height. */
-.jiraPicker__searchField--inactive {
-  visibility: hidden;
-  pointer-events: none;
-}
-
 .jiraPicker__searchField:focus-within {
   outline: 2px solid var(--ds-general-shadows-focus-ring);
   outline-offset: 1px;
@@ -75,12 +74,14 @@
   outline: none;
 }
 
-/* Fixed height, always — the container never resizes to its content. Content adapts to
-   it instead: a short list just leaves the box mostly empty above the fold, a long
-   description scrolls (overflow-y below). One constant size for every state (list,
-   search, preview) is the whole point — nothing here should ever move or resize. */
+/* The modal itself is what's fixed-size now (SourceModal's fixedHeight) — this box is
+   the one flexible piece inside it, growing or shrinking to fill whatever the header row
+   above it (tabs/back-link, plus the search field when it's mounted) doesn't use. A
+   short list just leaves more of it empty above the fold; a long description scrolls
+   (overflow-y below) once it hits the fixed modal's own ceiling. */
 .jiraPicker__results {
-  height: 300px;
+  flex: 1 1 auto;
+  min-height: 160px;
   overflow-y: auto;
   overflow-x: hidden;
   display: grid;

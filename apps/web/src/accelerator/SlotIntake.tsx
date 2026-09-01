@@ -609,6 +609,7 @@ function SlotSourceModal({
       subtitle={slot.role === "requirement" ? SOURCE_MODAL_SUBTITLE[kind] : slot.hint}
       onClose={onClose}
       footer={{ confirmLabel: SOURCE_MODAL_CONFIRM_LABEL[kind], confirmDisabled: !valid, onConfirm: handleConfirm }}
+      fixedHeight={jiraPickerActive}
       headerAction={
         kind === "component" && sbSummary?.status === "connected" ? (
           <DsIconButton
