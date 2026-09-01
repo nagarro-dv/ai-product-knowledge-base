@@ -1,0 +1,295 @@
+.slotIntake {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+  width: 100%;
+}
+
+/* ── Composer ─────────────────────────────────────────────────────────────
+   One chat-style box for the subject + free-text request — attachments as
+   chips above the textarea, then a single toolbar row: attach buttons on
+   the left, engine choice + send on the right. Everything else (references,
+   watch-outs, the criteria checklist) lives below it, out of the way. */
+.slotIntake__composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-xs);
+  min-width: 0;
+}
+
+.slotIntake__composer:focus-within {
+  border-color: var(--ds-general-color-muted-foreground);
+}
+
+.slotIntake__composerAttachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-sm);
+}
+
+.slotIntake__composerTextarea {
+  width: 100%;
+  min-height: 64px;
+  padding: var(--ds-general-padding-xs) 2px;
+  border: none;
+  background: transparent;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+  line-height: var(--ds-general-typography-paragraph-regular-line-height);
+  resize: none;
+}
+
+.slotIntake__composerTextarea::placeholder {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.slotIntake__composerTextarea:focus-visible,
+.slotIntake__composerTextarea:focus {
+  outline: none;
+}
+
+.slotIntake__composerToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+}
+
+.slotIntake__composerAttachButtons {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-xs);
+}
+
+.slotIntake__composerActions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  flex-shrink: 0;
+}
+
+/* Reused for both the composer's own attach buttons and every secondary
+   slot's kind row (.slotBox__kindButton below) — one visual language for
+   "attach a source" everywhere on this screen. */
+.slotIntake__attachChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px var(--ds-general-padding-sm) 5px var(--ds-general-padding-xs);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.slotIntake__attachChip--icon {
+  padding: 5px;
+}
+
+.slotIntake__attachChip svg {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+}
+
+.slotIntake__attachChip:hover {
+  background: var(--ds-general-color-canvas);
+  border-color: var(--ds-general-color-muted-foreground);
+}
+
+.slotIntake__attachChip:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.slotIntake__composerMore {
+  position: relative;
+}
+
+.slotIntake__composerMoreMenu {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: var(--ds-general-padding-xs);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-sm);
+}
+
+.slotIntake__composerMoreMenu button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: var(--ds-general-padding-xs) var(--ds-general-padding-sm);
+  border: none;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: none;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  text-align: left;
+  cursor: pointer;
+}
+
+.slotIntake__composerMoreMenu button:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.slotIntake__composerMoreMenu svg {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+}
+
+/* ── Below the composer: optional slots (left) + the criteria checklist
+   (right) — same row, opposite ends, so neither competes with the composer
+   itself for attention. */
+.slotIntake__belowRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-lg);
+}
+
+.slotIntake__secondarySlots {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-sm);
+}
+
+.slotIntake__secondaryToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.slotIntake__secondaryToggle:hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.slotIntake__secondaryToggle:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.slotIntake__secondaryOpen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  width: min(320px, 100%);
+}
+
+.slotIntake__secondaryLabel {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.slotIntake__secondaryTextarea {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--ds-general-padding-sm);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  resize: vertical;
+}
+
+.slotIntake__secondaryTextarea::placeholder {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.slotIntake__secondaryTextarea:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+/* The criteria checklist reads as a small badge that expands in place, not
+   a full-width panel — overriding DsAccordion's default 100% width. */
+.slotIntake__criteriaSlot {
+  flex: 0 0 auto;
+  width: min(300px, 100%);
+}
+
+.slotIntake__criteriaSlot .ds-accordion {
+  width: 100%;
+}
+
+/* ── Shared kind-row buttons (secondary slots) ───────────────────────────
+   Same visual language as .slotIntake__attachChip, kept under its original
+   class name since SecondarySlot still uses it. */
+.slotBox__kindRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-xs);
+}
+
+.slotBox__kindButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px var(--ds-general-padding-sm) 5px var(--ds-general-padding-xs);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.slotBox__kindButton svg {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+}
+
+.slotBox__kindButton:hover {
+  background: var(--ds-general-color-background);
+  border-color: var(--ds-general-color-muted-foreground);
+}
+
+.slotBox__kindButton:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+/* Modal chrome (root/backdrop/panel/header/fields/footer) now lives in the shared
+   SourceModal.tsx + SourceModal.css, used by both this composer and AiAgentInput's. */
+
+@media (max-width: 640px) {
+  .slotIntake__belowRow {
+    flex-direction: column;
+  }
+
+  .slotIntake__criteriaSlot {
+    width: 100%;
+  }
+}

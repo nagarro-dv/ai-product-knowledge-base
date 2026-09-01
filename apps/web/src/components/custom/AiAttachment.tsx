@@ -11,6 +11,8 @@ export type AiAttachmentProps = {
   href?: string | null;
   value?: string;
   subtitle?: string;
+  /** Short inline preview shown after the value in a "tag" chip — a ticket's title, a component's file path — so the user can tell what they're actually attaching without opening it. */
+  preview?: string | null;
   description?: string | null;
   icon?: ReactNode;
   onRemove?: () => void;
@@ -41,6 +43,7 @@ export function AiAttachment({
   href = null,
   value = "value",
   subtitle = "Source",
+  preview = null,
   description = null,
   icon,
   onRemove,
@@ -67,6 +70,7 @@ export function AiAttachment({
           ) : (
             <span className="aiAttachment__tagValue">{value}</span>
           )}
+          {preview ? <span className="aiAttachment__tagPreview">{preview}</span> : null}
           {onRemove ? (
             <button type="button" className="aiAttachment__tagClose" aria-label="Remove attachment" onClick={onRemove}>
               <X size={14} aria-hidden />

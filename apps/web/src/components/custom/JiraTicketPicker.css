@@ -3,8 +3,13 @@
   gap: var(--ds-general-gap-sm);
 }
 
+/* Shares a min-height with .jiraPicker__previewBack below (the two are never shown at
+   the same time — tabs while browsing, back-link while previewing) so swapping between
+   them doesn't change the modal's height. */
 .jiraPicker__tabs {
   display: inline-flex;
+  align-items: center;
+  min-height: 38px;
   gap: 2px;
   padding: 2px;
   border-radius: var(--ds-general-radius-rounded-md);
@@ -14,7 +19,7 @@
 
 .jiraPicker__tab {
   border: none;
-  padding: 6px 10px;
+  padding: 7px 12px;
   border-radius: var(--ds-general-radius-rounded-sm);
   background: transparent;
   color: var(--ds-general-color-muted-foreground);
@@ -45,6 +50,13 @@
   color: var(--ds-general-color-muted-foreground);
 }
 
+/* Kept mounted (not conditionally removed) on every tab, so its height stays reserved —
+   switching tabs, or opening/closing a preview, never changes the modal's height. */
+.jiraPicker__searchField--inactive {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .jiraPicker__searchField:focus-within {
   outline: 2px solid var(--ds-general-shadows-focus-ring);
   outline-offset: 1px;
@@ -63,21 +75,29 @@
   outline: none;
 }
 
+/* Fixed height, always — the container never resizes to its content. Content adapts to
+   it instead: a short list just leaves the box mostly empty above the fold, a long
+   description scrolls (overflow-y below). One constant size for every state (list,
+   search, preview) is the whole point — nothing here should ever move or resize. */
 .jiraPicker__results {
-  max-height: 220px;
+  height: 300px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
-  gap: 2px;
+  align-content: start;
+  gap: 4px;
   border: 1px solid var(--ds-general-color-border);
   border-radius: var(--ds-general-radius-rounded-md);
-  padding: 4px;
+  padding: 6px;
 }
 
 .jiraPicker__resultRow {
   display: flex;
   align-items: center;
-  gap: var(--ds-general-gap-sm);
-  padding: 8px 10px;
+  width: 100%;
+  min-width: 0;
+  gap: var(--ds-general-gap-md);
+  padding: 10px 12px;
   border: 1px solid transparent;
   border-radius: var(--ds-general-radius-rounded-sm);
   background: transparent;
@@ -140,34 +160,44 @@
   color: var(--ds-general-color-warning-foreground);
 }
 
-.jiraPicker__manualLink {
-  justify-self: start;
-  border: none;
-  padding: 0;
-  background: transparent;
-  color: var(--ds-general-color-muted-foreground);
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  font-family: var(--ds-general-typography-font-family-body);
-  font-size: var(--ds-general-typography-paragraph-mini-font-size);
-  cursor: pointer;
-}
-
-.jiraPicker__manualLink:focus-visible {
-  outline: 2px solid var(--ds-general-shadows-focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--ds-general-radius-rounded-xs);
-}
-
 /* ── Preview ────────────────────────────────────────────────────────────── */
 
 .jiraPicker__preview {
+  /* Lives inside the already-bordered/padded .jiraPicker__results box now — no border/
+     background/padding of its own, so list⇄preview doesn't read as a box-in-a-box. */
   display: grid;
-  gap: var(--ds-general-gap-sm);
-  padding: var(--ds-general-padding-md);
-  border: 1px solid var(--ds-general-color-border-alt-1);
-  border-radius: var(--ds-general-radius-rounded-md);
-  background: var(--ds-general-color-background);
+  gap: var(--ds-general-gap-md);
+  padding: 4px 6px;
+}
+
+/* Exact same treatment as .componentPicker__crumb — one "back to a list" language
+   everywhere in this modal, not a brighter, differently-styled link here. Matches
+   .jiraPicker__tabs' min-height (see above) since the two swap in the same slot. */
+.jiraPicker__previewBack {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border: none;
+  padding: 2px 4px;
+  margin: 0 -2px;
+  background: transparent;
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  cursor: pointer;
+}
+
+.jiraPicker__previewBack:hover {
+  color: var(--ds-general-color-foreground);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.jiraPicker__previewBack:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
 }
 
 .jiraPicker__previewHeader {

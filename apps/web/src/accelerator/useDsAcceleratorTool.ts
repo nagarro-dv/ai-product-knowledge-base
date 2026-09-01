@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { AcceleratorMode, CriterionWithState } from "@ds-starter/standards";
 import {
   cancelAgentJob,
   fetchAgentProviders,
@@ -14,11 +15,12 @@ import { fetchIntegrations } from "../integrations/jiraClient";
 import { publishToGithub } from "../integrations/repositoryClient";
 import type { AiAgentInputSendPayload } from "../components/custom/AiAgentInput";
 import { buildDuplicateCorrectionNote, buildTooFewDirectionsCorrectionNote, findNearDuplicatePair } from "./directionQuality";
-import { hasRealDirections, parseAnalysisOutput, parseProposalOutput, parseUnderstanding } from "./parsers";
-import { buildProposalPrompt, buildTextDirectionsPrompt, buildUnderstandingPrompt } from "./prompts";
+import { hasRealDirections, parseAnalysisOutput, parseProposalOutput, parseQaOutput, parseUnderstanding } from "./parsers";
+import { buildProposalPrompt, buildQaPrompt, buildTextDirectionsPrompt, buildUnderstandingPrompt } from "./prompts";
 import { appendHistory, summarizeContext } from "./runHistory";
 import { discardProposalRun, prepareProposalPreviews, promoteDirection } from "./proposalClient";
-import { extractTicketKey, resolveTaskFolder } from "./task-docs";
+import { fetchStandards, updateStandards } from "./standardsClient";
+import { runStaticQaChecks } from "./qaClient";
 import {
   ACTIVE_JOB_KEY,
   SNAPSHOT_KEY,
@@ -32,12 +34,15 @@ import {
   safeReadSession,
   safeRemoveSession,
   safeWriteSession,
+  sourcesForPrompt,
   toReadableAgentError,
 } from "./tool-utils";
 import type {
   AnalysisOutput,
   Direction,
   PreviewTarget,
+  QaFinding,
+  QaReport as QaReportData,
   RunPhase,
   SourceEntry,
   StreamItem,
@@ -49,14 +54,13 @@ function newRunId(): string {
   return `run-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
-/** Bump when the snapshot shape or state semantics change — mismatched snapshots are dropped, not misread. */
-const SNAPSHOT_VERSION = 2;
+/** Bump when the snapshot shape or state semantics change — mismatched snapshots are dropped, not misread. v3: mode replaces primaryFigma/primaryTicket (now derived from typed sources). v4: mode-select screen removed, mode is no longer nullable. */
+const SNAPSHOT_VERSION = 4;
 
 type SessionSnapshot = {
   version: number;
   state: ToolState;
-  primaryFigma: string;
-  primaryTicket: string;
+  mode: AcceleratorMode;
   baseContext: string;
   sources: SourceEntry[];
   understanding: UnderstandingBrief | null;
@@ -71,12 +75,12 @@ type SessionSnapshot = {
   promoteErrorMessage: string | null;
   generationStreamOffset: number;
   generationJobStatus: AgentJobStatus | null;
+  qaReport: QaReportData | null;
 };
 
 export function useDsAcceleratorTool() {
   const [state, setState] = useState<ToolState>("intake");
-  const [primaryFigma, setPrimaryFigma] = useState("");
-  const [primaryTicket, setPrimaryTicket] = useState("");
+  const [mode, setMode] = useState<AcceleratorMode>("improve");
   const [baseContext, setBaseContext] = useState("");
   const [sources, setSources] = useState<SourceEntry[]>([]);
   const [understanding, setUnderstanding] = useState<UnderstandingBrief | null>(null);
@@ -107,12 +111,62 @@ export function useDsAcceleratorTool() {
   const [providersError, setProvidersError] = useState<string | null>(null);
   const [authPreferenceVersion, setAuthPreferenceVersion] = useState(0);
 
+  // The project's quality checklist — a shipped baseline plus whatever the
+  // orchestrator has persisted for this repo, with live enabled flags. Fetched
+  // once; toggling optimistically updates local state and best-effort
+  // persists. See packages/standards for the catalog and StandardsPanel.tsx
+  // for the UI.
+  const [criteriaState, setCriteriaState] = useState<CriterionWithState[]>([]);
+  const [standardsLoaded, setStandardsLoaded] = useState(false);
+  const [qaReport, setQaReport] = useState<QaReportData | null>(null);
+  const [qaStaticFindings, setQaStaticFindings] = useState<QaFinding[] | null>(null);
+
   const analysisStreamRef = useRef<HTMLDivElement | null>(null);
   const generationAbortRef = useRef<AbortController | null>(null);
   const isHydratingFromSnapshotRef = useRef(false);
   const pendingDiscardRunIdRef = useRef<string | null>(null);
 
   useEffect(() => subscribeAuthPreferences(() => setAuthPreferenceVersion((v) => v + 1)), []);
+
+  const [standardsErrorMessage, setStandardsErrorMessage] = useState<string | null>(null);
+  const loadStandards = useCallback((signal?: AbortSignal) => {
+    setStandardsLoaded(false);
+    setStandardsErrorMessage(null);
+    void fetchStandards({ signal })
+      .then((data) => setCriteriaState(data.criteria))
+      .catch((error) => {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        // An empty checklist must never look identical to "nothing applies here" —
+        // that read as a broken 0-of-0 panel with no explanation, so the failure
+        // has to be visible and retryable, not swallowed.
+        setStandardsErrorMessage(
+          "Couldn't load the quality checklist. Make sure the assistant service is running, then retry.",
+        );
+      })
+      .finally(() => setStandardsLoaded(true));
+  }, []);
+  useEffect(() => {
+    const controller = new AbortController();
+    loadStandards(controller.signal);
+    return () => controller.abort();
+  }, [loadStandards]);
+
+  const modeCriteria = useMemo(
+    () => (mode ? criteriaState.filter((c) => c.appliesTo.includes(mode)) : criteriaState),
+    [criteriaState, mode],
+  );
+  const enabledModeCriteria = useMemo(() => modeCriteria.filter((c) => c.enabled), [modeCriteria]);
+
+  const toggleCriterion = useCallback((id: string) => {
+    setCriteriaState((current) => {
+      const next = current.map((c) => (c.id === id && !c.locked ? { ...c, enabled: !c.enabled } : c));
+      const disabledIds = next.filter((c) => !c.enabled && !c.locked).map((c) => c.id);
+      void updateStandards(disabledIds).catch(() => {
+        // best effort — the toggle still applies locally for this session
+      });
+      return next;
+    });
+  }, []);
 
   const activeProvider = useMemo(
     () => providers.find((p) => p.id === selectedProvider),
@@ -138,6 +192,8 @@ export function useDsAcceleratorTool() {
    * never implies a writable repo. Without one, everything degrades to the
    * existing text-only pipeline: honest analysis/directions, no fabricated
    * code preview, and Apply is separately blocked outright (see canApply).
+   * QA mode also needs this — it stages a real preview and reads real files,
+   * it just never writes back.
    */
   const [repositoryConnected, setRepositoryConnected] = useState(false);
   /** 'github' unlocks the post-Apply "Publish to GitHub" action; 'local' and null don't. */
@@ -161,8 +217,7 @@ export function useDsAcceleratorTool() {
   }, []);
   const canGenerateRealCode = activeCanEditFiles && repositoryConnected;
 
-  const ticketKey = useMemo(() => extractTicketKey(primaryTicket), [primaryTicket]);
-  const taskFolder = useMemo(() => resolveTaskFolder(ticketKey).taskFolder, [ticketKey]);
+  const taskFolder = useMemo(() => sources.find((s) => s.kind === "ticket")?.taskFolder ?? null, [sources]);
   const resolvedPreviewTarget: PreviewTarget = useMemo(
     () => resolvePreviewTarget(sources, baseContext, analysis?.changeIntent ?? null),
     [analysis?.changeIntent, baseContext, sources],
@@ -184,6 +239,8 @@ export function useDsAcceleratorTool() {
     if (state === "analyzing") return "Analyzing your request…";
     if (state === "analysisReady") return "Analysis ready — review it before generating.";
     if (state === "generating") return "Generating directions…";
+    if (state === "qaRunning") return "Checking your component…";
+    if (state === "qaReady") return "QA report ready";
     if (state === "implementationReady") return "Couldn't apply — try again.";
     if (state === "implementationSuccess") return "Direction applied";
     if (state === "analysisStopped") return "Analysis stopped";
@@ -270,6 +327,8 @@ export function useDsAcceleratorTool() {
               // confirmed analysis is still valid, no need to start over.
               appendStream({ kind: "status", text: "Generation stopped — you're back at the analysis." });
               setState("analysisReady");
+            } else if (phase === "qa") {
+              setState("intake");
             } else {
               setState("analysisStopped");
             }
@@ -281,7 +340,9 @@ export function useDsAcceleratorTool() {
             summary.error ||
               (phase === "directions"
                 ? "The generation didn't finish. You can try again."
-                : "The analysis didn't finish. You can try again."),
+                : phase === "qa"
+                  ? "The QA check didn't finish. You can try again."
+                  : "The analysis didn't finish. You can try again."),
           );
           setLiveStatus("Error");
           return null;
@@ -353,15 +414,14 @@ export function useDsAcceleratorTool() {
       }
       isHydratingFromSnapshotRef.current = true;
       restoredState = snapshot.state;
-      if ((restoredState === "analyzing" || restoredState === "generating") && !rawJobId) {
+      if ((restoredState === "analyzing" || restoredState === "generating" || restoredState === "qaRunning") && !rawJobId) {
         // A run was in flight but there's no job to resume (stopped locally, a
         // chat-stream run, or expired) — land on the nearest stable screen
         // instead of a spinner nobody will ever resolve.
         restoredState = snapshot.understanding ? "analysisReady" : "intake";
       }
       setState(restoredState);
-      setPrimaryFigma(snapshot.primaryFigma);
-      setPrimaryTicket(snapshot.primaryTicket);
+      setMode(snapshot.mode);
       setBaseContext(snapshot.baseContext);
       setSources(snapshot.sources);
       setUnderstanding(snapshot.understanding);
@@ -376,6 +436,7 @@ export function useDsAcceleratorTool() {
       setPromoteErrorMessage(snapshot.promoteErrorMessage);
       setGenerationStreamOffset(snapshot.generationStreamOffset);
       setGenerationJobStatus(snapshot.generationJobStatus);
+      setQaReport(snapshot.qaReport);
       restoredOffset = Number.isFinite(snapshot.generationStreamOffset) ? snapshot.generationStreamOffset : -1;
       restoredRunId = snapshot.runId;
       restoredPhase = snapshot.runPhase ?? "understanding";
@@ -428,13 +489,18 @@ export function useDsAcceleratorTool() {
             setAnalysis(parsed);
             setDirections(parsed.directions);
             setState("directionsReady");
+          } else if (restoredPhase === "qa") {
+            const subjectSource = sources.find((s) => s.role === "subject");
+            const report = parseQaOutput(output, restoredRunId ?? "", subjectSource?.value ?? "Component");
+            setQaReport(report);
+            setState("qaReady");
           } else {
             setUnderstanding(parseUnderstanding(output));
             setState("analysisReady");
           }
         };
         if (summary.status === "queued" || summary.status === "running") {
-          setState(restoredPhase === "directions" ? "generating" : "analyzing");
+          setState(restoredPhase === "directions" ? "generating" : restoredPhase === "qa" ? "qaRunning" : "analyzing");
           const output = await consumeGenerationJob(rawJobId, restoredOffset, restoredPhase);
           if (output) await finishPhase(output);
           return;
@@ -446,7 +512,7 @@ export function useDsAcceleratorTool() {
         if (summary.status === "cancelled") {
           // A cancelled directions job returns to the checkpoint — the confirmed
           // analysis is still valid. Only a cancelled analysis is a dead stop.
-          setState(restoredPhase === "directions" ? "analysisReady" : "analysisStopped");
+          setState(restoredPhase === "directions" ? "analysisReady" : restoredPhase === "qa" ? "intake" : "analysisStopped");
           return;
         }
         setState("error");
@@ -466,7 +532,12 @@ export function useDsAcceleratorTool() {
     // Persist across the whole mid-journey band — a reload at the checkpoint
     // or the direction comparison must not silently discard the run.
     const recoverable =
-      state === "analyzing" || state === "analysisReady" || state === "generating" || state === "directionsReady";
+      state === "analyzing" ||
+      state === "analysisReady" ||
+      state === "generating" ||
+      state === "directionsReady" ||
+      state === "qaRunning" ||
+      state === "qaReady";
     if (!recoverable && !generationJobId) {
       if (state === "intake") clearPersistence();
       return;
@@ -474,8 +545,7 @@ export function useDsAcceleratorTool() {
     const snapshot: SessionSnapshot = {
       version: SNAPSHOT_VERSION,
       state,
-      primaryFigma,
-      primaryTicket,
+      mode,
       baseContext,
       sources,
       understanding,
@@ -490,6 +560,7 @@ export function useDsAcceleratorTool() {
       promoteErrorMessage,
       generationStreamOffset,
       generationJobStatus,
+      qaReport,
     };
     if (!safeWriteSession(SNAPSHOT_KEY, JSON.stringify(snapshot))) clearPersistence();
     if (generationJobId) safeWriteSession(ACTIVE_JOB_KEY, generationJobId);
@@ -503,10 +574,10 @@ export function useDsAcceleratorTool() {
     generationJobStatus,
     generationStreamOffset,
     hasPromoted,
-    primaryFigma,
-    primaryTicket,
+    mode,
     promoteErrorMessage,
     promotedFiles,
+    qaReport,
     runId,
     runPhase,
     sources,
@@ -543,6 +614,8 @@ export function useDsAcceleratorTool() {
         if (phase === "directions") {
           appendStream({ kind: "status", text: "Generation stopped — you're back at the analysis." });
           setState("analysisReady");
+        } else if (phase === "qa") {
+          setState("intake");
         } else {
           setState("analysisStopped");
         }
@@ -591,7 +664,7 @@ export function useDsAcceleratorTool() {
    * from writing; ends at the checkpoint (`analysisReady`) where the user
    * reviews the AI's understanding before any implementation time is spent.
    */
-  const executeUnderstanding = async (nextSources: SourceEntry[], context: string, figma: string, ticket: string) => {
+  const executeUnderstanding = async (nextSources: SourceEntry[], context: string) => {
     // Any staged directions from a previous run are now stale — free them.
     discardRun(runId);
     setRunId(null);
@@ -610,14 +683,12 @@ export function useDsAcceleratorTool() {
     setIntakeErrorMessage(null);
     setLiveStatus("Analyzing your request…");
 
-    const componentSource = nextSources.find((source) => source.kind === "component");
-    const figmaUrls = collectFigmaUrls(nextSources, figma);
+    const componentSource = nextSources.find((source) => source.role === "subject");
+    const figmaUrls = collectFigmaUrls(nextSources);
     const figmaMcpAvailable = figmaUrls.length > 0 && Boolean(activeAuthMethod?.mcpServers?.includes("figma"));
     const prompt = buildUnderstandingPrompt({
-      primaryFigma: figma,
-      primaryTicket: ticket,
-      baseContext: context,
-      sources: nextSources,
+      sources: sourcesForPrompt(nextSources, context),
+      criteria: enabledModeCriteria,
       selectedComponentId: componentSource?.storybook?.componentPath,
       selectedComponentLabel: componentSource?.value,
       canReadRepo: canGenerateRealCode,
@@ -630,6 +701,92 @@ export function useDsAcceleratorTool() {
     setUnderstanding(parseUnderstanding(output));
     setState("analysisReady");
     setLiveStatus("Analysis ready");
+  };
+
+  /**
+   * QA mode — single-phase, read-only. Stages the subject into a same-origin
+   * preview (see buildQaPrompt for why: a hosted Storybook is cross-origin
+   * and nothing, including the DOM checks below, can read into it), then
+   * merges three kinds of finding: the model's judgment pass (handled here),
+   * the orchestrator's static file-content checks (kicked off once the
+   * model reports which real files it read), and the preview iframe's own
+   * measured DOM checks (owned by QaReport.tsx, since they only exist once
+   * the iframe actually mounts).
+   */
+  const executeQa = async (nextSources: SourceEntry[]) => {
+    if (!canGenerateRealCode) {
+      setIntakeErrorMessage(
+        "QA needs an engine that can read your repository and stage a preview — switch to Claude Code or Cursor.",
+      );
+      return;
+    }
+    discardRun(runId);
+    const attemptRunId = newRunId();
+    setRunId(attemptRunId);
+    setGenerationJobId(null);
+    setState("qaRunning");
+    setRunPhase("qa");
+    setStreamItems([]);
+    setQaReport(null);
+    setQaStaticFindings(null);
+    setErrorMessage(null);
+    setIntakeErrorMessage(null);
+    setLiveStatus("Checking your component…");
+
+    const componentSource = nextSources.find((source) => source.role === "subject");
+    const figmaUrls = collectFigmaUrls(nextSources);
+    const judgmentCriteria = enabledModeCriteria.filter((c) => c.verification === "judgment");
+    const prompt = buildQaPrompt({
+      runId: attemptRunId,
+      sources: sourcesForPrompt(nextSources, ""),
+      judgmentCriteria,
+      selectedComponentId: componentSource?.storybook?.componentPath,
+      selectedComponentLabel: componentSource?.value,
+    });
+    const output = await runJobPhase(prompt, "qa", figmaUrls);
+    if (!output) return;
+    const report = parseQaOutput(output, attemptRunId, componentSource?.value ?? "Component");
+    setQaReport(report);
+    setState("qaReady");
+    setLiveStatus("QA report ready");
+
+    const staticCriteria = enabledModeCriteria.filter((c) => c.verification === "automated" && c.checkId?.startsWith("static-"));
+    void runStaticQaChecks(report.subjectFiles, staticCriteria.map((c) => c.id))
+      .then(setQaStaticFindings)
+      .catch(() => setQaStaticFindings([]));
+  };
+
+  /**
+   * "Fix these findings" from the QA report — hands the failing findings
+   * into Improve mode as pre-filled constraint-role sources on the same
+   * subject, so the three modes read as one system instead of three tools.
+   */
+  const handleFixQaFindings = (failed: QaFinding[]) => {
+    const subjectSource = sources.find((source) => source.role === "subject");
+    const constraintSources: SourceEntry[] = failed.map((finding) => {
+      const criterion = modeCriteria.find((c) => c.id === finding.criterionId);
+      const label = criterion?.title ?? finding.criterionId;
+      return {
+        id: `qa-finding-${finding.criterionId}`,
+        kind: "note",
+        role: "constraint",
+        value: `${label}: ${finding.detail}${finding.suggestedFix ? ` Fix: ${finding.suggestedFix}` : ""}`,
+        context: "",
+      };
+    });
+    discardRun(runId);
+    setRunId(null);
+    setQaReport(null);
+    setQaStaticFindings(null);
+    setMode("improve");
+    setSources(subjectSource ? [subjectSource, ...constraintSources] : constraintSources);
+    setBaseContext("");
+    setUnderstanding(null);
+    setAnalysis(null);
+    setDirections([]);
+    setErrorMessage(null);
+    setIntakeErrorMessage(null);
+    setState("intake");
   };
 
   /**
@@ -664,14 +821,12 @@ export function useDsAcceleratorTool() {
     setPromoteErrorMessage(null);
     setErrorMessage(null);
 
-    const componentSource = sourcesForRun.find((source) => source.kind === "component");
-    const figmaUrls = collectFigmaUrls(sourcesForRun, primaryFigma);
+    const componentSource = sourcesForRun.find((source) => source.role === "subject");
+    const figmaUrls = collectFigmaUrls(sourcesForRun);
     const figmaMcpAvailable = figmaUrls.length > 0 && Boolean(activeAuthMethod?.mcpServers?.includes("figma"));
     const shared = {
-      primaryFigma,
-      primaryTicket,
-      baseContext: context,
-      sources: sourcesForRun,
+      sources: sourcesForPrompt(sourcesForRun, context),
+      criteria: enabledModeCriteria,
       selectedComponentId: componentSource?.storybook?.componentPath,
       selectedComponentLabel: componentSource?.value,
     };
@@ -801,8 +956,8 @@ export function useDsAcceleratorTool() {
    * a Figma source before it reaches executeUnderstanding/executeDirections —
    * those only trust the caller, they never re-check connection status.
    */
-  const checkFigmaReadiness = async (candidateSources: SourceEntry[], primaryFigmaUrl: string): Promise<string | null> => {
-    const figmaUrlsInRequest = collectFigmaUrls(candidateSources, primaryFigmaUrl);
+  const checkFigmaReadiness = async (candidateSources: SourceEntry[]): Promise<string | null> => {
+    const figmaUrlsInRequest = collectFigmaUrls(candidateSources);
     if (figmaUrlsInRequest.length === 0 || !activeAuthMethod?.mcpServers?.includes("figma")) return null;
     try {
       const list = await fetchIntegrations();
@@ -818,6 +973,20 @@ export function useDsAcceleratorTool() {
     }
   };
 
+  const handleSelectMode = (nextMode: AcceleratorMode) => {
+    setMode(nextMode);
+    setState("intake");
+    setSources([]);
+    setBaseContext("");
+    setUnderstanding(null);
+    setAnalysis(null);
+    setDirections([]);
+    setQaReport(null);
+    setQaStaticFindings(null);
+    setErrorMessage(null);
+    setIntakeErrorMessage(null);
+  };
+
   const handleAiAgentInputSend = async (payload: AiAgentInputSendPayload) => {
     if (providersLoading) {
       setIntakeErrorMessage("The AI engines are still loading — try again in a moment.");
@@ -827,51 +996,20 @@ export function useDsAcceleratorTool() {
       setIntakeErrorMessage("Describe the change or add at least one source to get started.");
       return;
     }
-    const figmaSources = payload.sources.filter((source) => source.kind === "figma");
-    const ticketSources = payload.sources.filter((source) => source.kind === "ticket");
-    const nextPrimaryFigma = figmaSources[0]?.href ?? "";
-    const nextPrimaryTicket = ticketSources[0]?.href ?? "";
-    const primaryIds = new Set([figmaSources[0]?.id ?? "", ticketSources[0]?.id ?? ""]);
-    const mappedSources = payload.sources.map(mapPayloadSource);
-    const additionalSources = mappedSources.filter((source) => !primaryIds.has(source.id));
-    const resolvedSources: SourceEntry[] = [...additionalSources];
-    if (nextPrimaryFigma.trim()) {
-      resolvedSources.unshift({
-        id: `primary-figma-${Date.now()}`,
-        kind: "figma",
-        value: nextPrimaryFigma.trim(),
-        context: payload.message.trim(),
-      });
-    }
-    if (nextPrimaryTicket.trim()) {
-      const key = extractTicketKey(nextPrimaryTicket);
-      const resolution = resolveTaskFolder(key);
-      resolvedSources.unshift({
-        id: `primary-ticket-${Date.now()}`,
-        kind: "ticket",
-        value: nextPrimaryTicket.trim(),
-        context: payload.message.trim(),
-        ticketKey: key ?? undefined,
-        taskFolder: resolution.taskFolder ?? undefined,
-      });
-    }
-    const figmaError = await checkFigmaReadiness(resolvedSources, nextPrimaryFigma);
+    const resolvedSources: SourceEntry[] = payload.sources.map(mapPayloadSource);
+    const figmaError = await checkFigmaReadiness(resolvedSources);
     if (figmaError) {
       setIntakeErrorMessage(figmaError);
       return;
     }
-    setPrimaryFigma(nextPrimaryFigma.trim());
-    setPrimaryTicket(nextPrimaryTicket.trim());
     setBaseContext(payload.message.trim());
     setSources(resolvedSources);
     setIntakeErrorMessage(null);
-    const nextTicketKey = extractTicketKey(nextPrimaryTicket);
-    const nextTicketResolution = resolveTaskFolder(nextTicketKey);
-    const ticketLabel =
-      nextPrimaryTicket.trim() && nextTicketResolution.taskFolder
-        ? `${nextPrimaryTicket.trim()} (task: docs/tasks/${nextTicketResolution.taskFolder})`
-        : nextPrimaryTicket.trim();
-    await executeUnderstanding(resolvedSources, payload.message.trim(), nextPrimaryFigma.trim(), ticketLabel);
+    if (mode === "qa") {
+      await executeQa(resolvedSources);
+    } else {
+      await executeUnderstanding(resolvedSources, payload.message.trim());
+    }
   };
 
   /**
@@ -891,7 +1029,7 @@ export function useDsAcceleratorTool() {
     // A clarification can attach a new Figma source just like the initial
     // send — must be gated the same way, or an unauthenticated MCP server
     // gets claimed as available and the model hits a real tool failure mid-run.
-    const figmaError = await checkFigmaReadiness(mergedSources, primaryFigma);
+    const figmaError = await checkFigmaReadiness(mergedSources);
     if (figmaError) {
       setIntakeErrorMessage(figmaError);
       return;
@@ -902,7 +1040,7 @@ export function useDsAcceleratorTool() {
       : baseContext;
     setBaseContext(mergedContext);
     setSources(mergedSources);
-    await executeUnderstanding(mergedSources, mergedContext, primaryFigma, primaryTicket);
+    await executeUnderstanding(mergedSources, mergedContext);
   };
 
   const handleStopAnalysis = () => {
@@ -944,7 +1082,7 @@ export function useDsAcceleratorTool() {
       ...sources,
       ...newSources.filter((next) => !sources.some((existing) => existing.id === next.id)),
     ];
-    const figmaError = await checkFigmaReadiness(mergedSources, primaryFigma);
+    const figmaError = await checkFigmaReadiness(mergedSources);
     if (figmaError) {
       setIntakeErrorMessage(figmaError);
       return;
@@ -971,7 +1109,11 @@ export function useDsAcceleratorTool() {
       await executeDirections();
       return;
     }
-    await executeUnderstanding(sources, baseContext, primaryFigma, primaryTicket);
+    if (runPhase === "qa") {
+      await executeQa(sources);
+      return;
+    }
+    await executeUnderstanding(sources, baseContext);
   };
 
   const handleChooseDirection = (directionId: string) => {
@@ -999,6 +1141,7 @@ export function useDsAcceleratorTool() {
       setIsPromoting(false);
       appendHistory({
         outcome: "applied",
+        mode,
         targetLabel: resolvedPreviewTarget.label,
         contextSummary: summarizeContext(baseContext, directions.map((d) => d.title)),
         baseContext,
@@ -1031,6 +1174,7 @@ export function useDsAcceleratorTool() {
       setState("implementationSuccess");
       appendHistory({
         outcome: "applied",
+        mode,
         targetLabel: resolvedPreviewTarget.label,
         contextSummary: summarizeContext(baseContext, directions.map((d) => d.title)),
         baseContext,
@@ -1073,6 +1217,7 @@ export function useDsAcceleratorTool() {
     if ((state === "error" || state === "analysisStopped") && (baseContext.trim() || sources.length > 0)) {
       appendHistory({
         outcome: state === "error" ? "error" : "stopped",
+        mode,
         targetLabel: resolvedPreviewTarget.label,
         contextSummary: summarizeContext(baseContext, directions.map((d) => d.title)),
         baseContext,
@@ -1084,9 +1229,10 @@ export function useDsAcceleratorTool() {
     }
     if (!hasPromoted) discardRun(runId);
     generationAbortRef.current?.abort();
+    // Mode is left as-is — there's no separate landing page to return to, and
+    // "start a new change" more naturally continues in the same mode than
+    // surprising the user with a jump back to Improve.
     setState("intake");
-    setPrimaryFigma("");
-    setPrimaryTicket("");
     setBaseContext("");
     setSources([]);
     setUnderstanding(null);
@@ -1107,12 +1253,15 @@ export function useDsAcceleratorTool() {
     setGenerationJobStatus(null);
     setGenerationStreamOffset(-1);
     setIsPromoting(false);
+    setQaReport(null);
+    setQaStaticFindings(null);
     clearPersistence();
   };
 
   /** Repopulates the intake from a history entry — does not replay old generated code. */
-  const restoreFromHistory = (entry: { baseContext: string; sources: SourceEntry[] }) => {
+  const restoreFromHistory = (entry: { mode?: AcceleratorMode | null; baseContext: string; sources: SourceEntry[] }) => {
     handleBackHome();
+    setMode(entry.mode ?? "improve");
     setBaseContext(entry.baseContext);
     setSources(entry.sources);
   };
@@ -1133,6 +1282,7 @@ export function useDsAcceleratorTool() {
 
   return {
     state,
+    mode,
     baseContext,
     sources,
     providers,
@@ -1175,6 +1325,7 @@ export function useDsAcceleratorTool() {
     showBackHomeArrow,
     runStatusLabel,
     liveStatus,
+    handleSelectMode,
     handleAiAgentInputSend,
     handleClarify,
     handleStopAnalysis,
@@ -1189,7 +1340,14 @@ export function useDsAcceleratorTool() {
     restoreFromHistory,
     removeSource,
     taskFolder,
+    modeCriteria,
+    enabledModeCriteria,
+    standardsLoaded,
+    standardsErrorMessage,
+    retryLoadStandards: () => loadStandards(),
+    toggleCriterion,
+    qaReport,
+    qaStaticFindings,
+    handleFixQaFindings,
   };
 }
-
-export type DsAcceleratorToolViewModel = ReturnType<typeof useDsAcceleratorTool>;

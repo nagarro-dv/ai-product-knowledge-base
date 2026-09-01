@@ -5,7 +5,7 @@ import { DsTypography } from "../components/ds/DsTypography";
 import type { StreamItem } from "./types";
 import "./GenerationProgress.css";
 
-export type GenerationProgressMode = "analysis" | "directions";
+export type GenerationProgressMode = "analysis" | "directions" | "qa";
 
 /**
  * Step labels per phase. Progress is derived from real run signals the parent
@@ -21,6 +21,10 @@ const PHASES: Record<GenerationProgressMode, { id: string; label: string }[]> = 
     { id: "preparing", label: "Reviewing your decisions" },
     { id: "writing", label: "Writing direction code" },
     { id: "describing", label: "Describing the directions" },
+  ],
+  qa: [
+    { id: "mounting", label: "Mounting the component" },
+    { id: "checking", label: "Running checks" },
   ],
 };
 

@@ -10,3 +10,10 @@ export const OPEN_SETTINGS_EVENT = "ds-open-settings";
 export function openSettings(tab?: SettingsTab): void {
   window.dispatchEvent(new CustomEvent(OPEN_SETTINGS_EVENT, { detail: tab }));
 }
+
+/** Recent-runs history lives in the persistent app topbar (next to Settings) but its data/drawer are owned by DsAcceleratorTool — same cross-view pattern as OPEN_SETTINGS_EVENT, just reversed in direction. */
+export const OPEN_HISTORY_EVENT = "ds-open-history";
+
+export function openHistory(): void {
+  window.dispatchEvent(new CustomEvent(OPEN_HISTORY_EVENT));
+}

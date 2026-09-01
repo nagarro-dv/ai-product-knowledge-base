@@ -20,18 +20,28 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 function StatusIcon({ category }: { category: JiraTicketSummary["statusCategory"] }) {
-  if (category === "done") return <CheckCircle2 size={14} className="jiraPicker__statusIcon--done" aria-hidden />;
+  if (category === "done") return <CheckCircle2 size={16} className="jiraPicker__statusIcon--done" aria-hidden />;
   if (category === "in-progress")
-    return <CircleDot size={14} className="jiraPicker__statusIcon--progress" aria-hidden />;
-  return <Circle size={14} className="jiraPicker__statusIcon--todo" aria-hidden />;
+    return <CircleDot size={16} className="jiraPicker__statusIcon--progress" aria-hidden />;
+  return <Circle size={16} className="jiraPicker__statusIcon--todo" aria-hidden />;
 }
 
 export function JiraTicketPicker({
   onSelect,
-  onSwitchToManual,
+  onPreviewChange,
+  showOwnFooter = false,
 }: {
-  onSelect: (ticket: JiraTicketDetail, formattedContext: string) => void;
-  onSwitchToManual: () => void;
+  /** Only consulted when `showOwnFooter` is true. */
+  onSelect?: (ticket: JiraTicketDetail, formattedContext: string) => void;
+  /** Fires whenever the previewed ticket changes (including back-to-results → null), so a
+   * parent-owned footer (SourceModal's) can drive confirmation instead of this component
+   * owning its own. Switching to manual entry is also the parent's call now (one
+   * consistently-placed link owns that, instead of this component rendering its own) —
+   * so there's no `onSwitchToManual` prop here anymore. */
+  onPreviewChange?: (ticket: JiraTicketDetail | null, formattedContext: string) => void;
+  /** Renders this component's own "Back to results"/"Use this ticket" footer. Off by
+   * default — both real callers now use a shared, always-visible modal footer instead. */
+  showOwnFooter?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("recent");
   const [query, setQuery] = useState("");
@@ -42,6 +52,23 @@ export function JiraTicketPicker({
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
+  const activeTabRef = useRef<HTMLButtonElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Focus lands somewhere real on open regardless of the default tab — the old
+  // `autoFocus` on the search input only worked when "Search" happened to be selected.
+  useEffect(() => {
+    activeTabRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // The search field stays mounted (see .jiraPicker__searchField--inactive) so switching
+  // tabs never changes the modal's height — but it should still take focus when the user
+  // actually switches to it, the way a freshly-mounted field would.
+  useEffect(() => {
+    if (tab === "search" && !preview) searchInputRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -84,6 +111,7 @@ export function JiraTicketPicker({
     try {
       const detail = await getJiraTicket(key);
       setPreview(detail);
+      onPreviewChange?.(detail, formatJiraTicketContext(detail));
     } catch (err) {
       setPreviewError(err instanceof Error ? err.message : "Couldn't load this ticket.");
     } finally {
@@ -91,97 +119,119 @@ export function JiraTicketPicker({
     }
   };
 
-  if (preview) {
-    return (
-      <div className="jiraPicker__preview">
-        <div className="jiraPicker__previewHeader">
-          <span className="jiraPicker__previewKey">{preview.key}</span>
-          <span className="jiraPicker__previewMeta">
-            {preview.type} · {preview.status}
-            {preview.priority ? ` · ${preview.priority}` : ""}
-          </span>
-        </div>
-        <p className="jiraPicker__previewTitle">{preview.title}</p>
-        {preview.assignee ? <p className="jiraPicker__previewLine">Assignee: {preview.assignee}</p> : null}
-        {preview.sprint ? <p className="jiraPicker__previewLine">Sprint: {preview.sprint}</p> : null}
-        {preview.epic ? <p className="jiraPicker__previewLine">Epic: {preview.epic}</p> : null}
-        {!preview.descriptionIsEmpty ? (
-          <p className="jiraPicker__previewDescription">{preview.description.slice(0, 320)}</p>
-        ) : (
-          <p className="jiraPicker__previewDescriptionEmpty">No description on this ticket.</p>
-        )}
-        <div className="jiraPicker__previewActions">
-          <DsButton variant="ghost" size="small" type="button" onClick={() => setPreview(null)}>
-            Back to results
-          </DsButton>
-          <DsButton
-            variant="primary"
-            size="small"
-            type="button"
-            onClick={() => onSelect(preview, formatJiraTicketContext(preview))}
-          >
-            Use this ticket
-          </DsButton>
-        </div>
-      </div>
-    );
-  }
+  const closePreview = () => {
+    setPreview(null);
+    setPreviewError(null);
+    onPreviewChange?.(null, "");
+  };
 
   return (
     <div className="jiraPicker">
-      <div className="jiraPicker__tabs" role="tablist">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            className={tab === t.id ? "jiraPicker__tab jiraPicker__tab--active" : "jiraPicker__tab"}
-            onClick={() => setTab(t.id)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Browse-mode chrome (which list you're looking at) is only relevant while
+          browsing — replaced as one unit by a single "back" affordance once a specific
+          ticket is open, so the layout visibly reflects having moved from "browsing" to
+          "reviewing one ticket" (and "Back to results" lives with the other navigation,
+          not inside the content box it's meant to take you out of). Both rows below keep
+          a reserved height regardless of which state is showing, so switching tabs or
+          opening/closing a preview doesn't change the modal's overall height. */}
+      {!preview ? (
+        <div className="jiraPicker__tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              ref={tab === t.id ? activeTabRef : undefined}
+              type="button"
+              role="tab"
+              aria-selected={tab === t.id}
+              className={tab === t.id ? "jiraPicker__tab jiraPicker__tab--active" : "jiraPicker__tab"}
+              onClick={() => setTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      ) : (
+        <button type="button" className="jiraPicker__previewBack" onClick={closePreview}>
+          Back to results
+        </button>
+      )}
 
-      {tab === "search" ? (
-        <label className="jiraPicker__searchField">
-          <SearchIcon size={14} aria-hidden />
-          <input
-            className="jiraPicker__searchInput"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search tickets by title…"
-            autoFocus
-          />
-        </label>
-      ) : null}
+      <label
+        className={`jiraPicker__searchField${tab === "search" && !preview ? "" : " jiraPicker__searchField--inactive"}`}
+      >
+        <SearchIcon size={14} aria-hidden />
+        <input
+          ref={searchInputRef}
+          className="jiraPicker__searchInput"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search tickets by title…"
+          tabIndex={tab === "search" && !preview ? 0 : -1}
+          aria-hidden={!(tab === "search" && !preview)}
+        />
+      </label>
 
       <div className="jiraPicker__results">
-        {loadingPreview ? (
-          <div className="jiraPicker__state">
+        {preview ? (
+          <div className="jiraPicker__preview">
+            <div className="jiraPicker__previewHeader">
+              <span className="jiraPicker__previewKey">{preview.key}</span>
+              <span className="jiraPicker__previewMeta">
+                {preview.type} · {preview.status}
+                {preview.priority ? ` · ${preview.priority}` : ""}
+              </span>
+            </div>
+            <p className="jiraPicker__previewTitle">{preview.title}</p>
+            {preview.assignee ? <p className="jiraPicker__previewLine">Assignee: {preview.assignee}</p> : null}
+            {preview.sprint ? <p className="jiraPicker__previewLine">Sprint: {preview.sprint}</p> : null}
+            {preview.epic ? <p className="jiraPicker__previewLine">Epic: {preview.epic}</p> : null}
+            {!preview.descriptionIsEmpty ? (
+              <p className="jiraPicker__previewDescription">{preview.description.slice(0, 320)}</p>
+            ) : (
+              <p className="jiraPicker__previewDescriptionEmpty">No description on this ticket.</p>
+            )}
+            {showOwnFooter ? (
+              <div className="jiraPicker__previewActions">
+                <DsButton variant="ghost" size="small" type="button" onClick={closePreview}>
+                  Back to results
+                </DsButton>
+                <DsButton
+                  variant="primary"
+                  size="small"
+                  type="button"
+                  onClick={() => onSelect?.(preview, formatJiraTicketContext(preview))}
+                >
+                  Use this ticket
+                </DsButton>
+              </div>
+            ) : null}
+          </div>
+        ) : loadingPreview ? (
+          <div className="jiraPicker__state" aria-live="polite">
             <DsSpinner size={16} aria-hidden />
             <span>Loading ticket…</span>
           </div>
         ) : previewError ? (
-          <div className="jiraPicker__state jiraPicker__state--error">
+          <div className="jiraPicker__state jiraPicker__state--error" aria-live="polite">
             <AlertTriangle size={14} aria-hidden />
             <span>{previewError}</span>
           </div>
         ) : loadingResults ? (
-          <div className="jiraPicker__state">
+          <div className="jiraPicker__state" aria-live="polite">
             <DsSpinner size={16} aria-hidden />
             <span>Loading tickets…</span>
           </div>
         ) : listError ? (
-          <div className="jiraPicker__state jiraPicker__state--error">
+          <div className="jiraPicker__state jiraPicker__state--error" aria-live="polite">
             <AlertTriangle size={14} aria-hidden />
             <span>{listError}</span>
           </div>
         ) : tab === "search" && query.trim().length < 2 ? (
-          <div className="jiraPicker__state">Type at least 2 characters to search.</div>
+          <div className="jiraPicker__state" aria-live="polite">
+            Type at least 2 characters to search.
+          </div>
         ) : results.length === 0 ? (
-          <div className="jiraPicker__state">
+          <div className="jiraPicker__state" aria-live="polite">
             {tab === "assigned-to-me" ? "Nothing assigned to you right now." : "No tickets found."}
           </div>
         ) : (
@@ -199,10 +249,6 @@ export function JiraTicketPicker({
           ))
         )}
       </div>
-
-      <button type="button" className="jiraPicker__manualLink" onClick={onSwitchToManual}>
-        Enter a ticket key manually instead
-      </button>
     </div>
   );
 }

@@ -19,7 +19,10 @@
    page around it scrolls instead.
 
    The dot grid is the "design canvas" signal (Figma/Storybook): the preview
-   reads as an artifact placed on a stage, not text in a box. */
+   reads as an artifact placed on a stage, not text in a box — texture, not
+   another bordered container. No border/radius of its own: the child
+   preview (.directionPreview / .storybookFrame__canvas) already draws that
+   boundary, and a second one here just stacked box-inside-box-inside-box. */
 .responsiveStage__stage {
   position: relative;
   width: 100%;
@@ -27,8 +30,6 @@
   overflow: hidden;
   padding: 12px;
   box-sizing: border-box;
-  border: 1px solid var(--ds-general-color-border-alt-1);
-  border-radius: var(--ds-general-radius-rounded-lg);
   background-color: var(--ds-general-color-background);
   background-image: radial-gradient(circle, var(--ds-general-color-border-alt-1) 1px, transparent 1px);
   background-size: 16px 16px;

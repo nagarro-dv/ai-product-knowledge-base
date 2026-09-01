@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, Settings as SettingsIcon } from "lucide-react";
+import { AlertTriangle, Check, History as HistoryIcon, Settings as SettingsIcon } from "lucide-react";
 import { DsAcceleratorTool } from "./accelerator/DsAcceleratorTool";
 import { SettingsView, type SettingsTab } from "./settings/SettingsView";
 import { JIRA_RETURN_TO_KEY } from "./integrations/jiraClient";
 import { GITHUB_RETURN_TO_KEY } from "./integrations/repositoryClient";
-import { OPEN_SETTINGS_EVENT } from "./navigationEvents";
+import { openHistory, OPEN_SETTINGS_EVENT } from "./navigationEvents";
 import { useTokenMode } from "./useTokenMode";
 import "./App.css";
 
@@ -140,6 +140,14 @@ export default function App() {
   );
   const [jiraBanner, setJiraBanner] = useState(jiraCallback.banner);
   const [githubBanner, setGithubBanner] = useState(githubCallback.banner);
+  // A slot inside the topbar itself, not a second bar below it — DsAcceleratorTool
+  // portals its "Start over" + stage tabs in here so the whole run's navigation
+  // (brand, run nav, History/Settings) reads as one bar, not two stacked ones.
+  const [runNavSlot, setRunNavSlot] = useState<HTMLDivElement | null>(null);
+  // A second topbar slot, right next to History/Settings rather than beside
+  // the brand — DsAcceleratorTool portals its "Design System: X" badge in
+  // here so it reads as one of the bar's actions, not part of the run nav.
+  const [dsStatusSlot, setDsStatusSlot] = useState<HTMLDivElement | null>(null);
 
   const goTools = useCallback(() => setSection("tools"), []);
   const goSettings = useCallback(() => setSection("settings"), []);
@@ -192,15 +200,25 @@ export default function App() {
           </span>
           <span className="app-topbar__title">DS Accelerator</span>
         </button>
-        <button
-          type="button"
-          className={section === "settings" ? "app-topbar__settings is-active" : "app-topbar__settings"}
-          onClick={goSettings}
-          aria-current={section === "settings" ? "page" : undefined}
-        >
-          <SettingsIcon size={16} strokeWidth={1.9} aria-hidden />
-          Settings
-        </button>
+        {section === "tools" ? <div className="app-topbar__runSlot" ref={setRunNavSlot} /> : null}
+        <div className="app-topbar__actions">
+          {section === "tools" ? <div className="app-topbar__dsStatusSlot" ref={setDsStatusSlot} /> : null}
+          {section === "tools" ? (
+            <button type="button" className="app-topbar__settings" onClick={() => openHistory()}>
+              <HistoryIcon size={16} strokeWidth={1.9} aria-hidden />
+              History
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={section === "settings" ? "app-topbar__settings is-active" : "app-topbar__settings"}
+            onClick={goSettings}
+            aria-current={section === "settings" ? "page" : undefined}
+          >
+            <SettingsIcon size={16} strokeWidth={1.9} aria-hidden />
+            Settings
+          </button>
+        </div>
       </header>
 
       <div className="app-body">
@@ -240,7 +258,7 @@ export default function App() {
           {section === "settings" ? (
             <SettingsView activeTab={settingsTab} onTabChange={setSettingsTab} />
           ) : (
-            <DsAcceleratorTool />
+            <DsAcceleratorTool runNavSlot={runNavSlot} dsStatusSlot={dsStatusSlot} />
           )}
         </div>
       </div>

@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowRight, Component, Figma, Ticket } from "lucide-react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowRight, Component, Figma, Search as SearchIcon, Ticket } from "lucide-react";
 import { AiAttachment, type AiAttachmentKind } from "./AiAttachment";
+import { ComponentPicker } from "./ComponentPicker";
 import { JiraTicketPicker } from "./JiraTicketPicker";
+import { SOURCE_MODAL_CONFIRM_LABEL, SOURCE_MODAL_SUBTITLE, SourceModal } from "./SourceModal";
 import { DsButton } from "../ds/Button";
 import { DsIconButton } from "../ds/IconButton";
 import { DsSpinner } from "../ds/Spinner";
+import { DsTypography } from "../ds/DsTypography";
 import { sourceChipName, sourceTypeLabel } from "../../accelerator/source-format";
 import { fetchIntegrations, startJiraConnect } from "../../integrations/jiraClient";
 import type { JiraTicketDetail } from "../../integrations/jiraClient";
@@ -12,13 +15,21 @@ import {
   connectStorybook,
   formatStorybookComponentContext,
   listStorybookComponents,
-  storybookDisplayName,
   type StorybookComponent,
   type StorybookSummary,
 } from "../../integrations/storybookClient";
+import type { SourceRole } from "../../accelerator/types";
 import "./AiAgentInput.css";
 
-type SourceKind = Extract<AiAttachmentKind, "figma" | "ticket" | "component">;
+/**
+ * Broader than AiAttachmentKind (which only covers rendering/icon lookup) —
+ * this composer's own dropdown only ever creates figma/ticket/component, but
+ * the type is shared with SlotIntake.tsx, whose slots can also produce
+ * "doc" and "note" sources.
+ */
+type SourceKind = "figma" | "ticket" | "component" | "doc" | "note";
+/** The subset this composer's own "Add source" dropdown offers. */
+type ComposerSourceKind = Extract<AiAttachmentKind, "figma" | "ticket" | "component">;
 
 /** Structured metadata carried when a component source comes from a connected Storybook. */
 export type StorybookSourceMeta = {
@@ -29,11 +40,29 @@ export type StorybookSourceMeta = {
   importPath?: string;
 };
 
+/**
+ * This composer is used only for AMENDMENTS to an already-running request
+ * (the checkpoint's "Add context", direction comparison's "Refine") — the
+ * initial slot-based intake lives in SlotIntake.tsx instead. A ticket added
+ * here is a new requirement, a Figma/component link is a new reference; the
+ * subject itself is already fixed by the time this composer is in play.
+ */
+const DEFAULT_ROLE_BY_KIND: Record<SourceKind, SourceRole> = {
+  ticket: "requirement",
+  figma: "reference",
+  component: "reference",
+  doc: "reference",
+  note: "requirement",
+};
+
 export type AiAgentInputSource = {
   id: string;
   kind: SourceKind;
+  role: SourceRole;
   href: string;
   context: string;
+  /** Short human-readable preview shown on the source's chip — a ticket's title, a component's file path. */
+  preview?: string;
   /** Present for component sources — they always come from the connected Storybook. */
   storybook?: StorybookSourceMeta;
 };
@@ -59,7 +88,7 @@ export type AiAgentInputProps = {
 
 const PROMPT_MAX_HEIGHT_PX = 500;
 
-function isValidSource(kind: SourceKind, href: string): boolean {
+function isValidSource(kind: ComposerSourceKind, href: string): boolean {
   if (kind === "component") return false; // component validity is decided by the Storybook picker selection
   if (kind === "ticket") return /[A-Z][A-Z0-9]+-\d+/i.test(href.trim());
   try {
@@ -83,14 +112,15 @@ export function AiAgentInput({
   const [sources, setSources] = useState<readonly AiAgentInputSource[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
-  const [pendingKind, setPendingKind] = useState<SourceKind>("ticket");
+  const [pendingKind, setPendingKind] = useState<ComposerSourceKind>("ticket");
   const [pendingHref, setPendingHref] = useState("");
   const [pendingContext, setPendingContext] = useState("");
-  const [pendingComponentSearch, setPendingComponentSearch] = useState("");
   const [pendingComponent, setPendingComponent] = useState<StorybookComponent | null>(null);
+  const [componentSearchOpen, setComponentSearchOpen] = useState(false);
   const [jiraConfigured, setJiraConfigured] = useState(false);
   const [jiraConnected, setJiraConnected] = useState(false);
-  const [showManualTicketEntry, setShowManualTicketEntry] = useState(false);
+  const [pendingTicket, setPendingTicket] = useState<JiraTicketDetail | null>(null);
+  const [pendingTicketContext, setPendingTicketContext] = useState("");
   const [sbSummary, setSbSummary] = useState<StorybookSummary | null>(null);
   const [sbComponents, setSbComponents] = useState<StorybookComponent[]>([]);
   const [sbLoading, setSbLoading] = useState(false);
@@ -104,22 +134,14 @@ export function AiAgentInput({
 
   const canSend = message.trim().length > 0 || sources.length > 0;
   const sbConnected = sbSummary?.status === "connected";
-
-  // Components come exclusively from the connected Storybook — the product
-  // has no built-in design system of its own.
-  const pickerOptions = useMemo<StorybookComponent[]>(() => {
-    const q = pendingComponentSearch.trim().toLowerCase();
-    return sbComponents.filter(
-      (c) =>
-        !q ||
-        c.title.toLowerCase().includes(q) ||
-        c.path.toLowerCase().includes(q) ||
-        c.importPath?.toLowerCase().includes(q),
-    );
-  }, [pendingComponentSearch, sbComponents]);
+  const jiraPickerActive = pendingKind === "ticket" && jiraConnected;
 
   const pendingValid =
-    pendingKind === "component" ? Boolean(pendingComponent) : isValidSource(pendingKind, pendingHref);
+    pendingKind === "component"
+      ? Boolean(pendingComponent)
+      : jiraPickerActive
+        ? Boolean(pendingTicket)
+        : isValidSource(pendingKind, pendingHref);
 
   const syncPromptHeight = useCallback(() => {
     const el = textareaRef.current;
@@ -225,23 +247,22 @@ export function AiAgentInput({
 
   useEffect(() => {
     if (!modalOpen) return;
-    setShowManualTicketEntry(false);
     modalFirstFieldRef.current?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      setModalOpen(false);
-      addSourceButtonRef.current?.focus();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
   }, [modalOpen]);
 
-  const openModal = (kind: SourceKind) => {
+  const closeModal = () => {
+    setModalOpen(false);
+    addSourceButtonRef.current?.focus();
+  };
+
+  const openModal = (kind: ComposerSourceKind) => {
     setPendingKind(kind);
     setPendingHref("");
     setPendingContext("");
-    setPendingComponentSearch("");
     setPendingComponent(null);
+    setComponentSearchOpen(false);
+    setPendingTicket(null);
+    setPendingTicketContext("");
     setSbConnectError(null);
     setDropdownOpen(false);
     setModalOpen(true);
@@ -277,8 +298,10 @@ export function AiAgentInput({
         {
           id: `source-${Date.now()}`,
           kind: "component",
+          role: DEFAULT_ROLE_BY_KIND.component,
           href: pendingComponent.title,
           context: userContext ? `${structured}\n\nWhy this source: ${userContext}` : structured,
+          preview: pendingComponent.importPath ?? pendingComponent.path,
           storybook: {
             url: sbUrl,
             componentPath: pendingComponent.path,
@@ -288,7 +311,23 @@ export function AiAgentInput({
           },
         },
       ]);
-      setModalOpen(false);
+      closeModal();
+      return;
+    }
+    if (jiraPickerActive) {
+      if (!pendingTicket) return;
+      setSources((prev) => [
+        ...prev,
+        {
+          id: `source-${Date.now()}`,
+          kind: "ticket",
+          role: DEFAULT_ROLE_BY_KIND.ticket,
+          href: pendingTicket.key,
+          context: pendingTicketContext,
+          preview: pendingTicket.title,
+        },
+      ]);
+      closeModal();
       return;
     }
     setSources((prev) => [
@@ -296,19 +335,12 @@ export function AiAgentInput({
       {
         id: `source-${Date.now()}`,
         kind: pendingKind,
+        role: DEFAULT_ROLE_BY_KIND[pendingKind],
         href: pendingHref.trim(),
         context: pendingContext.trim(),
       },
     ]);
-    setModalOpen(false);
-  };
-
-  const addJiraTicketSource = (ticket: JiraTicketDetail, formattedContext: string) => {
-    setSources((prev) => [
-      ...prev,
-      { id: `source-${Date.now()}`, kind: "ticket", href: ticket.key, context: formattedContext },
-    ]);
-    setModalOpen(false);
+    closeModal();
   };
 
   const rootClass = ["aiAgentInput", className].filter(Boolean).join(" ");
@@ -323,10 +355,11 @@ export function AiAgentInput({
                 <AiAttachment
                   key={source.id}
                   size="tag"
-                  kind={source.kind}
+                  kind={source.kind === "doc" || source.kind === "note" ? "comment" : source.kind}
                   href={source.kind === "component" ? null : source.href}
                   value={sourceChipName(source.kind, source.href)}
                   subtitle={sourceTypeLabel(source.kind)}
+                  preview={source.preview}
                   title={source.kind === "figma" ? source.href : undefined}
                   icon={
                     source.kind === "component" ? <Component size={16} strokeWidth={1.8} aria-hidden /> : undefined
@@ -399,162 +432,110 @@ export function AiAgentInput({
       </div>
 
       {modalOpen ? (
-        <div className="aiAgentInput__modalRoot" role="dialog" aria-modal="true" aria-labelledby="aiAgentInput-modal-title">
-          <button type="button" className="aiAgentInput__modalBackdrop" onClick={() => setModalOpen(false)} aria-label="Close" />
-          <div className="aiAgentInput__modal">
-            <h3 id="aiAgentInput-modal-title" className="aiAgentInput__modalTitle">
-              Add {pendingKind === "figma" ? "Figma" : pendingKind === "ticket" ? "ticket" : "component"} source
-            </h3>
-            {pendingKind === "ticket" && jiraConnected && !showManualTicketEntry ? (
-              <div className="aiAgentInput__modalFields">
-                <JiraTicketPicker
-                  onSelect={addJiraTicketSource}
-                  onSwitchToManual={() => setShowManualTicketEntry(true)}
+        <SourceModal
+          kind={pendingKind}
+          subtitle={SOURCE_MODAL_SUBTITLE[pendingKind]}
+          onClose={closeModal}
+          footer={{ confirmLabel: SOURCE_MODAL_CONFIRM_LABEL[pendingKind], confirmDisabled: !pendingValid, onConfirm: addSource }}
+          headerAction={
+            pendingKind === "component" && sbConnected ? (
+              <DsIconButton
+                variant="ghost"
+                size="small"
+                aria-label="Search components"
+                onClick={() => setComponentSearchOpen((open) => !open)}
+              >
+                <SearchIcon size={16} aria-hidden />
+              </DsIconButton>
+            ) : undefined
+          }
+        >
+          {pendingKind !== "ticket" || jiraPickerActive ? null : jiraConfigured ? (
+            <button type="button" className="sourceModal__jiraModeSwitch" onClick={() => startJiraConnect()}>
+              Connect Jira to search tickets
+            </button>
+          ) : (
+            <DsTypography as="p" variant="paragraph-mini-regular" className="aiAgentInput__jiraSetupNote">
+              Jira isn't set up on the assistant service yet — an admin can enable it from Settings → Integrations
+              (it needs an Atlassian OAuth app).
+            </DsTypography>
+          )}
+
+          {jiraPickerActive ? (
+            <JiraTicketPicker
+              onPreviewChange={(ticket, formattedContext) => {
+                setPendingTicket(ticket);
+                setPendingTicketContext(formattedContext);
+              }}
+            />
+          ) : pendingKind === "component" ? (
+            !sbConnected ? (
+              <div className="sourceModal__sbConnect">
+                <DsTypography as="span" variant="paragraph-small-bold">
+                  Connect your Storybook
+                </DsTypography>
+                <input
+                  ref={modalFirstFieldRef}
+                  className="sourceModal__fieldInput"
+                  value={sbConnectUrl}
+                  onChange={(e) => setSbConnectUrl(e.target.value)}
+                  placeholder="http://localhost:6006 or https://…"
+                  aria-label="Storybook URL"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleConnectStorybook();
+                  }}
                 />
+                <DsButton
+                  variant="secondary"
+                  size="small"
+                  type="button"
+                  disabled={sbConnecting || !sbConnectUrl.trim()}
+                  onClick={() => void handleConnectStorybook()}
+                  leftIcon={sbConnecting ? <DsSpinner size={12} aria-hidden /> : undefined}
+                >
+                  {sbConnecting ? "Connecting…" : "Connect"}
+                </DsButton>
+                {sbConnectError ? (
+                  <DsTypography as="p" variant="paragraph-mini-regular" role="alert">
+                    {sbConnectError}
+                  </DsTypography>
+                ) : null}
               </div>
             ) : (
-              <>
-                <div className="aiAgentInput__modalFields">
-                  {pendingKind === "component" ? (
-                    <>
-                      {!sbConnected ? (
-                        <div className="aiAgentInput__sbConnect">
-                          <span className="aiAgentInput__sbConnectTitle">
-                            Working with your own design system?
-                          </span>
-                          <span className="aiAgentInput__sbConnectHint">
-                            Connect your Storybook (local or hosted) and its components become searchable here.
-                          </span>
-                          <div className="aiAgentInput__sbConnectRow">
-                            <input
-                              className="aiAgentInput__fieldInput"
-                              value={sbConnectUrl}
-                              onChange={(e) => setSbConnectUrl(e.target.value)}
-                              placeholder="http://localhost:6006 or https://…"
-                              aria-label="Storybook URL"
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") void handleConnectStorybook();
-                              }}
-                            />
-                            <DsButton
-                              variant="secondary"
-                              size="small"
-                              type="button"
-                              disabled={sbConnecting || !sbConnectUrl.trim()}
-                              onClick={() => void handleConnectStorybook()}
-                              leftIcon={sbConnecting ? <DsSpinner size={12} aria-hidden /> : undefined}
-                            >
-                              {sbConnecting ? "Connecting…" : "Connect"}
-                            </DsButton>
-                          </div>
-                          {sbConnectError ? (
-                            <span className="aiAgentInput__sbConnectError" role="alert">
-                              {sbConnectError}
-                            </span>
-                          ) : null}
-                        </div>
-                      ) : null}
-                      {sbConnected ? (
-                        <>
-                          <div className="aiAgentInput__pickerSource">
-                            <span className="aiAgentInput__pickerSourceLabel">Searching components from</span>
-                            <span className="aiAgentInput__pickerSourceName">{storybookDisplayName(sbSummary)}</span>
-                          </div>
-                          <label className="aiAgentInput__field">
-                            <span className="aiAgentInput__fieldLabel">Search</span>
-                            <input
-                              ref={modalFirstFieldRef}
-                              className="aiAgentInput__fieldInput"
-                              value={pendingComponentSearch}
-                              onChange={(e) => setPendingComponentSearch(e.target.value)}
-                              placeholder="Type component name"
-                            />
-                          </label>
-                          <span className="aiAgentInput__pickerCaption">
-                            {sbLoading
-                              ? "Loading components…"
-                              : `${sbComponents.length} component${sbComponents.length === 1 ? "" : "s"} indexed`}
-                          </span>
-                          <div className="aiAgentInput__componentResults">
-                            {pickerOptions.length === 0 && !sbLoading ? (
-                              <span className="aiAgentInput__pickerEmpty">No components match that search.</span>
-                            ) : (
-                              pickerOptions.map((option) => (
-                                <button
-                                  key={option.id}
-                                  type="button"
-                                  className={
-                                    pendingComponent?.id === option.id
-                                      ? "aiAgentInput__componentOption aiAgentInput__componentOption--selected"
-                                      : "aiAgentInput__componentOption"
-                                  }
-                                  onClick={() => setPendingComponent(option)}
-                                >
-                                  <span className="aiAgentInput__componentOptionTitle">{option.title}</span>
-                                  <span className="aiAgentInput__componentOptionId">
-                                    {option.importPath ?? option.path}
-                                  </span>
-                                </button>
-                              ))
-                            )}
-                          </div>
-                        </>
-                      ) : null}
-                    </>
-                  ) : (
-                    <label className="aiAgentInput__field">
-                      <span className="aiAgentInput__fieldLabel">
-                        {pendingKind === "ticket" ? "Ticket key or link" : "Figma URL"}
-                      </span>
-                      <input
-                        ref={modalFirstFieldRef}
-                        className="aiAgentInput__fieldInput"
-                        value={pendingHref}
-                        onChange={(e) => setPendingHref(e.target.value)}
-                        placeholder={pendingKind === "ticket" ? "DS-042" : "https://www.figma.com/design/…"}
-                      />
-                    </label>
-                  )}
-                  {pendingKind === "ticket" && !jiraConnected && !jiraConfigured ? (
-                    <span className="aiAgentInput__jiraSetupNote">
-                      Jira isn't set up on the assistant service yet — an admin can enable it from Settings →
-                      Integrations (it needs an Atlassian OAuth app).
-                    </span>
-                  ) : pendingKind === "ticket" && !jiraConnected && jiraConfigured ? (
-                    <button type="button" className="aiAgentInput__jiraConnectHint" onClick={() => startJiraConnect()}>
-                      Connect Jira to search real tickets instead of typing a key →
-                    </button>
-                  ) : pendingKind === "ticket" && jiraConnected ? (
-                    <button
-                      type="button"
-                      className="aiAgentInput__jiraConnectHint"
-                      onClick={() => setShowManualTicketEntry(false)}
-                    >
-                      ← Search Jira instead
-                    </button>
-                  ) : null}
-                  <label className="aiAgentInput__field">
-                    <span className="aiAgentInput__fieldLabel">Additional context (optional)</span>
-                    <textarea
-                      className="aiAgentInput__contextInput"
-                      value={pendingContext}
-                      onChange={(e) => setPendingContext(e.target.value)}
-                      rows={3}
-                    />
-                  </label>
-                </div>
-                <div className="aiAgentInput__modalActions">
-                  <DsButton variant="ghost" size="small" type="button" onClick={() => setModalOpen(false)}>
-                    Cancel
-                  </DsButton>
-                  <DsButton variant="primary" size="small" type="button" disabled={!pendingValid} onClick={addSource}>
-                    Add source
-                  </DsButton>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
+              <ComponentPicker
+                components={sbComponents}
+                loading={sbLoading}
+                selected={pendingComponent}
+                onSelect={setPendingComponent}
+                inputRef={modalFirstFieldRef}
+                searchOpen={componentSearchOpen}
+                onSearchOpenChange={setComponentSearchOpen}
+              />
+            )
+          ) : (
+            <>
+              <label className="sourceModal__field">
+                <span>{pendingKind === "ticket" ? "Ticket key or link" : "Figma URL"}</span>
+                <input
+                  ref={modalFirstFieldRef}
+                  className="sourceModal__fieldInput"
+                  value={pendingHref}
+                  onChange={(e) => setPendingHref(e.target.value)}
+                  placeholder={pendingKind === "ticket" ? "DS-042" : "https://www.figma.com/design/…"}
+                />
+              </label>
+              <label className="sourceModal__field">
+                <span>Additional context (optional)</span>
+                <textarea
+                  className="sourceModal__contextInput"
+                  value={pendingContext}
+                  onChange={(e) => setPendingContext(e.target.value)}
+                  rows={3}
+                />
+              </label>
+            </>
+          )}
+        </SourceModal>
       ) : null}
     </div>
   );

@@ -17,12 +17,10 @@ import {
   setPreferredAuthMethod,
   subscribeAuthPreferences,
 } from "./authPreferences";
-import { PROVIDER_ICONS, providerRowStatus, type ProviderRowStatus } from "./providerMeta";
+import { PROVIDER_ICONS, providerRowStatus } from "./providerMeta";
 import { SettingsSectionHeader } from "../settings/SettingsSectionHeader";
 import { formatCheckedAt } from "../settings/relativeTime";
 import "./AiProvidersView.css";
-
-type RowStatus = ProviderRowStatus;
 
 const rowStatusOf = providerRowStatus;
 

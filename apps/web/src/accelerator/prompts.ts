@@ -1,4 +1,5 @@
-import type { SourceEntry, UnderstandingBrief } from "./types";
+import type { CriterionWithState } from "@ds-starter/standards";
+import type { SourceEntry, SourceRole, UnderstandingBrief } from "./types";
 
 /**
  * A compact, decision-only summary of the phase-1 checkpoint, for reuse in
@@ -39,6 +40,7 @@ function buildConfirmedBriefSummary(brief: UnderstandingBrief): string {
 }
 
 function formatSourceLabel(source: SourceEntry): string {
+  if (source.kind === "note") return source.value.trim();
   if (source.kind === "ticket" && source.taskFolder) {
     return `Ticket (${source.ticketKey}) → docs/tasks/${source.taskFolder}`;
   }
@@ -52,29 +54,59 @@ function formatSourceLabel(source: SourceEntry): string {
     }
     return `Component: ${source.value}`;
   }
-  if (source.kind === "internal-doc") {
-    return `Internal doc: ${source.value}`;
+  if (source.kind === "doc") {
+    return `Reference doc: ${source.value}`;
   }
   return `Figma: ${source.value}`;
 }
 
-function buildSourceLines(args: {
-  primaryFigma: string;
-  primaryTicket: string;
-  baseContext: string;
-  sources: SourceEntry[];
-}): string[] {
-  const sourceLines: string[] = [];
-  if (args.primaryFigma.trim()) sourceLines.push(`- Primary Figma: ${args.primaryFigma.trim()}`);
-  if (args.primaryTicket.trim()) sourceLines.push(`- Primary ticket: ${args.primaryTicket.trim()}`);
-  if (args.baseContext.trim()) sourceLines.push(`- Base context: ${args.baseContext.trim()}`);
-  for (const source of args.sources) {
-    sourceLines.push(`- ${formatSourceLabel(source)}`);
-    if (source.context.trim()) {
-      sourceLines.push(`  - Context attached to this source: ${source.context.trim()}`);
-    }
+function formatSourceBullet(source: SourceEntry): string[] {
+  const label = formatSourceLabel(source);
+  const lines = [`- ${label}`];
+  // A note's own text IS the label above — an identical context line under it
+  // would just repeat the same sentence, so only show context when it adds
+  // something the label didn't already say.
+  if (source.context.trim() && source.context.trim() !== source.value.trim()) {
+    lines.push(`  - Context attached to this source: ${source.context.trim()}`);
   }
-  return sourceLines;
+  return lines;
+}
+
+/**
+ * Headed blocks by ROLE, not a flat undifferentiated list — this is the
+ * fix for sources carrying provenance ("where did this come from") but never
+ * telling the model what it's actually FOR. A requirement and a reference no
+ * longer sit as two interchangeable bullets in one pile.
+ */
+const ROLE_HEADINGS: Record<SourceRole, string> = {
+  subject: "## The component you are changing",
+  requirement: "## Requirements this must satisfy",
+  reference: "## References to draw from (do not copy verbatim)",
+  constraint: "## Constraints you must comply with",
+  "watch-out": "## The requester specifically flagged",
+};
+
+const ROLE_ORDER: SourceRole[] = ["subject", "requirement", "reference", "constraint", "watch-out"];
+
+/**
+ * Builds the request body from typed sources plus the project's enabled
+ * quality criteria. Criteria feed the SAME "Constraints" section a
+ * constraint-role source would — this is what makes unchecking a criterion
+ * in the standards checklist genuinely remove it from the prompt, instead of
+ * the four hardcoded "Follow DS constraints" bullets this used to be.
+ */
+function buildRoleSections(sources: SourceEntry[], criteria: CriterionWithState[]): string[] {
+  const lines: string[] = [];
+  for (const role of ROLE_ORDER) {
+    const roleSources = sources.filter((source) => source.role === role);
+    const criterionLines = role === "constraint" ? criteria.filter((c) => c.enabled).map((c) => `- ${c.promptLine}`) : [];
+    if (roleSources.length === 0 && criterionLines.length === 0) continue;
+    lines.push(ROLE_HEADINGS[role], "");
+    for (const source of roleSources) lines.push(...formatSourceBullet(source));
+    lines.push(...criterionLines);
+    lines.push("");
+  }
+  return lines.length > 0 ? lines : ["## Requirements this must satisfy", "", "- (none provided)", ""];
 }
 
 /**
@@ -87,7 +119,7 @@ function buildSourceLines(args: {
 function buildFigmaMcpLines(figmaMcpAvailable: boolean): string[] {
   if (!figmaMcpAvailable) return [];
   return [
-    "You have access to a `figma` MCP server for the Figma link(s) listed under Sources below.",
+    "You have access to a `figma` MCP server for the Figma link(s) listed under References below.",
     "Use its `get_design_context` tool (and `get_screenshot` / `get_variable_defs` / `get_metadata` as needed) with the exact Figma link as input to actually inspect the frame — do not rely on the URL text alone or guess at its contents.",
     "Figma MCP tools take a `fileKey` and a `nodeId` — extract both from the Figma URL itself (for `https://www.figma.com/design/<fileKey>/<name>?node-id=<a>-<b>` the fileKey is the path segment after /design/ and the nodeId is `<a>:<b>`). Never guess or invent a nodeId; if the URL has no node-id parameter, say so instead of fabricating one.",
     "If a Figma MCP tool call reports that the server needs authentication, say so explicitly in your output (do not silently skip it or claim no Figma MCP is available) — the fix is a one-time `claude mcp login figma` run in a terminal on this machine.",
@@ -102,10 +134,8 @@ function buildFigmaMcpLines(figmaMcpAvailable: boolean): string[] {
  * For agentic engines this may READ the repository; it must never write.
  */
 export function buildUnderstandingPrompt(args: {
-  primaryFigma: string;
-  primaryTicket: string;
-  baseContext: string;
   sources: SourceEntry[];
+  criteria: CriterionWithState[];
   selectedComponentId?: string;
   selectedComponentLabel?: string;
   /** True for agentic engines that can read repository files during analysis. */
@@ -113,14 +143,12 @@ export function buildUnderstandingPrompt(args: {
   /** True when a Figma link is present AND the resolved auth method has real Figma MCP wiring. */
   figmaMcpAvailable?: boolean;
 }): string {
-  const sourceLines = buildSourceLines(args);
-
   return [
     "Analyze this design-system change request and explain your understanding — DO NOT implement anything yet.",
     "",
     "This is a review checkpoint: a designer will read your analysis and either correct it or approve it before any code is generated. Write for that designer — plain language, honest about uncertainty.",
     "",
-    "Think like a senior product designer throughout: weigh user outcome, clarity, and information hierarchy. Note accessibility (WCAG 2.2 AA) and design-token/consistency concerns as part of your analysis, not as an afterthought.",
+    "Think like a senior product designer throughout: weigh user outcome, clarity, and information hierarchy. Note accessibility and design-token/consistency concerns as part of your analysis, not as an afterthought.",
     "",
     ...(args.canReadRepo
       ? [
@@ -147,7 +175,7 @@ export function buildUnderstandingPrompt(args: {
     "## Interpretation",
     "- 1 to 3 sentences: WHY you interpreted it that way (which words/sources led you there), in the same plain style as Summary",
     "## Sources Reviewed",
-    "- one bullet per source you actually used (ticket, Figma link, component, repository file, the prompt itself) and what it contributed",
+    "- one bullet per source you actually used (requirement, reference, constraint, the component itself, repository file, the prompt itself) and what it contributed",
     "## In Scope",
     "- max 5 bullets, each 10 words or fewer, no trailing justification, no parenthetical jargon: what you will change, worded so someone outside this codebase can picture it (say what it does, not just its internal name)",
     "## Out of Scope",
@@ -173,8 +201,7 @@ export function buildUnderstandingPrompt(args: {
     "}",
     "```",
     "",
-    "Sources:",
-    ...(sourceLines.length > 0 ? sourceLines : ["- (none provided)"]),
+    ...buildRoleSections(args.sources, args.criteria),
   ].join("\n");
 }
 
@@ -184,10 +211,8 @@ export function buildUnderstandingPrompt(args: {
  * parseAnalysisOutput's "Planning Tasks" contract.
  */
 export function buildTextDirectionsPrompt(args: {
-  primaryFigma: string;
-  primaryTicket: string;
-  baseContext: string;
   sources: SourceEntry[];
+  criteria: CriterionWithState[];
   selectedComponentId?: string;
   selectedComponentLabel?: string;
   /** Confirmed understanding brief from phase 1 — see buildConfirmedBriefSummary for why this is the parsed object, not the raw text. */
@@ -197,10 +222,8 @@ export function buildTextDirectionsPrompt(args: {
   /** Present only on an automatic regeneration attempt — see directionQuality.ts. Names the specific overlap detected in the previous attempt so the model can actually fix it, not just "try again." */
   correctionNote?: string;
 }): string {
-  const sourceLines = buildSourceLines(args);
-
   return [
-    "Generate practical solution alternatives for the DS Starter Kit based on the CONFIRMED analysis below.",
+    "Generate practical solution alternatives for the connected design system based on the CONFIRMED analysis below.",
     "",
     ...buildFigmaMcpLines(args.figmaMcpAvailable ?? false),
     ...(args.correctionNote
@@ -244,15 +267,7 @@ export function buildTextDirectionsPrompt(args: {
     "}",
     "```",
     "",
-    "Follow DS constraints:",
-    "- Prioritise user outcomes, clarity, and information hierarchy in every choice",
-    "- Reuse existing DS components before custom UI",
-    "- Use var(--ds-*) tokens only",
-    "- Meet WCAG 2.2 AA accessibility requirements",
-    '- Never size a wrapper purely with a percentage (`width: 100%`, `min(100%, Npx)`, `aspect-ratio` off a percentage width, etc.) when every one of its own children is taken out of normal flow (`position: absolute`/`fixed`). Such a wrapper has no in-flow content of its own, so if any ancestor in its flex/grid chain doesn\'t resolve to a definite width — extremely common inside nested `flex-direction: column` + `align-items: center` layouts — the percentage has nothing to resolve against and the box silently collapses to 0 or an inconsistent tiny size. This exact pattern (a ring/badge/overlay wrapper stacking absolutely-positioned layers) is a frequent, easy-to-miss cause of broken previews. Give any such wrapper an explicit, non-percentage width AND height as a hard floor (e.g. inline style/CSS var driven px/rem), not just a percentage that assumes a definite ancestor.',
-    "",
-    "Sources:",
-    ...(sourceLines.length > 0 ? sourceLines : ["- (none provided)"]),
+    ...buildRoleSections(args.sources, args.criteria),
   ].join("\n");
 }
 
@@ -266,10 +281,8 @@ export function buildTextDirectionsPrompt(args: {
  */
 export function buildProposalPrompt(args: {
   runId: string;
-  primaryFigma: string;
-  primaryTicket: string;
-  baseContext: string;
   sources: SourceEntry[];
+  criteria: CriterionWithState[];
   selectedComponentId?: string;
   selectedComponentLabel?: string;
   directionCount?: number;
@@ -280,7 +293,6 @@ export function buildProposalPrompt(args: {
   /** Present only on an automatic regeneration attempt — see directionQuality.ts. Names the specific overlap detected in the previous attempt so the model can actually fix it, not just "try again." */
   correctionNote?: string;
 }): string {
-  const sourceLines = buildSourceLines(args);
   const stagingDir = `apps/web/src/accelerator/.generated/${args.runId}`;
   // A naming-convention reference only — NOT a target count. See step 2: the
   // model decides how many directions actually exist for this request.
@@ -310,7 +322,7 @@ export function buildProposalPrompt(args: {
           `1. The target file(s) are already known from the confirmed analysis: ${knownCodeTargets.join(", ")}. Read them directly, in full. Do not re-search the repository to rediscover them — only look further if something inside those files points you to another file you genuinely need.`,
         ]
       : [
-          "1. Identify the target component from the sources/context below. Find and read its current source file(s) in full before proposing anything — do not guess its structure or props.",
+          "1. Identify the target component from the sources below. Find and read its current source file(s) in full before proposing anything — do not guess its structure or props.",
           ...(args.selectedComponentId && args.selectedComponentLabel
             ? [`   Selected component: ${args.selectedComponentLabel} (${args.selectedComponentId})`]
             : []),
@@ -382,14 +394,58 @@ export function buildProposalPrompt(args: {
     '- "highlights" must differentiate: if two directions would share a chip, drop it from both and pick sharper ones. A shared chip is a signal the two directions aren\'t actually different enough yet — fix the underlying approach, not just the label.',
     '- This array MUST contain at least 2 directions (3 when the request supports it), each with a different "differentiationAxis". A single direction, or two directions sharing an axis, is treated as an error downstream, not a valid result.',
     "",
-    "Follow DS constraints:",
-    "- Prioritise user outcomes, clarity, and information hierarchy in every choice",
-    "- Reuse existing DS components before custom UI",
-    "- Use var(--ds-*) tokens only",
-    "- Meet WCAG 2.2 AA accessibility requirements",
-    "",
-    "Sources:",
-    ...(sourceLines.length > 0 ? sourceLines : ["- (none provided)"]),
+    ...buildRoleSections(args.sources, args.criteria),
   ].join("\n");
 }
 
+/**
+ * QA mode's judgment pass — runs against a staged, same-origin copy of the
+ * subject (see qaCriteriaRunner.ts for why staging is required at all: a
+ * hosted Storybook is cross-origin and can't be read into by anything, DOM
+ * checks included). This prompt handles ONLY criteria whose
+ * verification === "judgment" — automated/assisted criteria are decided by
+ * real runners, never by asking the model to grade its own homework.
+ */
+export function buildQaPrompt(args: {
+  runId: string;
+  sources: SourceEntry[];
+  judgmentCriteria: CriterionWithState[];
+  selectedComponentId?: string;
+  selectedComponentLabel?: string;
+}): string {
+  const stagingDir = `apps/web/src/accelerator/.generated/${args.runId}/qa`;
+  return [
+    "Stage the component below for a quality check, then judge it against a short list of criteria — do not implement or fix anything.",
+    "",
+    ...(args.selectedComponentId && args.selectedComponentLabel
+      ? [`Selected component: ${args.selectedComponentLabel} (${args.selectedComponentId})`, ""]
+      : []),
+    "Follow these steps in order:",
+    "1. Find and read the component's current source file(s) in full.",
+    `2. Write a preview harness to ${stagingDir}/Preview.tsx: default-exports a React function component with NO required props, imports the REAL component directly from its actual repo path using a correct relative import from ${stagingDir}/ back to that file (do not copy the file — QA reads the real, unmodified source, and never edits it), and renders it with realistic example data. Check for an existing \`*Showcase.tsx\` file for this component and reuse the same kind of example props/data it uses. Use only var(--ds-*) tokens for anything you write yourself.`,
+    "3. For EACH criterion listed below, judge the actual component you just read — never guess, never assume a pass. Ground every verdict in something specific: a prop, a class, a line of code, a piece of copy.",
+    "",
+    "WRITING STYLE — same rules as everywhere else in this product: plain language, no bare standard citations, short concrete sentences, one idea per bullet.",
+    "",
+    "Return exactly these sections:",
+    "## Files Read JSON",
+    "- return exactly one fenced json block: an array of every real repo-relative file path you read for this component in step 1 (not the staging path) — e.g. [\"apps/web/src/components/ds/CreditScore.tsx\"]",
+    "## QA Judgment JSON",
+    "- return exactly one fenced json block: an array with exactly one entry per criterion id below, this schema and no extra keys:",
+    "```json",
+    "[",
+    "  {",
+    '    "criterionId": "the exact id from the list below",',
+    '    "status": "pass | fail | warning | not-applicable | needs-review",',
+    '    "detail": "1-2 plain-language sentences grounded in the actual code — what you saw, not a generic restatement of the requirement",',
+    '    "suggestedFix": "one concrete sentence, or omit the key entirely if status is pass"',
+    "  }",
+    "]",
+    "```",
+    "",
+    "## Criteria to judge",
+    ...args.judgmentCriteria.map((c) => `- id: "${c.id}" — ${c.title}. ${c.requirement}`),
+    "",
+    ...buildRoleSections(args.sources, []),
+  ].join("\n");
+}

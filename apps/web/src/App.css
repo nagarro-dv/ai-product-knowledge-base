@@ -89,6 +89,25 @@
   color: var(--ds-general-color-foreground);
 }
 
+/* Where DsAcceleratorTool portals its "Start over" + stage tabs — same row,
+   same border, same background as the rest of the topbar. Empty (and
+   invisible) outside an active run. */
+.app-topbar__runSlot {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-xl);
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 100%;
+  overflow-x: auto;
+}
+
+.app-topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-2xs);
+}
+
 .app-topbar__settings {
   display: inline-flex;
   align-items: center;

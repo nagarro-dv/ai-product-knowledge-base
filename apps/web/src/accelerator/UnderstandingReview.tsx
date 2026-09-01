@@ -1,5 +1,5 @@
 import { AlertTriangle, Check, Target } from "lucide-react";
-import { forwardRef, useState } from "react";
+import { forwardRef, useState, type ReactNode } from "react";
 import { DsAccordion } from "../components/ds/Accordion";
 import { DsTypography } from "../components/ds/DsTypography";
 import type { ChangeIntentType, UnderstandingBrief } from "./types";
@@ -189,8 +189,13 @@ export const UnderstandingReview = forwardRef<
     targetLabel: string;
     resolvedAnswers?: Record<string, string>;
     onResolveQuestion?: (question: string, answer: string) => void;
+    /** Rendered directly after "Questions for you", before the "View full analysis"
+     * disclosure — so anything the caller adds here (e.g. "Anything to add before
+     * generating directions?") reads as part of the same "resolve before continuing"
+     * flow, not separated from it by an unrelated accordion. */
+    children?: ReactNode;
   }
->(function UnderstandingReview({ brief, targetLabel, resolvedAnswers = {}, onResolveQuestion }, headingRef) {
+>(function UnderstandingReview({ brief, targetLabel, resolvedAnswers = {}, onResolveQuestion, children }, headingRef) {
   const cleanedTarget = cleanInline(brief.changeIntent.targetComponent);
   const target =
     cleanedTarget && cleanedTarget !== "unknown" && !looksLikeSentence(cleanedTarget) ? cleanedTarget : targetLabel;
@@ -266,6 +271,8 @@ export const UnderstandingReview = forwardRef<
           onResolveQuestion={onResolveQuestion}
         />
       ) : null}
+
+      {children}
 
       <DsAccordion variant="ghost" size="small" title="View full analysis" defaultOpen={false}>
         <div className="analysisDash__full">

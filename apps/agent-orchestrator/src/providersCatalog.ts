@@ -5,6 +5,8 @@ import { CursorAdapter } from './providers/cursor/CursorAdapter.js';
 import { CursorCliAdapter } from './providers/cursor/CursorCliAdapter.js';
 import { GeminiAdapter } from './providers/gemini/GeminiAdapter.js';
 import { OpenAIAdapter } from './providers/openai/OpenAIAdapter.js';
+import { DemoAdapter } from './providers/demo/DemoAdapter.js';
+import { isDemoMode } from './demo/fixtures.js';
 import { asPersonalKeyMethod } from './providers/personal.js';
 import { clearAdapters, getAdapter, listAdapters, registerAdapter } from './providers/registry.js';
 import type { AiProviderAdapter } from './providers/types.js';
@@ -177,6 +179,14 @@ export async function syncProviders(options: SyncProvidersOptions = {}): Promise
 
   const nextCatalog: CatalogProvider[] = [];
   personalKeyMeta = await listPersonalKeyMeta();
+
+  if (isDemoMode()) {
+    await registerMethod(nextCatalog, {
+      adapter: new DemoAdapter(),
+      configured: true,
+      hint: 'Built-in offline demo data (DEMO_MODE) — no credentials needed.',
+    });
+  }
 
   const registerPersonalKeyMethod = async (providerId: string) => {
     const storedKey = await readPersonalKey(providerId);

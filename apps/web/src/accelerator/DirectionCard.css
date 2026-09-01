@@ -265,12 +265,19 @@
   gap: var(--ds-general-gap-2xs);
 }
 
-/* Pinned to the card bottom so both proposals' actions align exactly.
+/* Pinned to the card bottom so both proposals' actions align exactly, AND
+   sticky within the viewport — a tall preview/Details section used to bury
+   this below a full scroll of the page; now it rides along near the bottom
+   of the screen for as long as the card itself is still in view, so the
+   actual decision is never more than a glance away.
    Unchosen: a raised white button (a gray fill reads disabled). */
 .directionCard__choose {
   width: 100%;
   justify-content: center;
   margin-top: auto;
+  position: sticky;
+  bottom: var(--ds-general-gap-lg);
+  z-index: 3;
 }
 
 .directionCard__choose.ds-btn--secondary {

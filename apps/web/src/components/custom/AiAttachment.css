@@ -2,7 +2,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  /* stretch (not flex-start) so .aiAttachment__tag actually fills — and is therefore
+     clamped by — this element's own max-width, instead of sizing to its unshrunk content
+     and silently overflowing past it (the real bug behind "crammed, illegible": the close
+     button, and everything after it, was spilling into whatever sat next to the chip). */
+  align-items: stretch;
   padding: var(--ds-general-gap-xs) 0;
 }
 
@@ -32,8 +36,12 @@
   min-width: 0;
 }
 
+.aiAttachment--tag:has(.aiAttachment__tagPreview) {
+  max-width: 400px;
+}
+
 .aiAttachment__tag {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--ds-general-gap-xs);
   min-width: 0;
@@ -41,7 +49,10 @@
   border-radius: var(--ds-general-radius-full);
   padding: 0 var(--ds-general-gap-xs) 0 var(--ds-general-gap-sm);
   border: 1px solid var(--ds-general-color-border);
-  background: var(--ds-general-color-canvas);
+  /* Real contrast against a white composer, not the same white as its own container —
+     a 1px border alone reads as one continuous strip once two or more chips sit side by
+     side (the exact "crammed, illegible" failure). */
+  background: var(--ds-general-color-background);
 }
 
 .aiAttachment.is-hovered .aiAttachment__tag {
@@ -67,9 +78,14 @@
   color: var(--ds-general-color-muted-foreground);
 }
 
+/* Never competes for shrink space with .aiAttachment__tagPreview below — the value is
+   what was actually picked (a ticket key, a component name), so it keeps its own budget
+   (up to 55% of the chip) and only truncates on its own terms, instead of losing
+   characters first just because the preview text happens to be longer. */
 .aiAttachment__tagValue {
+  flex: 0 0 auto;
+  max-width: 55%;
   margin: 0;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -79,6 +95,24 @@
   font-weight: 600;
   line-height: var(--ds-general-typography-paragraph-small-line-height);
   color: var(--ds-general-color-foreground);
+}
+
+/* A small preview integrated into the chip itself — a ticket's title, a
+   component's file path — so the user can confirm what they attached
+   without opening it. Absorbs the row's remaining space and truncates
+   first, so the value (the thing they actually picked) stays legible. */
+.aiAttachment__tagPreview {
+  flex: 1 1 0%;
+  min-width: 12px;
+  margin: 0;
+  padding-left: 7px;
+  border-left: 1px solid var(--ds-general-color-border);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  color: var(--ds-general-color-muted-foreground);
 }
 
 .aiAttachment__link {
@@ -98,6 +132,7 @@
 
 .aiAttachment__tagClose {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: 16px;

@@ -118,7 +118,7 @@ export function ProviderPicker({
         onClick={() => setOpen((v) => !v)}
       >
         <span className="providerPicker__triggerIcon">
-          <SelectedIcon size={16} strokeWidth={1.8} aria-hidden />
+          <SelectedIcon size={13} strokeWidth={1.8} aria-hidden />
         </span>
         <span className="providerPicker__triggerLabel">{selected.label}</span>
         <span
@@ -134,9 +134,10 @@ export function ProviderPicker({
           ref={popoverRef}
           role="listbox"
           aria-label="Choose AI engine"
-          className="providerPicker__menu"
+          className={`providerPicker__menu providerPicker__menu--${position.placement}`}
           style={{
             top: position.top,
+            bottom: position.bottom,
             left: position.left,
             maxHeight: position.maxHeight,
             minWidth: Math.max(position.minWidth, 300),

@@ -8,6 +8,8 @@ import { requireAdapter, getAdapter, listAdapters } from './providers/registry.j
 import { buildRunMcpServers } from './mcpServers.js';
 import { IntegrationsRouter } from './integrationsRouter.js';
 import { ProposalsRouter } from './proposalsRouter.js';
+import { StandardsRouter } from './standardsRouter.js';
+import { QaRouter } from './qaRouter.js';
 import {
   buildProvidersPayload,
   connectPersonalKey,
@@ -16,6 +18,8 @@ import {
   reconnectMethod,
   syncProviders,
 } from './providersCatalog.js';
+import { isDemoMode } from './demo/fixtures.js';
+import { seedDemoRepo } from './demo/seedDemoRepo.js';
 
 type RequestMessage = {
   role: 'user' | 'assistant';
@@ -85,16 +89,29 @@ const repoRoot = process.env.DS_REPO_ROOT?.trim()
     : defaultRepoRoot;
 const port = Number.parseInt(process.env.AGENT_SERVER_PORT || '8787', 10);
 
-// DS Accelerator prompt — owned here, not by any provider adapter.
+// DS Accelerator prompt — owned here, not by any provider adapter. Kept
+// deliberately generic: the accelerator points at an arbitrary connected
+// repository (see IntegrationsRouter.resolveJobCwd), so nothing here may
+// assume this monorepo's own paths, tokens, or rule files. Quality/DS/a11y
+// expectations live in the standards catalog (packages/standards) and are
+// composed into the client-built prompt instead — see prompts.ts.
+//
+// The one thing genuinely worth stating from the server, not the browser: an
+// ABSOLUTE anchor for the staging directory. `cwd` below is the CONNECTED
+// repo's working copy (so reads/understanding target the real repo), but
+// staged direction/QA files must always land under this orchestrator's own
+// checkout — where Vite actually serves them from — regardless of cwd. The
+// browser-built prompt only knows a cwd-relative-looking path
+// (`apps/web/src/accelerator/.generated/...`); this absolute note is what
+// makes that resolve correctly even when cwd points elsewhere.
+const generatedStagingRoot = path.join(repoRoot, 'apps/web/src/accelerator/.generated');
 const basePrompt = `
-You are working in the DS Starter Kit monorepo (design-system playground + tokens + components).
+You are a coding assistant helping a designer change a UI component in a connected repository.
 
 Guardrails:
-- Treat repository files and .cursor/rules as source of truth.
-- Keep edits scoped to apps/web and packages/tokens unless absolutely required.
-- Reuse existing DS components and var(--ds-*) token usage; never introduce client-specific branding.
-- Follow WCAG 2.2 AA accessibility requirements from .cursor/rules/accessibility-wcag-eaa.mdc.
-- Explain intent clearly.
+- Treat the repository's own files (CLAUDE.md, docs, existing code) as source of truth for its conventions.
+- Explain your intent clearly as you work.
+- Whenever a prompt below asks you to write staged/generated files under a path starting with "apps/web/src/accelerator/.generated/", that path is ALWAYS relative to this absolute directory, never to your current working directory: ${generatedStagingRoot}
 `.trim();
 
 const jobs = new Map<string, AgentJob>();
@@ -105,6 +122,10 @@ const MAX_JOB_EVENTS = 5_000;
 const integrations = new IntegrationsRouter(repoRoot);
 // /api/agent/proposals/* — staging → preview → apply lifecycle for generated directions.
 const proposals = new ProposalsRouter(repoRoot, integrations.getRepository());
+// /api/standards — the project's quality checklist (packages/standards baseline + persisted overrides).
+const standards = new StandardsRouter();
+// /api/agent/qa/static — QA mode's file-content checks, read from the connected repo.
+const qa = new QaRouter(() => integrations.resolveJobCwd());
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
   res.statusCode = statusCode;
@@ -209,9 +230,13 @@ async function runJob(job: AgentJob) {
   job.abortController = abortController;
 
   try {
+    // The connected repository's working copy, not this orchestrator's own
+    // checkout — falls back to repoRoot only when nothing is connected. See
+    // basePrompt above for why staged files still land correctly regardless.
+    const jobCwd = await integrations.resolveJobCwd();
     const result = await adapter.runJob({
       prompt,
-      cwd: repoRoot,
+      cwd: jobCwd,
       onEvent: (event) => appendJobEvent(job, event),
       signal: abortController.signal,
       ...(job.figmaUrls && job.figmaUrls.length > 0 && integrations.isFigmaConnected()
@@ -332,6 +357,14 @@ Respond as the assistant to the final user message.`;
 }
 
 async function bootstrap() {
+  if (isDemoMode()) {
+    // Points the workspace repository connection at a seeded scratch repo
+    // BEFORE integrations.init() reads it, so demo runs never write into
+    // this orchestrator's own checkout. See demo/seedDemoRepo.ts.
+    await seedDemoRepo(repoRoot);
+    console.log('[demo] DEMO_MODE enabled — Storybook, Jira, the workspace repository, and the AI provider are all fixture-backed.');
+  }
+
   // Describe every known provider auth method (Cursor, Claude, ChatGPT,
   // Gemini) and register the ones that are configured and initialize cleanly.
   await syncProviders();
@@ -362,6 +395,16 @@ async function bootstrap() {
 
     // Proposal staging routes (/api/agent/proposals/*). Returns true once handled.
     if (await proposals.handle(req, res, pathname, req.method)) {
+      return;
+    }
+
+    // The project's quality checklist. Returns true once handled.
+    if (await standards.handle(req, res, pathname, req.method)) {
+      return;
+    }
+
+    // QA mode's static file-content checks. Returns true once handled.
+    if (await qa.handle(req, res, pathname, req.method)) {
       return;
     }
 
@@ -557,7 +600,7 @@ async function bootstrap() {
 
         const result = await adapter.runJob({
           prompt: buildPrompt(messages),
-          cwd: repoRoot,
+          cwd: await integrations.resolveJobCwd(),
           onEvent: () => {},
           signal: new AbortController().signal,
           ...(body.figmaUrls && body.figmaUrls.length > 0 && integrations.isFigmaConnected()
@@ -620,7 +663,7 @@ async function bootstrap() {
 
         const result = await adapter.runJob({
           prompt: buildPrompt(messages),
-          cwd: repoRoot,
+          cwd: await integrations.resolveJobCwd(),
           onEvent: (event) => writeSseData(res, event),
           signal: abortController.signal,
           ...(body.figmaUrls && body.figmaUrls.length > 0 && integrations.isFigmaConnected()

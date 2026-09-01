@@ -9,8 +9,10 @@ dist/
 .integrations.json
 .integration-tokens.json
 .dismissed-methods.json
+.standards.json
 apps/web/src/accelerator/.generated/
 apps/agent-orchestrator/.workspace-repos/
+apps/agent-orchestrator/.demo-repo/
 
 *storybook.log
 storybook-static

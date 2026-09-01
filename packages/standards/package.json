@@ -1,0 +1,7 @@
+{
+  "name": "@ds-starter/standards",
+  "version": "0.1.0",
+  "private": true,
+  "main": "index.ts",
+  "description": "Shared DS Accelerator standards/QA criteria catalog — types and the shipped baseline, consumed by both the web app and the agent orchestrator."
+}

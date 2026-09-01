@@ -3,9 +3,12 @@ import { FigmaIntegration, FIGMA_MCP_URL } from './integrations/figma/FigmaInteg
 import { StorybookIntegration } from './integrations/storybook/StorybookIntegration.js';
 import { WorkspaceRepository } from './workspace/WorkspaceRepository.js';
 import { JiraIntegration } from './integrations/jira/JiraIntegration.js';
+import { DemoJiraIntegration } from './integrations/jira/DemoJiraIntegration.js';
+import type { IntegrationAdapter } from './integrations/types.js';
 import { readIntegrationTokens } from './integrations/store.js';
 import { getAdapter } from './providers/registry.js';
 import { buildRunMcpServers } from './mcpServers.js';
+import { isDemoMode } from './demo/fixtures.js';
 
 /**
  * All `/api/integrations/*` routes live here, kept out of server.ts so the
@@ -104,13 +107,17 @@ export class IntegrationsRouter {
   private readonly storybook = new StorybookIntegration();
   private readonly figma = new FigmaIntegration();
   private readonly repository = new WorkspaceRepository();
-  private readonly jira: JiraIntegration | null;
+  private readonly jira: IntegrationAdapter | null;
   private readonly githubConfigured: boolean;
 
   constructor(private readonly repoRoot: string) {
-    const jiraId = process.env.JIRA_CLIENT_ID?.trim();
-    const jiraSecret = process.env.JIRA_CLIENT_SECRET?.trim();
-    this.jira = jiraId && jiraSecret ? new JiraIntegration({ clientId: jiraId, clientSecret: jiraSecret }) : null;
+    if (isDemoMode()) {
+      this.jira = new DemoJiraIntegration();
+    } else {
+      const jiraId = process.env.JIRA_CLIENT_ID?.trim();
+      const jiraSecret = process.env.JIRA_CLIENT_SECRET?.trim();
+      this.jira = jiraId && jiraSecret ? new JiraIntegration({ clientId: jiraId, clientSecret: jiraSecret }) : null;
+    }
     this.githubConfigured = Boolean(process.env.GITHUB_CLIENT_ID?.trim() && process.env.GITHUB_CLIENT_SECRET?.trim());
   }
 

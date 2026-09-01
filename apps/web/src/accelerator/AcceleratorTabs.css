@@ -2,12 +2,14 @@
    forward-only, view-only stepper. Every unlocked tab stays clickable so
    "where am I" never means "where am I stuck". */
 
+/* Border/padding owned by .app-topbar (App.css) — DsAcceleratorTool portals
+   this whole component into a slot inside the app's own topbar
+   (.app-topbar__runSlot), so it's genuinely part of that one bar, not a
+   second, separately-bordered row of its own below it. */
 .acceleratorTabs {
   display: flex;
   gap: var(--ds-general-gap-2xl);
-  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
   flex-shrink: 0;
-  padding: 0 var(--ds-general-gap-xs);
 }
 
 .acceleratorTabs__tab {

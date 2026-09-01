@@ -1,0 +1,253 @@
+/* Same quiet "+ Label" toggle the other optional slots (References, etc.)
+   use when collapsed — no border or surface of its own, just muted text —
+   so it doesn't read as heavier than a settings row the user rarely needs
+   to open (everything in it is already on by default). Opens as a side
+   panel (see .standardsPanel__drawer* below) rather than expanding in
+   place, so the full 11-row checklist never pushes the rest of the intake
+   form down the page. */
+.standardsPanel {
+  display: flex;
+}
+
+.standardsPanel__trigger {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--ds-general-gap-sm);
+  width: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 500;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.standardsPanel__trigger:hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.standardsPanel__trigger:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--ds-general-radius-rounded-xs);
+}
+
+.standardsPanel__triggerSummary {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.standardsPanel__count {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  white-space: nowrap;
+}
+
+.standardsPanel__summaryError {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ds-general-color-destructive-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  white-space: nowrap;
+}
+
+.standardsPanel__groups {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+}
+
+.standardsPanel__group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+}
+
+.standardsPanel__groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-sm);
+}
+
+.standardsPanel__groupCount {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+}
+
+.standardsPanel__statusState {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.standardsPanel__statusState p {
+  margin: 0;
+}
+
+.standardsPanel__statusState--error {
+  border: 1px solid var(--ds-general-color-destructive-border);
+  background: var(--ds-general-color-destructive-muted);
+  color: var(--ds-general-color-destructive-foreground);
+  flex-wrap: wrap;
+}
+
+.standardsPanel__statusState--error svg {
+  flex-shrink: 0;
+}
+
+.standardsPanel__statusState--error .ds-btn {
+  margin-left: auto;
+}
+
+.standardsPanel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* One line: checkbox, title (truncates), badge pinned to the same right
+   edge the group header's count sits on — the earlier version stacked the
+   badge under the title in a narrow left-hand column, wasting the row's
+   full width and misaligning against everything else in the panel. */
+.standardsPanel__row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-xs) var(--ds-general-padding-sm);
+  border: none;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.standardsPanel__row:hover:not(:disabled) {
+  background: var(--ds-general-color-background);
+}
+
+.standardsPanel__row:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: -1px;
+}
+
+.standardsPanel__row:disabled {
+  cursor: default;
+}
+
+.standardsPanel__rowTitle {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.standardsPanel__lockIcon {
+  color: var(--ds-general-color-muted-foreground);
+  flex-shrink: 0;
+}
+
+.standardsPanel__badge {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--ds-general-radius-full);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.standardsPanel__badge--measured {
+  background: color-mix(in srgb, var(--ds-general-color-success-foreground, #16a34a) 14%, transparent);
+  color: var(--ds-general-color-success-foreground, #16a34a);
+}
+
+.standardsPanel__badge--judged {
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* ── Side panel — same structural pattern as HistoryDrawer.css (fixed
+   root + backdrop + right-anchored panel), kept as its own rules here
+   rather than sharing classnames across files. ─────────────────────────── */
+
+.standardsPanel__drawerRoot {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+}
+
+.standardsPanel__drawerBackdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 24%, transparent);
+}
+
+.standardsPanel__drawer {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  max-width: 100vw;
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-gap-2xl);
+  border-left: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-canvas);
+  box-shadow: -20px 0 40px color-mix(in srgb, var(--ds-general-color-foreground) 14%, transparent);
+}
+
+.standardsPanel__drawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+}
+
+.standardsPanel__drawerHeader h2 {
+  margin: 0;
+}
+
+.standardsPanel__drawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+  min-height: 0;
+  /* Only ever scrolls vertically — see HistoryDrawer.css's identical comment. */
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.standardsPanel__legend {
+  color: var(--ds-general-color-muted-foreground);
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding-top: var(--ds-general-gap-2xs);
+  border-top: 1px solid var(--ds-general-color-border);
+}

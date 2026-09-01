@@ -1,30 +1,14 @@
-/* .app-shell (App.css) only sets min-height: 100vh, not height — so percentage
-   heights through .app-body never resolve to a definite value, and
-   overflow: hidden below silently fails to clip once content is taller than
-   one viewport (the whole document grows and scrolls instead). Anchoring to
-   the viewport directly, minus the app topbar's fixed 56px, gives this
-   component a genuinely definite, self-contained height so its own internal
-   scroll areas (.accelerator__stageBody) actually bound correctly. */
+/* .app-main-column (App.css) is the page's actual, single scroll container
+   (padding + overflow:auto) — this component used to assume it was instead
+   an unpadded, direct child of the viewport, anchoring its own height to
+   100vh and clipping (overflow:hidden) with an internal scroll area of its
+   own (.accelerator__stageBody). That fought .app-main-column's own scroll,
+   producing three nested/competing scrollbars. Now this is just normal flow
+   content: min-height is a FLOOR (short states still fill the viewport),
+   never a ceiling — nothing here clips or forces a second scroll region. */
 .accelerator {
-  height: calc(100vh - 56px);
-  min-height: 0;
-  padding: var(--ds-general-padding-3xl);
+  min-height: calc(100vh - 56px);
   box-sizing: border-box;
-  overflow: hidden;
-  /* --ds-general-color-background (#f9fafb) is the quiet page canvas here —
-     --ds-general-color-canvas is actually this system's WHITE surface token,
-     despite the name. Content lives on elevated white (canvas) surfaces
-     above this gray page, which is what gives every card its depth. Flat
-     white-on-white is the single biggest "wireframe" tell. */
-  background-color: var(--ds-general-color-background);
-  /* The same "design canvas" dot grid used deep in the flow for direction
-     previews (see ResponsivePreviewStage.css) — brought forward to the
-     shell itself so the product reads as a design tool from the very first
-     screen, not three steps in. Wide spacing and low contrast: texture, not
-     decoration — it should recede the moment real content sits on it. */
-  background-image: radial-gradient(circle, var(--ds-general-color-border-alt-1) 1px, transparent 1px);
-  background-size: 28px 28px;
-  border-radius: var(--ds-general-radius-rounded-xl);
 }
 
 /* Shared elevation recipe for surfaces raised off the canvas. */
@@ -39,12 +23,10 @@
 }
 
 .accelerator__window {
-  height: 100%;
   width: min(100%, 1680px);
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  min-height: 0;
   gap: var(--ds-general-gap-xl);
 }
 
@@ -53,6 +35,24 @@
    centered — see .accelerator__startScreen) keeps behaving unchanged. */
 .accelerator__window--intake .accelerator__startScreen {
   flex: 1 1 auto;
+}
+
+/* The intake/gate screen keeps the original "this is a design tool"
+   first-impression treatment (padded, rounded card on a dot-grid canvas).
+   Every other in-run state now flows as normal content directly on the
+   page's own background instead of a second nested box — see .accelerator's
+   comment above for why the old always-on version of this caused nested,
+   competing scrollbars. */
+.accelerator__window--intake {
+  padding: var(--ds-general-padding-3xl);
+  box-sizing: border-box;
+  border-radius: var(--ds-general-radius-rounded-xl);
+  /* --ds-general-color-background (#f9fafb) is the quiet page canvas here —
+     --ds-general-color-canvas is actually this system's WHITE surface token,
+     despite the name. */
+  background-color: var(--ds-general-color-background);
+  background-image: radial-gradient(circle, var(--ds-general-color-border-alt-1) 1px, transparent 1px);
+  background-size: 28px 28px;
 }
 
 /* ── Intake ─────────────────────────────────────────────────────────────── */
@@ -78,7 +78,14 @@
   flex-direction: column;
   justify-content: center;
   align-items: stretch;
-  gap: var(--ds-general-gap-xl);
+  gap: var(--ds-general-gap-2xl);
+}
+
+/* The slot-based intake reads better a little wider than the narrow gate
+   screen, but stays a single column — no need for the 1200px a two-column
+   layout would have wanted. */
+.accelerator__startContent:has(.slotIntake) {
+  max-width: 900px;
 }
 
 /* The intake screen is the one moment every single run passes through —
@@ -140,6 +147,23 @@
   width: 100%;
 }
 
+/* The intake header — question, mode tabs — is the one part of the screen
+   that reads as a centered hero; the composer and everything below it stays
+   left-aligned/full-width, so only this block gets its own centered stack
+   instead of overriding .accelerator__startContent's alignment. */
+.accelerator__startHeader {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--ds-general-gap-xl);
+  text-align: center;
+}
+
+.accelerator__startQuestion {
+  margin: 0;
+  color: var(--ds-general-color-foreground);
+}
+
 .accelerator__srOnly {
   position: absolute;
   width: 1px;
@@ -152,19 +176,26 @@
   border: 0;
 }
 
+.accelerator__srOnly:focus-visible {
+  outline: none;
+}
+
 /* ── Compact Storybook / Design System status line (intake) ──────────────
    Reassurance about what design system this run modifies, not an advert
    for the Storybook integration — the same weight class as a repo/branch
    switcher in Linear, Vercel, or GitHub. */
 
+/* A quiet caption, not a raised pill — connection status is background
+   context, not something that should out-compete the mode tabs or the
+   heading for attention. Only a warning state earns any real visual weight. */
 .accelerator__dsStatus {
   display: inline-flex;
   align-items: center;
-  gap: var(--ds-general-gap-sm);
+  gap: 6px;
   align-self: flex-start;
   border: none;
   background: transparent;
-  padding: 2px var(--ds-general-gap-2xs);
+  padding: 2px 2px;
   border-radius: var(--ds-general-radius-rounded-sm);
   cursor: pointer;
   color: var(--ds-general-color-muted-foreground);
@@ -173,6 +204,7 @@
 
 .accelerator__dsStatus:hover {
   color: var(--ds-general-color-foreground);
+  border-color: var(--ds-general-color-muted-foreground);
 }
 
 .accelerator__dsStatus:focus-visible {
@@ -195,6 +227,34 @@
 .accelerator__dsStatusText strong {
   color: var(--ds-general-color-foreground);
   font-weight: 600;
+}
+
+/* Nav-bar placement: the same chip, now sitting inline in the 56px topbar
+   row (portaled into .app-topbar__dsStatusSlot, right before History/
+   Settings) instead of stacked above the mode tabs — cancel the
+   block-context alignment and keep it from crowding the actions next to it. */
+.app-topbar__dsStatusSlot:empty {
+  display: none;
+}
+
+.app-topbar__dsStatusSlot {
+  display: flex;
+  align-items: center;
+  padding-right: var(--ds-general-gap-md);
+  margin-right: var(--ds-general-gap-2xs);
+  border-right: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.app-topbar__dsStatusSlot .accelerator__dsStatus {
+  align-self: center;
+  flex-shrink: 0;
+  max-width: 220px;
+}
+
+.app-topbar__dsStatusSlot .accelerator__dsStatusText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .accelerator__optionsRow {
@@ -243,29 +303,6 @@
   margin: 0;
 }
 
-/* ── Run header ─────────────────────────────────────────────────────────── */
-
-.accelerator__runHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--ds-general-gap-2xl);
-  padding: var(--ds-general-padding-md) 0;
-  flex-wrap: wrap;
-  /* Anchors the chrome — content clearly begins below this line. */
-  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
-}
-
-.accelerator__runBrand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--ds-general-gap-md);
-}
-
-.accelerator__runBrand p:focus-visible {
-  outline: none;
-}
-
 /* ── Phase action — the primary CTA attached directly under the content it
    acts on, instead of stranded in the header fighting for space with status
    text and Stop. ─────────────────────────────────────────────────────── */
@@ -291,8 +328,6 @@
    column. */
 
 .accelerator__shell {
-  flex: 1 1 auto;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: var(--ds-general-gap-xl);
@@ -301,11 +336,9 @@
 /* The active tab's content sits on its own raised sheet, not directly on the
    gray page canvas — the single biggest lever for "this is a considered
    product" over "this is a flat AI-tool wireframe". The tab bar stays
-   outside it, in the gray margin above, like tabs above a document. */
+   outside it, in the app topbar, like tabs above a document. */
 .accelerator__stagePanel {
-  flex: 1 1 auto;
   min-width: 0;
-  min-height: 0;
   display: flex;
   flex-direction: column;
   padding: var(--ds-general-padding-2xl) var(--ds-general-padding-2xl) 0;
@@ -333,9 +366,6 @@
 }
 
 .accelerator__stageBody {
-  min-height: 0;
-  flex: 1 1 auto;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: var(--ds-general-gap-2xl);
@@ -376,8 +406,11 @@
   border-radius: var(--ds-general-radius-rounded-xs);
 }
 
+/* A view control, not context — sits quieter and slightly lower than the
+   Sources label it shares a row with, so it reads as secondary. */
 .accelerator__responsiveToolbarRow {
   flex-shrink: 0;
+  margin-top: var(--ds-general-gap-lg);
 }
 
 /* Every phase screen enters with a soft rise — one intentional motion,
@@ -436,7 +469,10 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: var(--ds-general-gap-lg);
+  /* Tighter within the "context" zone (original component → how they
+     differ) than before the actual decision content — see directionGrid's
+     own margin-top below for the bigger step. */
+  gap: var(--ds-general-gap-md);
 }
 
 /* Build (implementing / implementationReady) — its own calm, single-focus
@@ -492,45 +528,30 @@
   gap: var(--ds-general-gap-sm);
 }
 
+/* Reads as "for context", not another full-strength content block — but
+   that comes from the muted heading (.accelerator__originalHeading) and the
+   ResponsivePreviewStage's own dot-grid canvas below it, not a THIRD box
+   wrapped around both. One container too many was reading as boxes nested
+   inside boxes nested inside boxes. */
 .accelerator__originalComponent {
   display: flex;
   flex-direction: column;
   gap: var(--ds-general-gap-sm);
 }
 
-/* ── "Before you continue" — a decision zone, not more of the same scroll.
-   Visually separated from the read-only analysis above it, so the
-   hierarchy reads as analysis → decision, not one flat document. ───────── */
+/* "Anything to add before generating directions?" now renders as one more
+   analysisDash__section, directly under "Questions for you" (see
+   UnderstandingReview's `children` slot) — same pattern, same section, not a
+   separately-styled block the "View full analysis" accordion used to split
+   them apart from. */
 
-.accelerator__reviewNext {
-  display: flex;
-  flex-direction: column;
-  gap: var(--ds-general-gap-md);
-  padding-top: var(--ds-general-padding-xl);
-  /* No border-top here — the "View full analysis" accordion right above
-     this (ghost variant) already draws its own bottom border. A second
-     border-top here read as a doubled hairline, not extra separation. */
-}
-
-.accelerator__reviewNextTitle {
-  margin: 0;
-  color: var(--ds-general-color-foreground);
-}
-
-/* An edit to the request, not a chat composer. */
+/* An edit to the request, not a chat composer. The trigger itself is now
+   .analysisDash__itemAction (see UnderstandingReview.css) — this class only
+   wraps the composer that expands once that trigger is clicked. */
 .accelerator__addContext {
   display: flex;
   flex-direction: column;
   gap: var(--ds-general-gap-md);
-}
-
-/* Without this, the flex column's default align-items:stretch pulls the
-   trigger button to the full container width, and the button's own
-   centered content then floats in the middle of that empty space — reads
-   as "misplaced," not just narrow. The button should size to its label,
-   left-aligned like everything else on this screen. */
-.accelerator__addContextTrigger {
-  align-self: flex-start;
 }
 
 /* Sticky primary action — mirrors the Directions tab's commit bar so every
@@ -552,10 +573,22 @@
 
 .accelerator__compareTop {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: var(--ds-general-gap-xl);
   flex-wrap: wrap;
+}
+
+/* Groups Sources (context) with the process-log disclosure underneath it —
+   both belong to "what informed this run", distinct from the viewport
+   toolbar on the other side of the row, which is a view control, not
+   context. Keeping them in one column instead of stacked full-width rows is
+   what turns three same-weight lines into one coherent left-hand cluster. */
+.accelerator__compareTopPrimary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  min-width: 0;
 }
 
 /* ── Commit bar — selection is light, commitment is unmistakable ──────────
@@ -901,24 +934,38 @@
   text-transform: uppercase;
 }
 
+/* One item per line, not squeezed onto a single wrapping row — the whole
+   point of this strip is a fast A-vs-B scan, which a shared line defeats. */
 .accelerator__compareStripRow {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--ds-general-gap-lg);
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
 }
 
 .accelerator__compareStripItem {
   display: inline-flex;
-  align-items: baseline;
-  gap: var(--ds-general-gap-xs);
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
   font-family: var(--ds-general-typography-font-family-body);
   font-size: var(--ds-general-typography-paragraph-small-font-size);
   color: var(--ds-general-color-foreground);
 }
 
+/* A real anchor for the eye, not bare bold text — same accent used for
+   directionCard__star, so it reads as the same "this is a direction id"
+   language as the cards below. */
 .accelerator__compareStripLetter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-primary);
+  color: var(--ds-general-color-canvas);
+  font-size: 11px;
   font-weight: 700;
-  color: var(--ds-general-color-muted-foreground);
 }
 
 /* ── Implementation ─────────────────────────────────────────────────────── */
@@ -931,10 +978,37 @@
   gap: var(--ds-general-gap-lg);
   /* Equal-height proposals — footers align, comparison reads as one table. */
   align-items: stretch;
+  /* The bigger step in the stage's rhythm — this is the actual decision
+     content, not more context, so it gets more separation than the gap
+     between context elements above it. */
+  margin-top: var(--ds-general-gap-lg);
 }
 
 .accelerator__originalHeading {
-  margin: var(--ds-general-gap-sm) 0 0;
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* Fallback for a Storybook connection that isn't a real http(s) URL (e.g.
+   the demo-mode fixture) — a plain component render or a message, centered
+   in the same stage a real StorybookStoryFrame would occupy.
+   Deliberately NOT height: 100% — this element is what gets measured (see
+   DsAcceleratorTool.tsx's demoPreviewNode/ResizeObserver) to size the stage
+   around it. Stretching it to fill the stage's own height would measure the
+   stage's height right back at itself instead of the component's real,
+   natural size — a circular loop that made the stage settle on whatever its
+   placeholder height happened to be instead of the real content height. */
+.accelerator__demoOriginalPreview {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--ds-general-padding-lg);
+  box-sizing: border-box;
+}
+
+.accelerator__demoOriginalPreview--empty {
+  color: var(--ds-general-color-muted-foreground);
 }
 
 .accelerator__textOnlyNote {
@@ -1125,24 +1199,8 @@
 /* ── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 1120px) {
-  .accelerator {
-    height: auto;
-    min-height: 100vh;
-    overflow: visible;
-  }
-
-  .accelerator__window {
-    height: auto;
-    min-height: calc(100vh - 32px);
-  }
-
   .accelerator__directionGrid {
     grid-template-columns: 1fr;
-  }
-
-  .accelerator__runHeader {
-    flex-direction: column;
-    align-items: flex-start;
   }
 }
 

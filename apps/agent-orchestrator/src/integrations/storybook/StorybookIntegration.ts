@@ -1,4 +1,5 @@
 import { patchIntegrationsConfig, readIntegrationsConfig } from '../configStore.js';
+import { isDemoMode, DEMO_STORYBOOK_COMPONENTS } from '../../demo/fixtures.js';
 
 /**
  * Bridge to an existing Storybook (local dev server or hosted static build).
@@ -343,6 +344,10 @@ export class StorybookIntegration {
 
   /** Restores a previously connected Storybook at boot. Index failures degrade to an error status, never crash startup. */
   async initFromConfig(): Promise<void> {
+    if (isDemoMode()) {
+      this.loadDemoFixture();
+      return;
+    }
     const config = await readIntegrationsConfig();
     const url = config.storybook?.url;
     if (!url) return;
@@ -358,6 +363,10 @@ export class StorybookIntegration {
 
   /** Validate-before-store: the URL is only persisted after a successful index. */
   async connect(rawUrl: string): Promise<StorybookSummary> {
+    if (isDemoMode()) {
+      this.loadDemoFixture();
+      return this.summary();
+    }
     const url = normalizeStorybookUrl(rawUrl);
     // Independent fetches — a project-title/version miss must never fail the
     // connect that the component index succeeded at.
@@ -377,6 +386,10 @@ export class StorybookIntegration {
   }
 
   async refresh(): Promise<StorybookSummary> {
+    if (isDemoMode()) {
+      this.loadDemoFixture();
+      return this.summary();
+    }
     if (!this.url) throw new Error('Storybook is not connected.');
     try {
       const [{ components, indexVersion }, projectTitle, exactVersion] = await Promise.all([
@@ -417,6 +430,16 @@ export class StorybookIntegration {
     this.components = components;
     this.projectTitle = projectTitle;
     this.versionLabel = detectVersionLabel(indexVersion, exactVersion);
+    this.lastIndexedAt = Date.now();
+    this.lastError = null;
+  }
+
+  /** DEMO_MODE: populates the index from a fixture instead of a real Storybook fetch — see demo/fixtures.ts. */
+  private loadDemoFixture(): void {
+    this.url = 'demo://design-system';
+    this.components = DEMO_STORYBOOK_COMPONENTS;
+    this.projectTitle = 'Demo Design System';
+    this.versionLabel = 'demo';
     this.lastIndexedAt = Date.now();
     this.lastError = null;
   }

@@ -4,12 +4,14 @@
  * name; the full value stays available on hover (title attribute).
  */
 
-export type SourceChipKind = "figma" | "ticket" | "component";
+export type SourceChipKind = "figma" | "ticket" | "component" | "doc" | "note";
 
 const TYPE_LABEL: Record<SourceChipKind, string> = {
   figma: "Figma",
   ticket: "Jira",
   component: "Component",
+  doc: "Doc",
+  note: "Note",
 };
 
 export function sourceTypeLabel(kind: SourceChipKind): string {
@@ -42,5 +44,10 @@ export function figmaLabelFromUrl(url: string): string {
 export function sourceChipName(kind: SourceChipKind, raw: string, componentTitle?: string): string {
   if (kind === "figma") return figmaLabelFromUrl(raw);
   if (kind === "ticket") return raw.trim() || "Ticket";
+  if (kind === "doc") return raw.trim() || "Document";
+  if (kind === "note") {
+    const trimmed = raw.trim();
+    return trimmed.length > 40 ? `${trimmed.slice(0, 40)}…` : trimmed || "Note";
+  }
   return componentTitle?.trim() || raw.trim() || "Component";
 }

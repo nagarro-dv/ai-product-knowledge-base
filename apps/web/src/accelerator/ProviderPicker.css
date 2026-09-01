@@ -3,44 +3,43 @@
   display: inline-flex;
 }
 
+/* Same pill chip every attach button in the composer toolbar uses (Link
+   component, Link Jira ticket) — one visual language for every control on
+   that row, not a heavier, taller control singled out on the right. */
 .providerPicker__trigger {
   display: inline-flex;
   align-items: center;
-  gap: var(--ds-general-gap-sm);
-  height: 36px;
-  padding: 0 var(--ds-general-gap-md) 0 var(--ds-general-gap-sm);
+  gap: 6px;
+  padding: 5px var(--ds-general-padding-sm) 5px var(--ds-general-padding-xs);
   border: 1px solid var(--ds-general-color-border);
-  border-radius: var(--ds-general-radius-rounded-md);
-  background: var(--ds-general-color-canvas);
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-background);
   color: var(--ds-general-color-foreground);
   cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard);
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
 }
 
 .providerPicker__trigger:hover {
-  background: var(--ds-general-color-muted);
+  background: var(--ds-general-color-canvas);
+  border-color: var(--ds-general-color-muted-foreground);
 }
 
 .providerPicker__trigger:focus-visible {
   outline: 2px solid var(--ds-general-shadows-focus-ring);
-  outline-offset: 2px;
+  outline-offset: 1px;
 }
 
 .providerPicker__triggerIcon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 22px;
-  height: 22px;
   flex-shrink: 0;
-  border-radius: var(--ds-general-radius-rounded-sm);
-  background: var(--ds-general-color-muted);
-  color: var(--ds-general-color-foreground);
+  color: var(--ds-general-color-muted-foreground);
 }
 
 .providerPicker__triggerLabel {
   font-family: var(--ds-general-typography-font-family-body);
-  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
   font-weight: 600;
 }
 

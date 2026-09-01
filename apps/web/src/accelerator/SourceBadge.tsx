@@ -1,4 +1,4 @@
-import { Component, ExternalLink, Figma, Ticket } from "lucide-react";
+import { Component, ExternalLink, Figma, FileText, StickyNote, Ticket } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { DsTypography } from "../components/ds/DsTypography";
 import { computeAnchoredPosition, type PopoverPosition } from "./popoverPosition";
@@ -51,6 +51,10 @@ export function SourceBadge({ source }: { source: SourceEntry & { kind: SourceCh
       <Figma size={14} aria-hidden />
     ) : source.kind === "ticket" ? (
       <Ticket size={14} aria-hidden />
+    ) : source.kind === "doc" ? (
+      <FileText size={14} aria-hidden />
+    ) : source.kind === "note" ? (
+      <StickyNote size={14} aria-hidden />
     ) : (
       <Component size={14} aria-hidden />
     );
@@ -77,7 +81,7 @@ export function SourceBadge({ source }: { source: SourceEntry & { kind: SourceCh
           className="sourceBadge__popover"
           role="dialog"
           aria-label={`${sourceTypeLabel(source.kind)} source details`}
-          style={{ top: position.top, left: position.left, maxHeight: position.maxHeight }}
+          style={{ top: position.top, bottom: position.bottom, left: position.left, maxHeight: position.maxHeight }}
         >
           <DsTypography as="p" variant="paragraph-mini-bold" className="sourceBadge__popoverType">
             {sourceTypeLabel(source.kind)}

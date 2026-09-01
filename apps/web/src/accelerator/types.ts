@@ -1,9 +1,15 @@
+import type { VerificationKind } from "@ds-starter/standards";
+
+export type { AcceleratorMode } from "@ds-starter/standards";
+import type { AcceleratorMode } from "@ds-starter/standards";
+
 /**
- * Two-phase journey. Phase 1 (analysis) is read-only and ends at the
- * `analysisReady` checkpoint — a real decision point where the user reviews
- * the AI's understanding and can revise prompt/sources before any
- * implementation time is spent. Only after confirmation does phase 2
- * (`generating`) write staged direction code.
+ * Journey states across all three modes. `intake` is the one idle screen —
+ * a persistent mode tab bar plus that mode's slot-based form, no separate
+ * landing page to click through first (see ModeTabs.tsx). Improve/Create:
+ * intake -> analyzing -> analysisReady -> generating -> directionsReady ->
+ * implementing -> implementationReady -> implementationSuccess. QA:
+ * intake -> qaRunning -> qaReady.
  */
 export type ToolState =
   | "intake"
@@ -15,18 +21,36 @@ export type ToolState =
   | "implementing"
   | "implementationReady"
   | "implementationSuccess"
+  | "qaRunning"
+  | "qaReady"
   | "error";
 
 /** Which phase a background job belongs to — needed to resume/retry the right one. */
-export type RunPhase = "understanding" | "directions";
+export type RunPhase = "understanding" | "directions" | "qa";
 
-export type SourceKind = "figma" | "ticket" | "component" | "internal-doc";
+/** Where a source came from. */
+export type SourceKind = "figma" | "ticket" | "component" | "doc" | "note";
+
+/**
+ * What a source is FOR — the half the prompt actually needs. The user never
+ * picks this directly: it's implied by which labelled slot (see
+ * modeSlots.ts) the source was dropped into.
+ */
+export type SourceRole =
+  | "subject" // the thing being changed or QA'd. At most one. Resolves the preview target.
+  | "requirement" // must be satisfied — a ticket, acceptance criteria, written spec
+  | "reference" // draw from this, don't copy it — a Figma frame, a sibling component
+  | "constraint" // must comply with this — a standards doc, a brand rule, a failing QA finding
+  | "watch-out"; // the requester's flagged attention point
 
 export type SourceEntry = {
   id: string;
   kind: SourceKind;
+  role: SourceRole;
   value: string;
   context: string;
+  /** Short human-readable preview shown on the source's chip — a ticket's title, a component's file path. */
+  preview?: string;
   ticketKey?: string;
   taskFolder?: string;
   /** Present for component sources — they always come from the connected Storybook. */
@@ -37,6 +61,32 @@ export type SourceEntry = {
     storyNames: string[];
     importPath?: string;
   };
+};
+
+/** A single labelled drop target on the intake screen. The role is fixed per slot — the user fills a box, not a taxonomy. */
+export type SourceSlot = {
+  id: string;
+  label: string;
+  hint: string;
+  role: SourceRole;
+  kinds: SourceKind[];
+  max: number | "many";
+  required: boolean;
+  /** Free-text entry (e.g. "What should change") in addition to/instead of attachments. */
+  allowFreeText: boolean;
+};
+
+export type ModePhase = { id: string; label: string };
+
+export type ModeConfig = {
+  mode: AcceleratorMode;
+  title: string;
+  provides: string;
+  does: string;
+  gets: string;
+  disabled: boolean;
+  slots: SourceSlot[];
+  phases: ModePhase[];
 };
 
 export type DirectionComplexity = "low" | "medium" | "high";
@@ -138,4 +188,27 @@ export type PreviewTarget = {
   id: string;
   label: string;
   reason: string;
+};
+
+/** A single QA verdict against one enabled criterion. verifiedBy must always be rendered distinctly — a measured result and a model opinion cannot look the same. */
+export type QaFinding = {
+  criterionId: string;
+  status: "pass" | "fail" | "warning" | "not-applicable" | "needs-review";
+  verifiedBy: VerificationKind;
+  /** Concrete evidence for automated/assisted findings: a ratio, a selector, a file:line. Empty for pure judgment findings. */
+  evidence: string;
+  /** Plain-language explanation, same writing rules as the understanding brief. */
+  detail: string;
+  suggestedFix?: string;
+};
+
+export type QaReport = {
+  runId: string;
+  subjectLabel: string;
+  findings: QaFinding[];
+  /** Real repo-relative file(s) the agent actually read for the subject — feeds the orchestrator's static (file-content) checks. */
+  subjectFiles: string[];
+  /** Browser-importable module URL for the staged QA preview harness, or null before it's ready. */
+  previewModulePath: string | null;
+  raw: string;
 };

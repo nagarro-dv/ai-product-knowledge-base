@@ -1,0 +1,68 @@
+/* A single segmented-control track — a muted pill housing all three modes
+   flush against each other, with the selected mode as a floating white
+   segment inside it. Centered under the "What are you working on today?"
+   question rather than stretched to the composer's width, so it reads as
+   one small decision, not a wide control bar. */
+.modeTabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-muted);
+}
+
+@media (max-width: 420px) {
+  .modeTabs {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+.modeTabs__tab {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-lg);
+  border: 1px solid transparent;
+  border-radius: var(--ds-general-radius-full);
+  background: transparent;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.modeTabs__tab:not(:disabled):not(.modeTabs__tab--selected):hover {
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 60%, transparent);
+}
+
+.modeTabs__tab:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.modeTabs__tab:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.modeTabs__tab--selected {
+  border-color: var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-xs);
+}
+
+.modeTabs__title {
+  color: var(--ds-general-color-muted-foreground);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.modeTabs__tab--selected .modeTabs__title {
+  color: var(--ds-general-color-foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modeTabs__tab {
+    transition: none;
+  }
+}

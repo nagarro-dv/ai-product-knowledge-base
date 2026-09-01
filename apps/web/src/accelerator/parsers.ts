@@ -4,6 +4,8 @@ import type {
   AnalysisOutput,
   Direction,
   DirectionComplexity,
+  QaFinding,
+  QaReport,
   UnderstandingBrief,
 } from "./types";
 
@@ -318,5 +320,70 @@ export function parseProposalOutput(raw: string, runId: string): AnalysisOutput 
   }
 
   return { ...base, directions };
+}
+
+const QA_STATUSES = new Set(["pass", "fail", "warning", "not-applicable", "needs-review"]);
+
+/**
+ * Parses ONLY the judgment half of a QA run — buildQaPrompt only asks the
+ * model about judgment criteria, never the ones a real runner already
+ * measured. The caller merges this with the DOM/static runners' findings
+ * into one report; verifiedBy is always "judgment" here by construction.
+ * The staged preview path is deterministic (buildQaPrompt always writes to
+ * `${runId}/qa/Preview.tsx`), so it's constructed here rather than parsed.
+ */
+export function parseQaOutput(raw: string, runId: string, subjectLabel: string): QaReport {
+  const judgmentSection = extractSection(raw, "QA Judgment JSON");
+  const jsonText = judgmentSection ? extractJsonFence(judgmentSection) : null;
+  let findings: QaFinding[] = [];
+  if (jsonText) {
+    try {
+      const parsed = JSON.parse(jsonText);
+      if (Array.isArray(parsed)) {
+        findings = parsed
+          .map((entry): QaFinding | null => {
+            if (typeof entry !== "object" || entry === null) return null;
+            const e = entry as Record<string, unknown>;
+            const criterionId = typeof e.criterionId === "string" ? e.criterionId.trim() : "";
+            if (!criterionId) return null;
+            const status = QA_STATUSES.has(e.status as string) ? (e.status as QaFinding["status"]) : "needs-review";
+            return {
+              criterionId,
+              status,
+              verifiedBy: "judgment",
+              evidence: "",
+              detail: typeof e.detail === "string" ? e.detail.trim() : "",
+              suggestedFix: typeof e.suggestedFix === "string" && e.suggestedFix.trim() ? e.suggestedFix.trim() : undefined,
+            };
+          })
+          .filter((f): f is QaFinding => f !== null);
+      }
+    } catch {
+      findings = [];
+    }
+  }
+
+  const filesSection = extractSection(raw, "Files Read JSON");
+  const filesJsonText = filesSection ? extractJsonFence(filesSection) : null;
+  let subjectFiles: string[] = [];
+  if (filesJsonText) {
+    try {
+      const parsedFiles = JSON.parse(filesJsonText);
+      if (Array.isArray(parsedFiles)) {
+        subjectFiles = parsedFiles.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+      }
+    } catch {
+      subjectFiles = [];
+    }
+  }
+
+  return {
+    runId,
+    subjectLabel,
+    findings,
+    subjectFiles,
+    previewModulePath: `/src/accelerator/.generated/${runId}/qa/Preview.tsx`,
+    raw,
+  };
 }
 

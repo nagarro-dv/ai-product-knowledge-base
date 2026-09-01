@@ -1,3 +1,4 @@
+import type { AcceleratorMode } from "@ds-starter/standards";
 import type { SourceEntry } from "./types";
 
 /**
@@ -21,6 +22,8 @@ export type RunHistoryEntry = {
   appliedFilePaths: string[];
   /** Display label of the AI engine used for the run (e.g. "Claude"). Absent on entries saved before this was tracked. */
   provider?: string;
+  /** Which mode this run was. Absent (null) on entries saved before modes existed — restoreFromHistory defaults those to "improve" rather than guessing. */
+  mode?: AcceleratorMode | null;
 };
 
 const HISTORY_KEY = "ds-accelerator-history";

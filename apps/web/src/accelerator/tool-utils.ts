@@ -138,14 +138,17 @@ export function formatStreamLine(event: AgentStreamEvent): Omit<StreamItem, "id"
 }
 
 export function mapPayloadSource(source: AiAgentInputSendPayload["sources"][number]): SourceEntry {
+  const role = source.role;
   if (source.kind === "ticket") {
     const ticketKey = extractTicketKey(source.href);
     const resolution = resolveTaskFolder(ticketKey);
     return {
       id: source.id,
       kind: "ticket",
+      role,
       value: source.href,
       context: source.context,
+      preview: source.preview,
       ticketKey: ticketKey ?? undefined,
       taskFolder: resolution.taskFolder ?? undefined,
     };
@@ -154,18 +157,25 @@ export function mapPayloadSource(source: AiAgentInputSendPayload["sources"][numb
     return {
       id: source.id,
       kind: "component",
+      role,
       value: source.href,
       context: source.context,
+      preview: source.preview,
       storybook: source.storybook,
     };
   }
-  return { id: source.id, kind: "figma", value: source.href, context: source.context };
+  if (source.kind === "doc") {
+    return { id: source.id, kind: "doc", role, value: source.href, context: source.context };
+  }
+  if (source.kind === "note") {
+    return { id: source.id, kind: "note", role, value: source.href, context: source.context };
+  }
+  return { id: source.id, kind: "figma", role, value: source.href, context: source.context };
 }
 
-/** Deduplicated Figma URLs across the primary Figma field and any figma-kind sources. */
-export function collectFigmaUrls(sources: SourceEntry[], primaryFigma: string): string[] {
+/** Deduplicated Figma URLs across every figma-kind source, regardless of which slot/role it landed under. */
+export function collectFigmaUrls(sources: SourceEntry[]): string[] {
   const urls = new Set<string>();
-  if (primaryFigma.trim()) urls.add(primaryFigma.trim());
   for (const source of sources) {
     if (source.kind === "figma" && source.value.trim()) urls.add(source.value.trim());
   }
@@ -173,8 +183,21 @@ export function collectFigmaUrls(sources: SourceEntry[], primaryFigma: string): 
 }
 
 /**
+ * Free text typed into a slot (e.g. "What should change") isn't stored as a
+ * discrete attachment — it's folded into the prompt as a synthetic
+ * requirement-role note right before the prompt is built, so the role
+ * sections stay the single source of truth without the base-context text
+ * needing its own id/lifecycle inside `sources` state.
+ */
+export function sourcesForPrompt(sources: SourceEntry[], baseContext: string): SourceEntry[] {
+  const trimmed = baseContext.trim();
+  if (!trimmed) return sources;
+  return [{ id: "base-context", kind: "note", role: "requirement", value: trimmed, context: "" }, ...sources];
+}
+
+/**
  * Resolves which component the run is about. The only authority is a
- * Storybook-backed component source; failing that, the analysis's own
+ * subject-role component source; failing that, the analysis's own
  * change-intent target. There is no built-in registry to guess from.
  */
 export function resolvePreviewTarget(
@@ -182,7 +205,7 @@ export function resolvePreviewTarget(
   _baseContext: string,
   changeIntent?: ChangeIntent | null,
 ): PreviewTarget {
-  const componentSource = sources.find((source) => source.kind === "component");
+  const componentSource = sources.find((source) => source.role === "subject") ?? sources.find((source) => source.kind === "component");
   if (componentSource) {
     return {
       id: componentSource.storybook?.componentPath ?? componentSource.value,

@@ -1,9 +1,9 @@
-import { AlertTriangle, ChevronLeft, ExternalLink, Github, History as HistoryIcon } from "lucide-react";
+import { AlertTriangle, ChevronLeft, ExternalLink, Github } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { AiAgentInput, type AiAgentInputSource } from "../components/custom/AiAgentInput";
+import { createPortal } from "react-dom";
+import { AiAgentInput } from "../components/custom/AiAgentInput";
 import { DsAccordion } from "../components/ds/Accordion";
 import { DsButton } from "../components/ds/Button";
-import { DsIconButton } from "../components/ds/IconButton";
 import { DsSpinner } from "../components/ds/Spinner";
 import { DsSuccess } from "../components/ds/Success";
 import { DsTypography } from "../components/ds/DsTypography";
@@ -13,43 +13,54 @@ import { AcceleratorTabs, type TabId } from "./AcceleratorTabs";
 import { DirectionCard } from "./DirectionCard";
 import { GenerationProgress } from "./GenerationProgress";
 import { HistoryDrawer } from "./HistoryDrawer";
-import { ProviderPicker } from "./ProviderPicker";
+import { ModeTabs } from "./ModeTabs";
+import { modeConfig } from "./modeSlots";
+import { QaReport } from "./QaReport";
 import { RefineControl } from "./RefineControl";
 import { ResponsivePreviewStage } from "./ResponsivePreviewStage";
 import { ResponsiveToolbar } from "./ResponsiveToolbar";
 import { DEFAULT_VIEWPORT, withCustomWidth } from "./responsiveViewport";
+import { SlotIntake } from "./SlotIntake";
 import { SourceBadge } from "./SourceBadge";
 import { type SourceChipKind } from "./source-format";
 import { StorybookStoryFrame } from "./StorybookStoryFrame";
+import { DsCreditScore } from "../components/ds/CreditScore";
 import { UnderstandingReview } from "./UnderstandingReview";
 import { clearHistory, readHistory, type RunHistoryEntry } from "./runHistory";
-import { openSettings } from "../navigationEvents";
+import { openSettings, OPEN_HISTORY_EVENT } from "../navigationEvents";
 import { groupFilesByDirection, lastStreamItemOfKind, streamItemLabel } from "./tool-utils";
 import type { SourceEntry } from "./types";
 import { useDsAcceleratorTool } from "./useDsAcceleratorTool";
 import "./DsAcceleratorTool.css";
 
-/** AiAgentInput owns its own source list internally — this bridges a restored history entry into it. */
-function toInputSources(entries: SourceEntry[]): AiAgentInputSource[] {
-  return entries
-    .filter((entry) => entry.kind !== "internal-doc")
-    .map((entry) => ({
-      id: entry.id,
-      kind: entry.kind as "figma" | "ticket" | "component",
-      href: entry.value,
-      context: entry.context,
-      storybook: entry.storybook,
-    }));
+function isEmbeddableStorybookUrl(url: string): boolean {
+  return /^https?:\/\//i.test(url);
 }
 
-export function DsAcceleratorTool() {
+/**
+ * Storybook connections that aren't a real, fetchable http(s) URL — such as
+ * this app's own demo-mode fixture (`demo://…`) — can never be iframed:
+ * StorybookStoryFrame has no way to detect that from a cross-origin embed
+ * and would spin on "Loading from Storybook…" forever (see its own header
+ * comment). For the one fixture component this app ships with, render the
+ * real component directly instead of an iframe that can never load.
+ */
+function renderKnownLocalPreview(componentPath: string | undefined) {
+  if (componentPath === "Data Display/Credit Score") return <DsCreditScore />;
+  return null;
+}
+
+export function DsAcceleratorTool({
+  runNavSlot,
+  dsStatusSlot,
+}: {
+  runNavSlot: HTMLDivElement | null;
+  dsStatusSlot: HTMLDivElement | null;
+}) {
   const vm = useDsAcceleratorTool();
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyEntries, setHistoryEntries] = useState<RunHistoryEntry[]>([]);
-  const historyTriggerRef = useRef<HTMLButtonElement | null>(null);
-  // Prefills the composer when restoring a history entry.
-  const [examplePrefill, setExamplePrefill] = useState("");
 
   // The design system IS the connected Storybook — the workflow only unlocks
   // once one is connected. null = still checking.
@@ -130,7 +141,25 @@ export function DsAcceleratorTool() {
     setViewport(DEFAULT_VIEWPORT);
   }, [vm.runId]);
 
-  const [restoredSources, setRestoredSources] = useState<AiAgentInputSource[] | undefined>(undefined);
+  // Measures the real height of a locally-rendered demo/fallback preview
+  // (see renderKnownLocalPreview) the same way DirectionPreviewFrame measures
+  // its iframe content — without this, ResponsivePreviewStage has no
+  // contentSize to size itself to and falls back to its 240px placeholder,
+  // clipping anything taller (a callback ref, not a plain useRef: this
+  // component doesn't remount between states, so a plain ref's mount-time
+  // effect would never re-fire once the node actually appears).
+  const [demoPreviewNode, setDemoPreviewNode] = useState<HTMLDivElement | null>(null);
+  const [demoPreviewSize, setDemoPreviewSize] = useState<{ width: number; height: number } | null>(null);
+  useEffect(() => {
+    if (!demoPreviewNode) return;
+    const observer = new ResizeObserver((entries) => {
+      const rect = entries[0]?.contentRect;
+      if (rect) setDemoPreviewSize({ width: rect.width, height: rect.height });
+    });
+    observer.observe(demoPreviewNode);
+    return () => observer.disconnect();
+  }, [demoPreviewNode]);
+
   const runHeadingRef = useRef<HTMLElement | null>(null);
   const understandingHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const successHeadingRef = useRef<HTMLElement | null>(null);
@@ -141,7 +170,7 @@ export function DsAcceleratorTool() {
   // disclosures on every stage change, so neither carries over stale-open
   // from whatever stage was active before.
   useEffect(() => {
-    if (vm.state === "analyzing" || vm.state === "generating") runHeadingRef.current?.focus();
+    if (vm.state === "analyzing" || vm.state === "generating" || vm.state === "qaRunning") runHeadingRef.current?.focus();
     if (vm.state === "analysisReady") understandingHeadingRef.current?.focus();
     if (vm.state === "implementationSuccess") successHeadingRef.current?.focus();
     if (vm.state === "error" || vm.state === "analysisStopped") errorCardRef.current?.focus();
@@ -168,6 +197,16 @@ export function DsAcceleratorTool() {
     setHistoryEntries(readHistory());
     setHistoryOpen(true);
   };
+
+  // The History trigger lives in the persistent app topbar (next to
+  // Settings), not in this component's own content — it dispatches
+  // OPEN_HISTORY_EVENT rather than calling openHistory directly, since
+  // App.tsx has no reference to this component's state.
+  useEffect(() => {
+    window.addEventListener(OPEN_HISTORY_EVENT, openHistory);
+    return () => window.removeEventListener(OPEN_HISTORY_EVENT, openHistory);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const renderStream = (emptyLabel: string, streamRef: RefObject<HTMLDivElement | null>) => (
     <div
@@ -242,10 +281,9 @@ export function DsAcceleratorTool() {
 
   // Sources are pinned, structural context — grounding for the current
   // stage's content, not chat attachments — so they render in the stage's
-  // own header, never inline mid-scroll.
-  const visibleSources = vm.sources.filter(
-    (source): source is SourceEntry & { kind: SourceChipKind } => source.kind !== "internal-doc",
-  );
+  // own header, never inline mid-scroll. SourceKind and SourceChipKind are
+  // the same union, so every source is displayable.
+  const visibleSources: (SourceEntry & { kind: SourceChipKind })[] = vm.sources;
   const renderSourceStrip = () =>
     visibleSources.length > 0 ? (
       <div className="accelerator__sourceStrip" aria-label="Sources used">
@@ -298,8 +336,11 @@ export function DsAcceleratorTool() {
 
   // Only present when a real Storybook-bound component source exists —
   // never an empty placeholder.
-  const renderOriginalComponent = () =>
-    storybookSource?.storybook && storybookSource.storybook.storyIds.length > 0 ? (
+  const renderOriginalComponent = () => {
+    if (!storybookSource?.storybook || storybookSource.storybook.storyIds.length === 0) return null;
+    const { url, storyIds, componentPath } = storybookSource.storybook;
+    const localPreview = !isEmbeddableStorybookUrl(url) ? renderKnownLocalPreview(componentPath) : null;
+    return (
       <div className="accelerator__originalComponent">
         <DsTypography as="h3" variant="paragraph-small-bold" className="accelerator__originalHeading">
           Original component · {storybookSource.value}
@@ -308,15 +349,25 @@ export function DsAcceleratorTool() {
           viewport={viewport}
           onResizeWidth={handleResizeWidth}
           label="Resize original component preview width"
+          contentSize={isEmbeddableStorybookUrl(url) ? null : demoPreviewSize}
         >
-          <StorybookStoryFrame
-            url={storybookSource.storybook.url}
-            storyId={storybookSource.storybook.storyIds[0]!}
-            title={storybookSource.value}
-          />
+          {isEmbeddableStorybookUrl(url) ? (
+            <StorybookStoryFrame url={url} storyId={storyIds[0]!} title={storybookSource.value} />
+          ) : localPreview ? (
+            <div className="accelerator__demoOriginalPreview" ref={setDemoPreviewNode}>
+              {localPreview}
+            </div>
+          ) : (
+            <div className="accelerator__demoOriginalPreview accelerator__demoOriginalPreview--empty">
+              <DsTypography as="p" variant="paragraph-small">
+                No live preview available for this connection.
+              </DsTypography>
+            </div>
+          )}
         </ResponsivePreviewStage>
       </div>
-    ) : null;
+    );
+  };
 
   // The applied result's payoff, shown on the Done state — the staged
   // preview module is deleted the instant promote runs (server sweeps
@@ -325,22 +376,35 @@ export function DsAcceleratorTool() {
   // now-changed file, and it's exactly the promise the gate copy makes
   // ("your Storybook reflects it immediately") — the same story, genuinely
   // live, is a stronger proof than a frozen snapshot would have been anyway.
-  const renderAppliedComponent = () =>
-    storybookSource?.storybook && storybookSource.storybook.storyIds.length > 0 ? (
+  const renderAppliedComponent = () => {
+    if (!storybookSource?.storybook || storybookSource.storybook.storyIds.length === 0) return null;
+    const { url, storyIds, componentPath } = storybookSource.storybook;
+    const localPreview = !isEmbeddableStorybookUrl(url) ? renderKnownLocalPreview(componentPath) : null;
+    return (
       <div className="accelerator__appliedPreview">
         <ResponsivePreviewStage
           viewport={viewport}
           onResizeWidth={handleResizeWidth}
           label="Resize applied result preview width"
+          contentSize={isEmbeddableStorybookUrl(url) ? null : demoPreviewSize}
         >
-          <StorybookStoryFrame
-            url={storybookSource.storybook.url}
-            storyId={storybookSource.storybook.storyIds[0]!}
-            title={storybookSource.value}
-          />
+          {isEmbeddableStorybookUrl(url) ? (
+            <StorybookStoryFrame url={url} storyId={storyIds[0]!} title={storybookSource.value} />
+          ) : localPreview ? (
+            <div className="accelerator__demoOriginalPreview" ref={setDemoPreviewNode}>
+              {localPreview}
+            </div>
+          ) : (
+            <div className="accelerator__demoOriginalPreview accelerator__demoOriginalPreview--empty">
+              <DsTypography as="p" variant="paragraph-small">
+                No live preview available for this connection.
+              </DsTypography>
+            </div>
+          )}
         </ResponsivePreviewStage>
       </div>
-    ) : null;
+    );
+  };
 
   return (
     <main className="accelerator" aria-label="DS Accelerator">
@@ -430,68 +494,38 @@ export function DsAcceleratorTool() {
             </div>
           </section>
         ) : vm.state === "intake" ? (
-          <section className="accelerator__startScreen" aria-label="Describe your request">
+          <section className="accelerator__startScreen" aria-label={modeConfig(vm.mode).title}>
             <div className="accelerator__startContent">
-              <section className="accelerator__startIntro" aria-label="Introduction">
-                <DsTypography as="h1" id="accelerator-title" variant="heading-2">
-                  What should we improve today?
+              <div className="accelerator__startHeader">
+                <DsTypography as="h1" id="accelerator-title" variant="heading-2" className="accelerator__startQuestion">
+                  What are you working on today?
                 </DsTypography>
-                <DsTypography as="p" variant="paragraph-regular" className="accelerator__startHint">
-                  Describe the change you need. Attach a ticket, a Figma design, or a component for better results.
-                </DsTypography>
-                {sbSummary?.status === "connected" ? (
-                  <button type="button" className="accelerator__dsStatus" onClick={() => openSettings("workspace")}>
-                    <span className="accelerator__dsStatusDot accelerator__dsStatusDot--ok" aria-hidden />
-                    <DsTypography as="span" variant="paragraph-small" className="accelerator__dsStatusText">
-                      Current Design System: <strong>{storybookDisplayName(sbSummary)}</strong>
-                    </DsTypography>
-                  </button>
-                ) : sbSummary?.status === "error" ? (
-                  <button
-                    type="button"
-                    className="accelerator__dsStatus accelerator__dsStatus--warning"
-                    onClick={() => openSettings("workspace")}
-                  >
-                    <span className="accelerator__dsStatusDot accelerator__dsStatusDot--warning" aria-hidden />
-                    <DsTypography as="span" variant="paragraph-small" className="accelerator__dsStatusText">
-                      Current Design System: <strong>{storybookDisplayName(sbSummary)}</strong> — not reachable right
-                      now
-                    </DsTypography>
-                  </button>
-                ) : null}
-              </section>
-              <AiAgentInput
-                className="accelerator__startInput"
-                placeholder="Describe what should change and why…"
+                <ModeTabs selected={vm.mode} onSelect={vm.handleSelectMode} />
+              </div>
+              <SlotIntake
+                key={vm.mode}
+                mode={vm.mode}
+                config={modeConfig(vm.mode)}
+                criteria={vm.modeCriteria}
+                onToggleCriterion={vm.toggleCriterion}
+                standardsLoading={!vm.standardsLoaded}
+                standardsErrorMessage={vm.standardsErrorMessage}
+                onRetryStandards={vm.retryLoadStandards}
+                providers={vm.providers}
+                selectedProvider={vm.selectedProvider}
+                onSelectProvider={vm.setSelectedProvider}
+                onManageProviders={() => openSettings("ai-models")}
                 onSend={vm.handleAiAgentInputSend}
-                prefill={examplePrefill}
-                prefillSources={restoredSources}
+                sendLabel={vm.mode === "qa" ? "Run QA" : "Analyze"}
+                errorMessage={vm.intakeErrorMessage}
+                initialSources={vm.sources}
+                initialMessage={vm.baseContext}
               />
-              <section className="accelerator__optionsRow" aria-label="Run options">
-                {vm.providers.length > 0 ? (
-                  <ProviderPicker
-                    providers={vm.providers}
-                    selectedProviderId={vm.selectedProvider}
-                    onSelect={vm.setSelectedProvider}
-                    onManage={() => openSettings("ai-models")}
-                  />
-                ) : null}
-                <div className="accelerator__optionsGroup">
-                  <DsIconButton
-                    ref={historyTriggerRef}
-                    variant="ghost"
-                    size="small"
-                    aria-label="Recent runs"
-                    onClick={openHistory}
-                  >
-                    <HistoryIcon size={16} aria-hidden />
-                  </DsIconButton>
-                </div>
-              </section>
               {!vm.activeCanEditFiles && vm.activeAuthMethod ? (
                 <DsTypography as="p" variant="paragraph-small" className="accelerator__textOnlyNote">
-                  {vm.providers.find((p) => p.id === vm.selectedProvider)?.label ?? "This engine"} proposes directions
-                  as text only — switch to Claude Code or Cursor for live previews.
+                  {vm.providers.find((p) => p.id === vm.selectedProvider)?.label ?? "This engine"}{" "}
+                  {vm.mode === "qa" ? "can't stage a live preview for QA" : "proposes directions as text only"} —
+                  switch to Claude Code or Cursor.
                 </DsTypography>
               ) : null}
               {vm.providers.length < 2 && vm.providersError ? (
@@ -502,64 +536,120 @@ export function DsAcceleratorTool() {
                   </DsTypography>
                 </p>
               ) : null}
-              {vm.intakeErrorMessage ? (
-                <div className="accelerator__errorCard" role="alert">
-                  <DsTypography as="p" variant="paragraph-regular">
-                    {vm.intakeErrorMessage}
-                  </DsTypography>
-                </div>
-              ) : null}
             </div>
           </section>
         ) : null}
 
-        {vm.state !== "intake" ? (
-          <header className="accelerator__runHeader">
-            <div className="accelerator__runBrand">
-              {vm.showBackHomeArrow ? (
-                <DsButton
-                  variant="ghost"
-                  size="small"
-                  aria-label="Back to home"
-                  onClick={vm.handleBackHome}
-                  leftIcon={<ChevronLeft size={16} aria-hidden />}
+        <DsTypography
+          as="p"
+          id="accelerator-title"
+          variant="heading-4"
+          tabIndex={-1}
+          ref={runHeadingRef}
+          className="accelerator__srOnly"
+        >
+          DS Accelerator
+        </DsTypography>
+
+        {dsStatusSlot && (sbSummary?.status === "connected" || sbSummary?.status === "error")
+          ? createPortal(
+              sbSummary.status === "connected" ? (
+                <button type="button" className="accelerator__dsStatus" onClick={() => openSettings("workspace")}>
+                  <span className="accelerator__dsStatusDot accelerator__dsStatusDot--ok" aria-hidden />
+                  <DsTypography as="span" variant="paragraph-mini-regular" className="accelerator__dsStatusText">
+                    Design System: <strong>{storybookDisplayName(sbSummary)}</strong>
+                  </DsTypography>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className="accelerator__dsStatus accelerator__dsStatus--warning"
+                  onClick={() => openSettings("workspace")}
                 >
-                  Back
-                </DsButton>
-              ) : null}
-              <DsTypography
-                as="p"
-                id="accelerator-title"
-                variant="heading-4"
-                tabIndex={-1}
-                ref={runHeadingRef}
-                className="accelerator__srOnly"
-              >
-                DS Accelerator
-              </DsTypography>
+                  <span className="accelerator__dsStatusDot accelerator__dsStatusDot--warning" aria-hidden />
+                  <DsTypography as="span" variant="paragraph-mini-regular" className="accelerator__dsStatusText">
+                    Design System: <strong>{storybookDisplayName(sbSummary)}</strong> — not reachable
+                  </DsTypography>
+                </button>
+              ),
+              dsStatusSlot,
+            )
+          : null}
+
+        {vm.state !== "intake" && runNavSlot
+          ? createPortal(
+              <>
+                {vm.showBackHomeArrow ? (
+                  <DsButton
+                    variant="ghost"
+                    size="small"
+                    aria-label="Discard this run and start over"
+                    onClick={() => {
+                      // This button discards the whole in-progress run (understanding,
+                      // generated directions, everything) — it's not navigation, so a
+                      // stray click shouldn't silently lose real work.
+                      if (window.confirm("Discard this run and start over? Anything generated so far will be lost.")) {
+                        vm.handleBackHome();
+                      }
+                    }}
+                    leftIcon={<ChevronLeft size={16} aria-hidden />}
+                  >
+                    Start over
+                  </DsButton>
+                ) : null}
+                {vm.state !== "qaRunning" && vm.state !== "qaReady" ? (
+                  <AcceleratorTabs
+                    activeTab={effectiveTab}
+                    directionsUnlocked={directionsUnlocked}
+                    implementationUnlocked={implementationUnlocked}
+                    hasError={vm.state === "error"}
+                    errorTab={errorTab}
+                    onSelectTab={setViewOverride}
+                  />
+                ) : null}
+              </>,
+              runNavSlot,
+            )
+          : null}
+
+        {vm.state === "qaRunning" || vm.state === "qaReady" ? (
+          <div className="accelerator__shell">
+            <div className="accelerator__stagePanel">
+              <div className="accelerator__stageBody">
+                {vm.state === "qaRunning" ? (
+                  <section className="accelerator__loadingScreen" aria-label="Running QA">
+                    <DsTypography as="p" variant="paragraph-bold" role="status" className="accelerator__loadingStatus">
+                      {vm.runStatusLabel}
+                    </DsTypography>
+                    <GenerationProgress
+                      mode="qa"
+                      activeIndex={vm.streamItems.length > 0 ? 1 : 0}
+                      thinkingItem={latestThinkingItem}
+                      processLine={latestProcessItem?.text}
+                    />
+                    <DsButton variant="ghost" size="small" onClick={vm.handleStopAnalysis}>
+                      Stop
+                    </DsButton>
+                    <DsAccordion variant="ghost" size="small" title="Show full activity log" defaultOpen={false}>
+                      {renderStream("Waiting for updates…", vm.analysisStreamRef)}
+                    </DsAccordion>
+                  </section>
+                ) : null}
+                {vm.state === "qaReady" && vm.qaReport ? (
+                  <QaReport
+                    report={vm.qaReport}
+                    criteria={vm.modeCriteria}
+                    staticFindings={vm.qaStaticFindings}
+                    onFixFindings={vm.handleFixQaFindings}
+                  />
+                ) : null}
+              </div>
             </div>
-            <DsIconButton
-              ref={historyTriggerRef}
-              variant="ghost"
-              size="small"
-              aria-label="Recent runs"
-              onClick={openHistory}
-            >
-              <HistoryIcon size={16} aria-hidden />
-            </DsIconButton>
-          </header>
+          </div>
         ) : null}
 
-        {vm.state !== "intake" ? (
+        {vm.state !== "intake" && vm.state !== "qaRunning" && vm.state !== "qaReady" ? (
           <div className="accelerator__shell">
-            <AcceleratorTabs
-              activeTab={effectiveTab}
-              directionsUnlocked={directionsUnlocked}
-              implementationUnlocked={implementationUnlocked}
-              hasError={vm.state === "error"}
-              errorTab={errorTab}
-              onSelectTab={setViewOverride}
-            />
             <div className="accelerator__stagePanel">
               {effectiveTab === "implementation" && vm.state === "implementationSuccess" ? (
                 <div className="accelerator__stageBody">
@@ -685,12 +775,14 @@ export function DsAcceleratorTool() {
                         {vm.directions.length > 1 ? "Compare directions" : "Recommended direction"}
                       </DsTypography>
                       <div className="accelerator__compareTop">
-                        {renderSourceStrip()}
+                        <div className="accelerator__compareTopPrimary">
+                          {renderSourceStrip()}
+                          {renderActivityToggle()}
+                        </div>
                         <div className="accelerator__responsiveToolbarRow">
                           <ResponsiveToolbar viewport={viewport} onChange={setViewport} />
                         </div>
                       </div>
-                      {renderActivityToggle()}
                     </div>
                   ) : null}
 
@@ -743,40 +835,44 @@ export function DsAcceleratorTool() {
                           targetLabel={vm.resolvedPreviewTarget.label}
                           resolvedAnswers={resolvedAnswers}
                           onResolveQuestion={handleResolveQuestion}
-                        />
-
-                        <div className="accelerator__reviewNext" aria-label="Before you continue">
-                          <DsTypography as="h3" variant="paragraph-small-bold" className="accelerator__reviewNextTitle">
-                            Anything to add before generating directions?
-                          </DsTypography>
-                          <div className="accelerator__addContext" ref={addContextRef}>
-                            {addContextOpen ? (
-                              <>
-                                <AiAgentInput
-                                  placeholder="Add context, correct something, or attach another source…"
-                                  onSend={vm.handleClarify}
-                                  sendLabel="Update analysis"
-                                />
-                                {vm.intakeErrorMessage ? (
-                                  <div className="accelerator__errorCard" role="alert">
-                                    <DsTypography as="p" variant="paragraph-regular">
-                                      {vm.intakeErrorMessage}
-                                    </DsTypography>
+                        >
+                          <section className="analysisDash__section" aria-label="Before you continue">
+                            <ul className="analysisDash__questionList">
+                              <li className="analysisDash__questionItem">
+                                <div className="analysisDash__questionRow">
+                                  <DsTypography as="span" variant="paragraph-small" className="analysisDash__questionText">
+                                    Anything to add before generating directions?
+                                  </DsTypography>
+                                  {!addContextOpen ? (
+                                    <button
+                                      type="button"
+                                      className="analysisDash__itemAction"
+                                      onClick={() => setAddContextOpen(true)}
+                                    >
+                                      Add context
+                                    </button>
+                                  ) : null}
+                                </div>
+                                {addContextOpen ? (
+                                  <div className="accelerator__addContext" ref={addContextRef}>
+                                    <AiAgentInput
+                                      placeholder="Add context, correct something, or attach another source…"
+                                      onSend={vm.handleClarify}
+                                      sendLabel="Update analysis"
+                                    />
+                                    {vm.intakeErrorMessage ? (
+                                      <div className="accelerator__errorCard" role="alert">
+                                        <DsTypography as="p" variant="paragraph-regular">
+                                          {vm.intakeErrorMessage}
+                                        </DsTypography>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 ) : null}
-                              </>
-                            ) : (
-                              <DsButton
-                                variant="ghost"
-                                size="small"
-                                className="accelerator__addContextTrigger"
-                                onClick={() => setAddContextOpen(true)}
-                              >
-                                Add context
-                              </DsButton>
-                            )}
-                          </div>
-                        </div>
+                              </li>
+                            </ul>
+                          </section>
+                        </UnderstandingReview>
 
                         <div className="accelerator__reviewActionBar">
                           <DsButton
@@ -946,11 +1042,8 @@ export function DsAcceleratorTool() {
         <HistoryDrawer
           entries={historyEntries}
           onClose={() => setHistoryOpen(false)}
-          returnFocusRef={historyTriggerRef}
           onRestore={(entry) => {
             vm.restoreFromHistory(entry);
-            setExamplePrefill(entry.baseContext);
-            setRestoredSources(toInputSources(entry.sources));
             setHistoryOpen(false);
           }}
           onClear={() => {

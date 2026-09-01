@@ -1,0 +1,157 @@
+.qaReport {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+}
+
+.qaReport__summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-2xs);
+  padding: var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+}
+
+.qaReport__summaryBar {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--ds-general-color-muted);
+}
+
+.qaReport__summaryBar--fail {
+  background: var(--ds-general-color-error, #dc2626);
+}
+
+.qaReport__summaryBar--review {
+  background: var(--ds-general-color-warning, #d97706);
+}
+
+.qaReport__summaryBar--pass {
+  background: var(--ds-general-color-success, #16a34a);
+}
+
+.qaReport__columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: var(--ds-general-gap-lg);
+  align-items: start;
+}
+
+@media (max-width: 860px) {
+  .qaReport__columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Same quiet reference-panel treatment as the Compare Directions screen's
+   original-component preview — a real container instead of floating in
+   whitespace next to the (taller) findings column. */
+.qaReport__previewColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border: 1px dashed var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-background);
+  position: sticky;
+  top: 0;
+}
+
+.qaReport__findingsColumn {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  min-width: 0;
+}
+
+.qaReport__passedList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  padding-top: var(--ds-general-gap-sm);
+}
+
+.qaReport__card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px solid var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+}
+
+.qaReport__card--fail {
+  border-color: color-mix(in srgb, var(--ds-general-color-error, #dc2626) 45%, var(--ds-general-color-border));
+  background: color-mix(in srgb, var(--ds-general-color-error, #dc2626) 6%, var(--ds-general-color-canvas));
+}
+
+.qaReport__card--warning,
+.qaReport__card--needs-review {
+  border-color: color-mix(in srgb, var(--ds-general-color-warning, #d97706) 45%, var(--ds-general-color-border));
+  background: color-mix(in srgb, var(--ds-general-color-warning, #d97706) 6%, var(--ds-general-color-canvas));
+}
+
+.qaReport__cardHeader {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.qaReport__cardStatus {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qaReport__verifiedBadge {
+  margin-left: auto;
+  padding: 1px 6px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.qaReport__verifiedBadge--measured {
+  background: color-mix(in srgb, var(--ds-general-color-success, #16a34a) 14%, transparent);
+  color: var(--ds-general-color-success, #16a34a);
+}
+
+.qaReport__verifiedBadge--judged {
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.qaReport__cardTitle {
+  margin: 0;
+}
+
+.qaReport__assessedNote {
+  color: var(--ds-general-color-muted-foreground);
+  font-style: italic;
+}
+
+.qaReport__evidence {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--ds-general-color-muted-foreground);
+  overflow-wrap: anywhere;
+}
+
+.qaReport__detail {
+  color: var(--ds-general-color-foreground);
+}
+
+.qaReport__fix {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.qaReport__actions {
+  display: flex;
+  justify-content: flex-end;
+}

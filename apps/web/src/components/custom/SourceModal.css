@@ -1,0 +1,131 @@
+/* Shared shell for every "add a source" modal (SlotIntake's + AiAgentInput's) — one
+   definition instead of two that can drift. Chrome matches ConnectMethodModal.css, the
+   other well-built modal already in this app (border + rounded-xl + elev-md). */
+
+.sourceModal__root {
+  position: fixed;
+  inset: 0;
+  z-index: 2100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sourceModal__backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  background: color-mix(in srgb, var(--ds-general-color-foreground) 34%, transparent);
+}
+
+.sourceModal__panel {
+  position: relative;
+  width: min(480px, calc(100vw - var(--ds-general-gap-4xl)));
+  /* Tall enough that JiraTicketPicker's 380px results box (see JiraTicketPicker.css)
+     fits without the panel itself scrolling on top of the results' own inner scroll —
+     the .jiraPicker__results scrollbar should be the only one that ever appears. */
+  max-height: min(720px, calc(100vh - 64px));
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-gap-2xl);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-md);
+}
+
+/* Title + subtitle read as one tightly-bound block (its own small internal gap), clearly
+   separated from the body below by the panel's own larger gap — the rhythm is header
+   block / content block / actions, not one flat stack of same-weight lines. */
+.sourceModal__titleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sourceModal__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.sourceModal__headerTitle {
+  margin: 0;
+  flex: 1 1 auto;
+}
+
+.sourceModal__closeButton {
+  flex-shrink: 0;
+}
+
+.sourceModal__subtitle {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourceModal__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+}
+
+.sourceModal__field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+}
+
+.sourceModal__field > span:first-child {
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.sourceModal__fieldInput,
+.sourceModal__contextInput {
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-regular-font-size);
+}
+
+.sourceModal__fieldInput:focus-visible,
+.sourceModal__contextInput:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.sourceModal__sbConnect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xs);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-radius: var(--ds-general-radius-rounded-md);
+  border: 1px dashed var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-background);
+}
+
+.sourceModal__jiraModeSwitch {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--ds-general-color-accent);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sourceModal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-xs);
+}

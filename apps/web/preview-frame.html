@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DS Accelerator preview</title>
+    <!--
+      Scoped to THIS document only (never apps/web/src/index.css, which the
+      outer app shell also loads — overflow:hidden there would break the
+      whole app's own scrolling). An iframe is its own independent browsing
+      context: the host page's overflow:hidden on the iframe box can't
+      suppress this document's native scrollbar, only this document's own
+      overflow can. ResponsivePreviewStage always sizes the iframe box to
+      the real measured content height (see its own comments) — this is
+      what makes that promise hold even during the brief window before that
+      measurement lands, or if it's ever stale by a frame.
+    -->
+    <style>
+      html,
+      body {
+        overflow: hidden;
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
     <div id="preview-root"></div>
