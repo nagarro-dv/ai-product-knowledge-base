@@ -1,0 +1,139 @@
+.sourcesPopover {
+  position: relative;
+  display: inline-flex;
+}
+
+.sourcesPopover__menu {
+  position: fixed;
+  z-index: 1200;
+  display: flex;
+  flex-direction: column;
+  width: 300px;
+  max-width: calc(100vw - 16px);
+  box-sizing: border-box;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-md);
+  overflow: hidden;
+}
+
+.sourcesPopover__search {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-bottom: 1px solid var(--ds-general-color-border);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourcesPopover__searchInput {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+}
+
+.sourcesPopover__searchInput:focus {
+  outline: none;
+}
+
+.sourcesPopover__searchInput::placeholder {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourcesPopover__list {
+  overflow-y: auto;
+  padding: 0 var(--ds-general-padding-xs) var(--ds-general-padding-xs);
+}
+
+.sourcesPopover__empty {
+  padding: var(--ds-general-padding-md);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourcesPopover__group {
+  display: grid;
+  gap: 1px;
+}
+
+/* Category dividers: a hairline between groups plus a small uppercase
+   label, so the eye can jump category to category instead of reading a
+   flat list of 40+ names. */
+.sourcesPopover__group + .sourcesPopover__group {
+  margin-top: var(--ds-general-gap-xs);
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.sourcesPopover__groupLabel {
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-sm) var(--ds-general-padding-xs);
+  color: var(--ds-general-color-muted-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.sourcesPopover__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  padding: 6px var(--ds-general-padding-sm);
+  border: none;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: transparent;
+  color: var(--ds-general-color-foreground);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.sourcesPopover__row:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.sourcesPopover__row:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: -2px;
+}
+
+.sourcesPopover__rowIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+}
+
+/* Brand logos are designed for a light background — keep their tile white
+   (with a hairline) in every appearance so dark marks like GitHub's or
+   Notion's stay visible in Dark mode. */
+.sourcesPopover__rowIcon--logo {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px var(--ds-general-color-border);
+}
+
+.sourcesPopover__rowLabel {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sourcesPopover__rowCheck {
+  flex-shrink: 0;
+  color: var(--knowledge-accent, var(--ds-general-color-foreground));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sourcesPopover__row {
+    transition: none;
+  }
+}

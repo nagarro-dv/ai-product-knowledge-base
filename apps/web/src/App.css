@@ -41,52 +41,9 @@
   background: var(--ds-general-color-background);
 }
 
-.app-topbar__brand {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--ds-general-gap-md);
-  border: none;
-  background: transparent;
-  padding: var(--ds-general-gap-xs) var(--ds-general-gap-sm);
-  margin-left: calc(-1 * var(--ds-general-gap-sm));
-  border-radius: var(--ds-general-radius-rounded-md);
-  color: var(--ds-general-color-foreground);
-  cursor: pointer;
-  transition: background-color var(--dur-fast) var(--ease-standard);
-}
-
-.app-topbar__brand:hover {
-  background: var(--ds-general-color-muted);
-}
-
-.app-topbar__brand:focus-visible {
-  outline: 2px solid var(--ds-general-shadows-focus-ring);
-  outline-offset: 2px;
-}
-
-/* The one deliberately saturated surface in the whole shell — everything
-   else in the product speaks in neutrals, so this tile is where the brand
-   actually shows up. A gray placeholder here read as "nobody designed this
-   yet"; a small confident block of the real accent color reads as owned. */
-.app-topbar__logo {
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  border-radius: var(--ds-general-radius-rounded-md);
-  background: linear-gradient(155deg, var(--ds-general-color-primary-hover) 0%, var(--ds-general-color-primary) 100%);
-  color: var(--ds-general-color-primary-foreground);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 12%, transparent);
-}
-
-.app-topbar__title {
-  font-family: var(--ds-general-typography-font-family-headings);
-  font-size: 0.875rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--ds-general-color-foreground);
+/* Knowledge Base v2 runs its canvas straight up to the topbar. */
+.app-shell--kb2 .app-topbar {
+  border-bottom-color: transparent;
 }
 
 /* Where DsAcceleratorTool portals its "Start over" + stage tabs — same row,

@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { AlertTriangle, Check, History as HistoryIcon, Settings as SettingsIcon } from "lucide-react";
 import { DsAcceleratorTool } from "./accelerator/DsAcceleratorTool";
+import { ProductKnowledgeHome } from "./knowledge/ProductKnowledgeHome";
+import { KnowledgeV2 } from "./knowledgeV2/KnowledgeV2";
+import { ProductPicker } from "./ProductPicker";
+import { getInitialProduct, persistProduct, type ProductId } from "./products";
 import { SettingsView, type SettingsTab } from "./settings/SettingsView";
 import { JIRA_RETURN_TO_KEY } from "./integrations/jiraClient";
 import { GITHUB_RETURN_TO_KEY } from "./integrations/repositoryClient";
@@ -149,7 +153,15 @@ export default function App() {
   // here so it reads as one of the bar's actions, not part of the run nav.
   const [dsStatusSlot, setDsStatusSlot] = useState<HTMLDivElement | null>(null);
 
-  const goTools = useCallback(() => setSection("tools"), []);
+  const [product, setProduct] = useState<ProductId>(getInitialProduct);
+  // Run nav, the Design System badge and History all belong to DS Accelerator.
+  const showAcceleratorChrome = section === "tools" && product === "ds-accelerator";
+
+  const selectProduct = useCallback((next: ProductId) => {
+    setProduct(next);
+    persistProduct(next);
+    setSection("tools");
+  }, []);
   const goSettings = useCallback(() => setSection("settings"), []);
 
   useEffect(() => {
@@ -179,31 +191,13 @@ export default function App() {
   }, []);
 
   return (
-    <div className="app-shell">
+    <div className={product === "knowledge-base-v2" && section !== "settings" ? "app-shell app-shell--kb2" : "app-shell"}>
       <header className="app-topbar" aria-label="Top navigation">
-        <button
-          type="button"
-          className="app-topbar__brand"
-          onClick={goTools}
-          aria-current={section === "tools" ? "page" : undefined}
-        >
-          <span className="app-topbar__logo" aria-hidden>
-            <svg viewBox="0 0 24 24" width="15" height="15" fill="none">
-              <path
-                d="M9 6.5 4 12l5 5.5M15 6.5 20 12l-5 5.5"
-                stroke="currentColor"
-                strokeWidth="2.1"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <span className="app-topbar__title">DS Accelerator</span>
-        </button>
-        {section === "tools" ? <div className="app-topbar__runSlot" ref={setRunNavSlot} /> : null}
+        <ProductPicker selected={product} onSelect={selectProduct} />
+        {showAcceleratorChrome ? <div className="app-topbar__runSlot" ref={setRunNavSlot} /> : null}
         <div className="app-topbar__actions">
-          {section === "tools" ? <div className="app-topbar__dsStatusSlot" ref={setDsStatusSlot} /> : null}
-          {section === "tools" ? (
+          {showAcceleratorChrome ? <div className="app-topbar__dsStatusSlot" ref={setDsStatusSlot} /> : null}
+          {showAcceleratorChrome ? (
             <button type="button" className="app-topbar__settings" onClick={() => openHistory()}>
               <HistoryIcon size={16} strokeWidth={1.9} aria-hidden />
               History
@@ -222,7 +216,14 @@ export default function App() {
       </header>
 
       <div className="app-body">
-        <div className="app-main-column">
+        {/* v2 owns its own sidebar and scroll areas, so it sits edge to edge. */}
+        <div
+          className={
+            section !== "settings" && product === "knowledge-base-v2"
+              ? "app-main-column app-main-column--flowsFull"
+              : "app-main-column"
+          }
+        >
           {jiraBanner ? (
             <div
               className={`app-jiraBanner app-jiraBanner--${jiraBanner.kind === "connected" ? "success" : "error"}`}
@@ -257,6 +258,10 @@ export default function App() {
 
           {section === "settings" ? (
             <SettingsView activeTab={settingsTab} onTabChange={setSettingsTab} />
+          ) : product === "knowledge-base" ? (
+            <ProductKnowledgeHome />
+          ) : product === "knowledge-base-v2" ? (
+            <KnowledgeV2 />
           ) : (
             <DsAcceleratorTool runNavSlot={runNavSlot} dsStatusSlot={dsStatusSlot} />
           )}

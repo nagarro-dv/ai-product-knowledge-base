@@ -155,7 +155,9 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--ds-general-gap-xl);
+  /* Same title-to-tabs distance as the Product Knowledge Base home (its
+     content gap + the margin under its title), so both landings match. */
+  gap: calc(var(--ds-general-gap-2xl) + var(--ds-general-gap-4xl));
   text-align: center;
 }
 

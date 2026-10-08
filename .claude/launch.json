@@ -4,19 +4,30 @@
     {
       "name": "ds-starter-kit-agent",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "/Users/joaopedrocostacatarino/Documents/ds-starter-kit", "run", "dev:agent"],
+      "runtimeArgs": [
+        "run",
+        "dev:agent"
+      ],
       "port": 8787
     },
     {
       "name": "ds-starter-kit-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "/Users/joaopedrocostacatarino/Documents/ds-starter-kit", "run", "dev:web"],
+      "runtimeArgs": [
+        "run",
+        "dev:web"
+      ],
       "port": 5173
     },
     {
       "name": "ds-starter-kit-storybook",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "/Users/joaopedrocostacatarino/Documents/ds-starter-kit/apps/web", "run", "storybook"],
+      "runtimeArgs": [
+        "run",
+        "storybook",
+        "-w",
+        "@ds-starter/web"
+      ],
       "port": 6006
     }
   ]
