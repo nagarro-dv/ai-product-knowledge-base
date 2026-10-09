@@ -8,7 +8,6 @@ import azureDevops from "thesvg/azure-azure-devops";
 import clickup from "thesvg/clickup";
 import confluence from "thesvg/confluence";
 import dovetail from "thesvg/dovetail";
-import dropbox from "thesvg/dropbox";
 import figma from "thesvg/figma";
 import fullstory from "thesvg/fullstory";
 import github from "thesvg/github";
@@ -29,7 +28,6 @@ import miro from "thesvg/miro";
 import mixpanel from "thesvg/mixpanel";
 import monday from "thesvg/monday";
 import notion from "thesvg/notion";
-import productboard from "thesvg/productboard";
 import qualtrics from "thesvg/qualtrics";
 import salesforce from "thesvg/salesforce";
 import slack from "thesvg/slack";
@@ -42,8 +40,10 @@ import zoom from "thesvg/zoom";
 import ahaLogo from "./logos/aha.svg";
 import airtableLogo from "./logos/airtable.svg";
 import amplitudeLogo from "./logos/amplitude.svg";
+import dropboxLogo from "./logos/dropbox.svg";
 import pendoLogo from "./logos/pendo.svg";
 import powerBiLogo from "./logos/power-bi.svg";
+import productboardLogo from "./logos/productboard.svg";
 import typeformLogo from "./logos/typeform.svg";
 import userTestingLogo from "./logos/usertesting.svg";
 
@@ -90,8 +90,9 @@ export const SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       // No Microsoft 365 mark in thesvg — the Office icon stands in.
       source("Microsoft 365", logo(microsoftOffice)),
       source("Notion", logo(notion)),
-      source("Confluence", logo(confluence)),
-      source("Dropbox", logo(dropbox)),
+      // thesvg's Confluence mark is near-black navy; use Confluence's blue.
+      source("Confluence", logo({ ...confluence, svg: confluence.svg.replace(/#172B4D/gi, "#006AE4") })),
+      source("Dropbox", dropboxLogo),
       // thesvg's Airtable mark has the wrong colours; this is the official one.
       source("Airtable", airtableLogo),
     ],
@@ -103,7 +104,8 @@ export const SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       source("Microsoft Teams", logo(microsoftTeams)),
       source("Zoom", logo(zoom)),
       source("Loom", logo(loom)),
-      source("Granola", logo(granola)),
+      // thesvg's Granola mark is near-black; use Granola's green.
+      source("Granola", logo({ ...granola, svg: granola.svg.replace(/#1E1E1E/gi, "#AEC327") })),
     ],
   },
   {
@@ -117,7 +119,7 @@ export const SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       source("ClickUp", logo(clickup)),
       source("GitHub", logo(github)),
       source("GitLab", logo(gitlab)),
-      source("Productboard", logo(productboard, "mono")),
+      source("Productboard", productboardLogo),
       source("Aha!", ahaLogo),
     ],
   },

@@ -1,5 +1,5 @@
 import { ArrowUp, Bot, ChartLine, FileText, Lightbulb, Paperclip, Radar, type LucideIcon } from "lucide-react";
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ProviderPicker } from "../accelerator/ProviderPicker";
 import { fetchAgentProviders, type AgentProvider } from "../agentSseClient";
 import { resolveSelectedProvider, saveSelectedProvider } from "../aiProviders/providerSelection";
@@ -13,7 +13,8 @@ import { openSettings } from "../navigationEvents";
 import type { ContextRef, Initiative, Starter } from "./data";
 import { PromptEditor, type PromptEditorHandle } from "./PromptEditor";
 import { promptText, slotOptions, type PromptSegment } from "./promptSlots";
-import { Tip } from "./Tip";
+import { suggestSources } from "./sourceSuggestions";
+import { OverflowTip, Tip } from "./Tip";
 
 export type Attachment =
   | { kind: "source"; id: string }
@@ -21,7 +22,8 @@ export type Attachment =
   | { kind: "context"; id: string; ref: ContextRef };
 
 const PROVIDER_SCOPE = "knowledge-base-v2";
-const QUICK_SOURCE_IDS = ["jira", "figma"];
+/** The part of an attachment chip that ellipsizes when its name is long. */
+const TRUNCATING_TEXT = ".aiAttachment__tagValue";
 
 const CONTEXT_ICONS: Record<ContextRef["kind"], LucideIcon> = {
   initiative: Lightbulb,
@@ -95,13 +97,19 @@ export const Composer = forwardRef<
   // The slot chip menu renders outside the form; while it's open the box
   // still counts as focused.
   const pickerOpen = useRef(false);
-  const hasText = promptText(value).trim().length > 0;
+  const text = promptText(value);
+  const hasText = text.trim().length > 0;
   const formRef = useRef<HTMLFormElement | null>(null);
   const actionsRef = useRef<HTMLDivElement | null>(null);
   const lastLayout = useRef<Layout | null>(null);
   const lastCompact = useRef(compact);
   const animating = useRef(false);
   const attachedSourceIds = new Set(attachments.filter((a) => a.kind === "source").map((a) => a.id));
+  // The one-click source chips follow what the prompt is about (falls back to Jira + Figma).
+  const suggested = useMemo(
+    () => suggestSources(text, new Set(attachments.filter((a) => a.kind === "source").map((a) => a.id))),
+    [text, attachments],
+  );
 
   useImperativeHandle(ref, () => ({ focus: () => editorRef.current?.focus() }), []);
 
@@ -222,41 +230,36 @@ export const Composer = forwardRef<
             const remove = () => onAttachmentsChange(attachments.filter((a) => a.id !== attachment.id));
             if (attachment.kind === "file") {
               return (
-                <AiAttachment
-                  key={attachment.id}
-                  size="tag"
-                  kind="comment"
-                  value={attachment.name}
-                  subtitle="File"
-                  title={attachment.name}
-                  onRemove={remove}
-                />
+                <OverflowTip key={attachment.id} label={attachment.name} selector={TRUNCATING_TEXT}>
+                  <AiAttachment size="tag" kind="comment" value={attachment.name} subtitle="File" onRemove={remove} />
+                </OverflowTip>
               );
             }
             if (attachment.kind === "context") {
               const Icon = CONTEXT_ICONS[attachment.ref.kind];
               return (
-                <AiAttachment
-                  key={attachment.id}
-                  size="tag"
-                  value={attachment.ref.label}
-                  subtitle={CONTEXT_SUBTITLES[attachment.ref.kind]}
-                  title={attachment.ref.label}
-                  icon={<Icon size={16} strokeWidth={1.8} aria-hidden />}
-                  onRemove={remove}
-                />
+                <OverflowTip key={attachment.id} label={attachment.ref.label} selector={TRUNCATING_TEXT}>
+                  <AiAttachment
+                    size="tag"
+                    value={attachment.ref.label}
+                    subtitle={CONTEXT_SUBTITLES[attachment.ref.kind]}
+                    icon={<Icon size={16} strokeWidth={1.8} aria-hidden />}
+                    onRemove={remove}
+                  />
+                </OverflowTip>
               );
             }
             const source = sourceById(attachment.id);
             return (
-              <AiAttachment
-                key={attachment.id}
-                size="tag"
-                value={source.label}
-                subtitle="Source"
-                icon={<SourceMark source={source} size={16} />}
-                onRemove={remove}
-              />
+              <OverflowTip key={attachment.id} label={source.label} selector={TRUNCATING_TEXT}>
+                <AiAttachment
+                  size="tag"
+                  value={source.label}
+                  subtitle="Source"
+                  icon={<SourceMark source={source} size={16} />}
+                  onRemove={remove}
+                />
+              </OverflowTip>
             );
           })}
         </div>
@@ -281,14 +284,22 @@ export const Composer = forwardRef<
                 onUpload={() => fileInputRef.current?.click()}
               />
             </Tip>
-            {QUICK_SOURCE_IDS.filter((id) => !attachedSourceIds.has(id))
-              .map(sourceById)
-              .map((source) => (
-                <button key={source.id} type="button" className="slotIntake__attachChip" onClick={() => toggleSource(source.id)}>
+            {suggested.map(({ source: id, reason }) => {
+              const source = sourceById(id);
+              const chip = (
+                <button key={id} type="button" className="slotIntake__attachChip" onClick={() => toggleSource(id)}>
                   <SourceMark source={source} size={13} />
                   {source.label}
                 </button>
-              ))}
+              );
+              return reason ? (
+                <Tip key={id} label={reason}>
+                  {chip}
+                </Tip>
+              ) : (
+                chip
+              );
+            })}
             <input
               ref={fileInputRef}
               type="file"

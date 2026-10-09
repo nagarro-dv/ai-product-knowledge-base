@@ -89,6 +89,11 @@
   outline-offset: 1px;
 }
 
+/* Start / Search / Create sit 8px apart; the chat history stays tighter. */
+.kb2Nav:not(.kb2Nav--history) {
+  gap: 8px;
+}
+
 .kb2Nav--history .kb2Nav__item {
   font-weight: 400;
 }
@@ -618,7 +623,7 @@
 }
 
 .kb2Chip:hover {
-  border-color: var(--kb2-accent);
+  border-color: rgb(0 0 0 / 10%);
   box-shadow: var(--elev-xs);
 }
 
@@ -1770,6 +1775,17 @@ button.kb2Timeline__item:hover {
 .kb2InsightDetail__sources {
   margin-left: auto;
   gap: 6px;
+}
+
+/* Attachment chips in the prompt box (the shared AiAttachment). Its name is
+   capped at 55% of the chip so a preview line beside it keeps room — but our
+   chips have no preview, so a long name stopped at 55% and left an empty gap
+   after the ×. Without a preview, let the name take whatever room is left
+   (still ellipsized within the chip's 240px). */
+.kb2Composer .aiAttachment__tag:not(:has(.aiAttachment__tagPreview)) .aiAttachment__tagValue {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: none;
 }
 
 /* ── Prompt editor & slot chips (PromptEditor.tsx) ────────────────────────── */

@@ -22,6 +22,7 @@ import { SourceStack, Sparkline } from "./Composer";
 import { Tip } from "./Tip";
 import {
   AGENT_RUNS,
+  CONNECTED_COUNT,
   METRICS,
   RECENT_WORK,
   SIGNALS,
@@ -70,7 +71,7 @@ export function StartPage({
             Good morning — here's what's new
           </DsTypography>
           <DsTypography as="p" variant="paragraph-small" className="kb2PageHeader__subtitle">
-            Your agents checked 7 sources overnight: {proposed.length} initiative{proposed.length === 1 ? "" : "s"} to review,{" "}
+            Your agents checked {CONNECTED_COUNT} sources overnight: {proposed.length} initiative{proposed.length === 1 ? "" : "s"} to review,{" "}
             {NEW_SIGNALS.length} new insights.
           </DsTypography>
         </div>

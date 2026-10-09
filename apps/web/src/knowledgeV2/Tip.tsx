@@ -101,3 +101,43 @@ export function Tip({ label, children, className }: { label: string; children: R
     </span>
   );
 }
+
+/**
+ * Like <Tip>, but only appears when the text inside is cut off — for chips
+ * whose labels can truncate (attachments in the prompt box). `selector` picks
+ * the element that truncates; the tooltip then shows the full `label`.
+ */
+export function OverflowTip({
+  label,
+  selector,
+  children,
+  className,
+}: {
+  label: string;
+  selector: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const anchorRef = useRef<HTMLSpanElement | null>(null);
+  const { show, hide, tooltip } = useFloatingTip();
+
+  const showIfTruncated = () => {
+    const anchor = anchorRef.current;
+    const text = anchor?.querySelector<HTMLElement>(selector);
+    if (!anchor || !text || text.scrollWidth <= text.clientWidth + 1) return;
+    show(anchor, label);
+  };
+
+  return (
+    <span
+      ref={anchorRef}
+      className={className ? `kb2Tip kb2OverflowTip ${className}` : "kb2Tip kb2OverflowTip"}
+      onPointerEnter={showIfTruncated}
+      onPointerLeave={hide}
+      onPointerDown={hide}
+    >
+      {children}
+      {tooltip}
+    </span>
+  );
+}

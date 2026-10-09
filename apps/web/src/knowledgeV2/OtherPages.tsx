@@ -1,5 +1,5 @@
 import { ArrowLeft, ArrowRight, Check, Pause, Play, Plus, Search, Sparkles, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { DsTypography } from "../components/ds/DsTypography";
 import { SourceMark } from "../knowledge/SourceMark";
 import { sourceById } from "../knowledge/sources";
@@ -39,6 +39,12 @@ export function SearchPage({
   onToggleSource: (id: string) => void;
   onSearchTopic: (topic: string) => void;
 }) {
+  // Two full rows: as many sources as fit, then "Connect a source" as the
+  // last tile. The column count follows the window, so it's measured.
+  const sourceGridRef = useRef<HTMLDivElement | null>(null);
+  const columns = useGridColumns(sourceGridRef);
+  const visibleSources = CONNECTED_SOURCES.slice(0, Math.max(1, columns * 2 - 1));
+
   return (
     <div className="kb2Search">
       <header className="kb2PageHeader">
@@ -69,8 +75,8 @@ export function SearchPage({
             {scopedSourceIds.size > 0 ? `Searching ${scopedSourceIds.size} of ${CONNECTED_SOURCES.length}` : "Searching all sources"}
           </span>
         </div>
-        <div className="kb2SourceGrid">
-          {CONNECTED_SOURCES.map((connected) => {
+        <div className="kb2SourceGrid" ref={sourceGridRef}>
+          {visibleSources.map((connected) => {
             const source = sourceById(connected.id);
             const selected = scopedSourceIds.has(connected.id);
             return (
@@ -128,6 +134,21 @@ export function SearchPage({
       </section>
     </div>
   );
+}
+
+/** How many columns a CSS grid currently lays out (it's auto-fill, so it changes with width). */
+function useGridColumns(ref: React.RefObject<HTMLElement | null>): number {
+  const [columns, setColumns] = useState(4);
+  useLayoutEffect(() => {
+    const grid = ref.current;
+    if (!grid) return;
+    const measure = () => setColumns(getComputedStyle(grid).gridTemplateColumns.split(" ").filter(Boolean).length || 1);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(grid);
+    return () => observer.disconnect();
+  }, [ref]);
+  return columns;
 }
 
 // ── Create ──────────────────────────────────────────────────────────────────

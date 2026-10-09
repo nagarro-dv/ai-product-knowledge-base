@@ -560,12 +560,22 @@ export const CONNECTED_SOURCES: ConnectedSource[] = [
   { id: "confluence", items: "1,140 pages", synced: "30 min ago", highlight: "Q4 roadmap last edited 3 days ago" },
   { id: "dovetail", items: "86 interviews", synced: "Yesterday", highlight: "6 new onboarding interviews tagged" },
   { id: "slack", items: "24 channels", synced: "1 min ago", highlight: "#support-escalations is busier than usual" },
+  { id: "intercom", items: "6,410 conversations", synced: "4 min ago", highlight: "Pre-sales questions up 18% this month" },
+  { id: "mixpanel", items: "94 events", synced: "1h ago", highlight: "Checkout conversion down 2.1 points" },
+  { id: "hotjar", items: "2,380 recordings", synced: "3h ago", highlight: "Rage clicks spiking on the pricing page" },
+  { id: "productboard", items: "540 requests", synced: "Today", highlight: "Saved searches is the most-voted request" },
+  { id: "miro", items: "37 boards", synced: "Yesterday", highlight: "Onboarding journey map updated" },
+  { id: "salesforce", items: "1,920 accounts", synced: "20 min ago", highlight: "9 enterprise deals list SSO as a blocker" },
+  { id: "github", items: "12 repos", synced: "8 min ago", highlight: "Checkout service had 14 merges this week" },
 ];
+
+/** How many sources are connected — used in copy across v2. */
+export const CONNECTED_COUNT = CONNECTED_SOURCES.length;
 
 export const TRENDING_TOPICS = ["Invoices", "Plan upgrades", "SSO", "Mobile checkout", "Onboarding"];
 
 export const KNOWLEDGE_TOTALS = [
-  { label: "Sources connected", value: "7" },
+  { label: "Sources connected", value: String(CONNECTED_COUNT) },
   { label: "Items indexed", value: "23.5k" },
   { label: "New this week", value: "1,312" },
 ];

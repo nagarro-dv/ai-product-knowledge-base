@@ -10,6 +10,7 @@ import {
   DEFAULT_TRACKED_METRICS,
   INITIAL_CHATS,
   INITIAL_INITIATIVES,
+  CONNECTED_COUNT,
   CREATE_STARTERS,
   SEARCH_STARTERS,
   START_STARTERS,
@@ -43,7 +44,7 @@ const NAV = [
 
 const PLACEHOLDERS: Record<Page["kind"], string> = {
   start: "Ask anything about your product — or about something agents found…",
-  search: "Search across Jira, Figma, Zendesk and 4 more sources…",
+  search: `Search across Jira, Figma, Zendesk and ${CONNECTED_COUNT - 3} more sources…`,
   create: "Describe an initiative to plan, or pick a template above…",
   agents: "Ask about what your agents found…",
   insights: "Ask about an insight, or what's behind it…",
@@ -362,7 +363,7 @@ export function KnowledgeV2() {
 
 /** Honest placeholder reply: says what a real answer would draw on. */
 function demoReply(sources: string[], context: ContextRef[], draftDoc: Artifact | null): Message {
-  const from = sources.length > 0 ? sources.map((id) => sourceById(id).label).join(", ") : "all 7 connected sources";
+  const from = sources.length > 0 ? sources.map((id) => sourceById(id).label).join(", ") : `all ${CONNECTED_COUNT} connected sources`;
   const about = context.length > 0 ? `, using ${context.map((c) => `“${c.label}”`).join(" and ")} as context` : "";
   return {
     id: uid("m"),
