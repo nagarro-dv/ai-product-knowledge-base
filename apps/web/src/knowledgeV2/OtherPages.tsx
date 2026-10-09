@@ -4,6 +4,9 @@ import { DsTypography } from "../components/ds/DsTypography";
 import { SourceMark } from "../knowledge/SourceMark";
 import { sourceById } from "../knowledge/sources";
 import { openSettings } from "../navigationEvents";
+import { ArtifactCard } from "./Artifacts";
+import type { Artifact } from "./artifactData";
+import { Carousel } from "./Carousel";
 import { SourceStack } from "./Composer";
 import { Tip } from "./Tip";
 import {
@@ -218,12 +221,14 @@ export function CreatePage({
       </section>
 
       <section aria-labelledby="kb2-templates-title" className="kb2Section">
-        <div className="kb2Section__head">
-          <span id="kb2-templates-title" className="kb2Eyebrow">
-            Start from a template
-          </span>
-        </div>
-        <div className="kb2TemplateGrid">
+        <Carousel
+          label="Templates"
+          header={
+            <span id="kb2-templates-title" className="kb2Eyebrow">
+              Start from a template
+            </span>
+          }
+        >
           {TEMPLATES.map((template) => {
             const Icon = template.icon;
             return (
@@ -240,7 +245,7 @@ export function CreatePage({
               </button>
             );
           })}
-        </div>
+        </Carousel>
       </section>
     </div>
   );
@@ -326,7 +331,18 @@ export function AgentsPage({ onBack, onOpenCreate }: { onBack: () => void; onOpe
 
 // ── Chat ────────────────────────────────────────────────────────────────────
 
-export function ChatPage({ chat, pending }: { chat: Chat; pending: boolean }) {
+export function ChatPage({
+  chat,
+  pending,
+  artifacts,
+  onOpenArtifact,
+}: {
+  chat: Chat;
+  pending: boolean;
+  artifacts: Artifact[];
+  onOpenArtifact: (id: string) => void;
+}) {
+  const byId = new Map(artifacts.map((a) => [a.id, a]));
   return (
     <div className="kb2Chat">
       <header className="kb2PageHeader">
@@ -341,6 +357,14 @@ export function ChatPage({ chat, pending }: { chat: Chat; pending: boolean }) {
             <DsTypography as="p" variant="paragraph-small" className="kb2Message__text">
               {message.text}
             </DsTypography>
+            {message.artifacts?.length ? (
+              <div className="kb2Message__artifacts">
+                {message.artifacts.map((id) => {
+                  const artifact = byId.get(id);
+                  return artifact ? <ArtifactCard key={id} artifact={artifact} onOpen={() => onOpenArtifact(id)} /> : null;
+                })}
+              </div>
+            ) : null}
             {(message.context?.length ?? 0) + (message.sources?.length ?? 0) > 0 ? (
               <div className="kb2Message__refs">
                 {message.context?.map((ref) => (

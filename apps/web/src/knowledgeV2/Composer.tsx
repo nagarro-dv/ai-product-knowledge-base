@@ -1,5 +1,5 @@
-import { ArrowRight, Bot, ChartLine, FileText, Lightbulb, Radar, type LucideIcon } from "lucide-react";
-import { forwardRef, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
+import { ArrowUp, Bot, ChartLine, FileText, Lightbulb, Paperclip, Radar, type LucideIcon } from "lucide-react";
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useRef, useState } from "react";
 import { ProviderPicker } from "../accelerator/ProviderPicker";
 import { fetchAgentProviders, type AgentProvider } from "../agentSseClient";
 import { resolveSelectedProvider, saveSelectedProvider } from "../aiProviders/providerSelection";
@@ -10,7 +10,9 @@ import { SourceMark } from "../knowledge/SourceMark";
 import { SourcesPopover } from "../knowledge/SourcesPopover";
 import { sourceById } from "../knowledge/sources";
 import { openSettings } from "../navigationEvents";
-import type { ContextRef, Starter } from "./data";
+import type { ContextRef, Initiative, Starter } from "./data";
+import { PromptEditor, type PromptEditorHandle } from "./PromptEditor";
+import { promptText, slotOptions, type PromptSegment } from "./promptSlots";
 import { Tip } from "./Tip";
 
 export type Attachment =
@@ -27,6 +29,7 @@ const CONTEXT_ICONS: Record<ContextRef["kind"], LucideIcon> = {
   signal: Radar,
   template: FileText,
   agent: Bot,
+  file: Paperclip,
 };
 
 const CONTEXT_SUBTITLES: Record<ContextRef["kind"], string> = {
@@ -35,6 +38,7 @@ const CONTEXT_SUBTITLES: Record<ContextRef["kind"], string> = {
   signal: "Insight",
   template: "Template",
   agent: "Agent",
+  file: "File",
 };
 
 export type ComposerHandle = { focus: () => void };
@@ -50,14 +54,16 @@ type Layout = { height: number; radius: number; send: DOMRect | null };
  * insights the user pulled in from the cards above.
  *
  * `compact` collapses it to a one-line box with just the send button, for
- * while it floats over content. The textarea stays mounted in both states so
+ * while it floats over content. The text field stays mounted in both states so
  * clicking into the compact box keeps focus as it expands.
  */
 export const Composer = forwardRef<
   ComposerHandle,
   {
-    value: string;
-    onChange: (value: string) => void;
+    value: PromptSegment[];
+    onChange: (value: PromptSegment[]) => void;
+    /** For the slot chips' lists (initiatives change as users move them along). */
+    initiatives: Initiative[];
     attachments: Attachment[];
     onAttachmentsChange: (next: Attachment[]) => void;
     onSubmit: () => void;
@@ -68,13 +74,28 @@ export const Composer = forwardRef<
     onFocusWithinChange?: (focused: boolean) => void;
   }
 >(function Composer(
-  { value, onChange, attachments, onAttachmentsChange, onSubmit, placeholder, label, compact = false, onFocusWithinChange },
+  {
+    value,
+    onChange,
+    initiatives,
+    attachments,
+    onAttachmentsChange,
+    onSubmit,
+    placeholder,
+    label,
+    compact = false,
+    onFocusWithinChange,
+  },
   ref,
 ) {
   const [providers, setProviders] = useState<AgentProvider[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editorRef = useRef<PromptEditorHandle | null>(null);
+  // The slot chip menu renders outside the form; while it's open the box
+  // still counts as focused.
+  const pickerOpen = useRef(false);
+  const hasText = promptText(value).trim().length > 0;
   const formRef = useRef<HTMLFormElement | null>(null);
   const actionsRef = useRef<HTMLDivElement | null>(null);
   const lastLayout = useRef<Layout | null>(null);
@@ -82,7 +103,19 @@ export const Composer = forwardRef<
   const animating = useRef(false);
   const attachedSourceIds = new Set(attachments.filter((a) => a.kind === "source").map((a) => a.id));
 
-  useImperativeHandle(ref, () => ({ focus: () => textareaRef.current?.focus() }), []);
+  useImperativeHandle(ref, () => ({ focus: () => editorRef.current?.focus() }), []);
+
+  const onPickerOpenChange = useCallback(
+    (open: boolean) => {
+      pickerOpen.current = open;
+      if (open) return;
+      // Closing the menu by clicking elsewhere drops focus without a blur event.
+      window.requestAnimationFrame(() => {
+        if (!formRef.current?.contains(document.activeElement)) onFocusWithinChange?.(false);
+      });
+    },
+    [onFocusWithinChange],
+  );
 
   // Compact ↔ full is a layout swap (one row ↔ text over toolbar), so it's
   // animated FLIP-style: remember the last layout, and when `compact` flips,
@@ -171,15 +204,16 @@ export const Composer = forwardRef<
       className={`slotIntake__composer kb2Composer${compact ? " kb2Composer--compact" : ""}`}
       onClick={(event) => {
         // The whole compact box reads as a text field; clicking anywhere on it expands it.
-        if (compact && event.target === event.currentTarget) textareaRef.current?.focus();
+        if (compact && event.target === event.currentTarget) editorRef.current?.focus();
       }}
       onFocus={() => onFocusWithinChange?.(true)}
       onBlur={(event) => {
+        if (pickerOpen.current) return;
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) onFocusWithinChange?.(false);
       }}
       onSubmit={(event) => {
         event.preventDefault();
-        if (value.trim()) onSubmit();
+        if (hasText) onSubmit();
       }}
     >
       {attachments.length > 0 && !compact ? (
@@ -227,20 +261,15 @@ export const Composer = forwardRef<
           })}
         </div>
       ) : null}
-      <textarea
-        ref={textareaRef}
-        className="slotIntake__composerTextarea"
+      <PromptEditor
+        ref={editorRef}
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
-            event.preventDefault();
-            event.currentTarget.form?.requestSubmit();
-          }
-        }}
+        onChange={onChange}
+        onSubmit={() => formRef.current?.requestSubmit()}
         placeholder={placeholder}
-        aria-label={label}
-        rows={compact ? 1 : 3}
+        label={label}
+        getOptions={(slotLabel) => slotOptions(slotLabel, initiatives)}
+        onPickerOpenChange={onPickerOpenChange}
       />
       <div className="slotIntake__composerToolbar">
         {compact ? null : (
@@ -287,8 +316,8 @@ export const Composer = forwardRef<
             </div>
           ) : null}
           <Tip label="Send">
-            <DsIconButton variant="primary" size="small" type="submit" aria-label="Send" disabled={!value.trim()}>
-              <ArrowRight size={16} aria-hidden />
+            <DsIconButton variant="primary" size="small" type="submit" aria-label="Send" disabled={!hasText}>
+              <ArrowUp size={16} aria-hidden />
             </DsIconButton>
           </Tip>
         </div>

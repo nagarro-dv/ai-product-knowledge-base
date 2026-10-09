@@ -41,6 +41,8 @@ export type StartActions = {
   openChat: (id: string) => void;
   openAgents: () => void;
   openCreate: () => void;
+  /** The Insights page, optionally with one insight selected. */
+  openInsights: (id?: string) => void;
 };
 
 /**
@@ -69,7 +71,7 @@ export function StartPage({
           </DsTypography>
           <DsTypography as="p" variant="paragraph-small" className="kb2PageHeader__subtitle">
             Your agents checked 7 sources overnight: {proposed.length} initiative{proposed.length === 1 ? "" : "s"} to review,{" "}
-            {SIGNALS.length} new insights.
+            {NEW_SIGNALS.length} new insights.
           </DsTypography>
         </div>
       </header>
@@ -313,12 +315,20 @@ function CustomizeMetrics({ trackedIds, onChange }: { trackedIds: string[]; onCh
   );
 }
 
+/** Unseen insights first; Start only has room for two. */
+const NEW_SIGNALS = SIGNALS.filter((s) => s.isNew);
+const START_SIGNALS = [...NEW_SIGNALS, ...SIGNALS.filter((s) => !s.isNew)].slice(0, 2);
+
 function SignalsCard({ initiatives, actions }: { initiatives: Initiative[]; actions: StartActions }) {
   return (
     <article className="kb2Card kb2Card--signals">
-      <CardHeader eyebrow="New insights" />
+      <CardHeader eyebrow="New insights">
+        <button type="button" className="kb2TextButton" onClick={() => actions.openInsights()}>
+          View all <ArrowRight size={14} aria-hidden />
+        </button>
+      </CardHeader>
       <ul className="kb2SignalList">
-        {SIGNALS.map((signal) => {
+        {START_SIGNALS.map((signal) => {
           const ref: ContextRef = { id: `signal:${signal.id}`, label: signal.title, kind: "signal" };
           const linked = initiatives.find((i) => i.id === signal.initiativeId);
           return (
@@ -326,7 +336,9 @@ function SignalsCard({ initiatives, actions }: { initiatives: Initiative[]; acti
               <div className="kb2Signal__head">
                 {signal.tone === "warning" ? <TrendingDown size={15} aria-hidden /> : <TrendingUp size={15} aria-hidden />}
                 <DsTypography as="h3" variant="paragraph-small-bold">
-                  {signal.title}
+                  <button type="button" className="kb2Signal__title" onClick={() => actions.openInsights(signal.id)}>
+                    {signal.title}
+                  </button>
                 </DsTypography>
               </div>
               <DsTypography as="p" variant="paragraph-small" className="kb2Muted kb2Clamp3">

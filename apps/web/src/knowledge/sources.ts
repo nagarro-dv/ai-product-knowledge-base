@@ -2,7 +2,6 @@ import { Upload, type LucideIcon } from "lucide-react";
 // Real brand logos from thesvg (one import per logo, so only these get
 // bundled), plus a few supplied separately in ./logos for brands thesvg
 // lacks or only has as an unreadable wordmark.
-import airtable from "thesvg/airtable";
 import appStore from "thesvg/app-store";
 import asana from "thesvg/asana";
 import azureDevops from "thesvg/azure-azure-devops";
@@ -41,6 +40,7 @@ import surveymonkey from "thesvg/surveymonkey";
 import zendesk from "thesvg/zendesk";
 import zoom from "thesvg/zoom";
 import ahaLogo from "./logos/aha.svg";
+import airtableLogo from "./logos/airtable.svg";
 import amplitudeLogo from "./logos/amplitude.svg";
 import pendoLogo from "./logos/pendo.svg";
 import powerBiLogo from "./logos/power-bi.svg";
@@ -92,7 +92,8 @@ export const SOURCE_GROUPS: readonly KnowledgeSourceGroup[] = [
       source("Notion", logo(notion)),
       source("Confluence", logo(confluence)),
       source("Dropbox", logo(dropbox)),
-      source("Airtable", logo(airtable)),
+      // thesvg's Airtable mark has the wrong colours; this is the official one.
+      source("Airtable", airtableLogo),
     ],
   },
   {

@@ -5,7 +5,9 @@ import {
   FileText,
   FlaskConical,
   Frame,
+  GitCompareArrows,
   History,
+  Lightbulb,
   ListOrdered,
   Megaphone,
   MessagesSquare,
@@ -242,33 +244,197 @@ export const INITIAL_INITIATIVES: Initiative[] = [
 /** Something an agent noticed that isn't an initiative yet. */
 export type Signal = {
   id: string;
+  /** warning = needs attention, positive = opportunity, info = trend. */
   tone: "warning" | "positive" | "info";
+  category: "Customer voice" | "Product usage" | "Revenue" | "Research" | "Market";
   title: string;
+  /** One or two sentences — what the Start card shows. */
   body: string;
+  /** The fuller explanation on the Insights page. */
+  detail: string;
   sources: SourceId[];
+  evidence: Evidence[];
+  /** The metric it moves, with recent history for a sparkline. */
+  impact?: { label: string; value: string; delta: string; trend: "up" | "down"; series: number[] };
+  /** Which agent found it (see AGENTS). */
+  agentId: string;
   /** The initiative it led to, if the agents proposed one. */
   initiativeId?: string;
   found: string;
+  /** Not seen yet — the Start card shows these. */
+  isNew?: boolean;
 };
+
+export const SIGNAL_TONES: { id: Signal["tone"]; label: string }[] = [
+  { id: "warning", label: "Needs attention" },
+  { id: "positive", label: "Opportunities" },
+  { id: "info", label: "Trends" },
+];
 
 export const SIGNALS: Signal[] = [
   {
     id: "voc-drop",
     tone: "warning",
+    category: "Customer voice",
     title: "Voice of customer is dropping",
     body: "Negative sentiment about invoices rose 63% in 30 days. “I can't tell what I'm being charged for” is the most repeated phrase.",
+    detail:
+      "Billing conversations now make up 41% of all support contacts, up from 24% a month ago, and they score far lower than anything else. Most mention mid-cycle upgrades or seat changes, and first responses on billing take 9 hours against a 2-hour target. The drop lines up with the invoice redesign shipped on 2 September.",
     sources: ["zendesk", "intercom", "app-store-reviews"],
+    evidence: [
+      { source: "zendesk", summary: "148 tickets mention invoices or prorated charges (+63% in 30 days)" },
+      { source: "intercom", summary: "First response on billing conversations: 9h (target 2h)" },
+      { source: "app-store-reviews", summary: "7 one-star reviews this month cite confusing charges" },
+    ],
+    impact: { label: "Customer satisfaction", value: "3.9 / 5", delta: "−0.5 in 30 days", trend: "down", series: [4.4, 4.4, 4.3, 4.4, 4.3, 4.2, 4.2, 4.1, 4.0, 4.0, 3.9, 3.9] },
+    agentId: "voc",
     initiativeId: "support-quality",
     found: "Found 2h ago",
+    isNew: true,
   },
   {
     id: "invite-retention",
     tone: "positive",
+    category: "Product usage",
     title: "Team invites predict retention",
     body: "Accounts that invite a teammate in their first week retain 2.3× better — the strongest predictor found so far.",
+    detail:
+      "Across 4,200 accounts created this year, inviting at least one teammate in the first seven days is the single strongest predictor of being active at day 90 — stronger than connecting an integration or finishing setup. Only 31% of new accounts invite anyone in week one, and interviews suggest new admins don't realise they can.",
     sources: ["amplitude", "dovetail"],
+    evidence: [
+      { source: "amplitude", summary: "Day-90 retention: 58% with a week-1 invite vs 25% without" },
+      { source: "amplitude", summary: "31% of new accounts invite a teammate in week 1" },
+      { source: "dovetail", summary: "4 of 6 new-admin interviews didn't know inviting was possible during setup" },
+    ],
+    impact: { label: "Week-1 invite rate", value: "31%", delta: "+2 pts month on month", trend: "up", series: [26, 27, 27, 28, 28, 29, 28, 29, 30, 30, 31, 31] },
+    agentId: "research",
     initiativeId: "onboarding-checklist",
     found: "Found yesterday",
+    isNew: true,
+  },
+  {
+    id: "upgrade-completion",
+    tone: "warning",
+    category: "Revenue",
+    title: "Fewer customers finish plan upgrades",
+    body: "Upgrade completion fell from 71% to 62% in 30 days, mostly at the step that shows the prorated charge.",
+    detail:
+      "People start upgrades at the usual rate but abandon at the confirmation step, where the prorated amount is shown without explanation. The drop is concentrated in mid-cycle upgrades; upgrades at renewal are unchanged. At current volumes this is roughly 140 lost upgrades a month.",
+    sources: ["mixpanel", "zendesk", "jira"],
+    evidence: [
+      { source: "mixpanel", summary: "Upgrade completion 71% → 62% in 30 days; drop is at the confirm step" },
+      { source: "zendesk", summary: "52 tickets ask why the upgrade price differs from the plan price" },
+      { source: "jira", summary: "BILL-412 (explain prorated charges) open since March" },
+    ],
+    impact: { label: "Upgrade completion", value: "62%", delta: "−9 pts in 30 days", trend: "down", series: [72, 71, 71, 70, 70, 69, 67, 66, 65, 64, 63, 62] },
+    agentId: "kpi",
+    initiativeId: "plan-upgrades",
+    found: "Found today, 07:40",
+  },
+  {
+    id: "pricing-hesitation",
+    tone: "info",
+    category: "Product usage",
+    title: "Visitors hesitate on the pricing page",
+    body: "Time on the pricing page is up 22 seconds, and 38% of visitors scroll back to the plan table three or more times.",
+    detail:
+      "Session recordings show visitors comparing plans repeatedly, hovering over seat and storage limits, and leaving without choosing. Exit rate from pricing rose from 41% to 47%. The questions customers ask sales before buying — mixed seats, downgrades, prorating — aren't answered on the page.",
+    sources: ["hotjar", "google-analytics", "intercom"],
+    evidence: [
+      { source: "hotjar", summary: "38% of sessions scroll back to the plan table 3+ times" },
+      { source: "google-analytics", summary: "Pricing exit rate 41% → 47% month on month" },
+      { source: "intercom", summary: "Top pre-sales questions aren't covered on the pricing page" },
+    ],
+    impact: { label: "Time on pricing page", value: "1m 48s", delta: "+22s month on month", trend: "down", series: [80, 82, 85, 84, 88, 92, 95, 97, 99, 102, 105, 108] },
+    agentId: "kpi",
+    initiativeId: "pricing-clarity",
+    found: "Found 2 days ago",
+  },
+  {
+    id: "wallet-demand",
+    tone: "info",
+    category: "Customer voice",
+    title: "Requests for Apple Pay are climbing",
+    body: "Wallet payments are now the most-requested checkout feature in app reviews and sales notes.",
+    detail:
+      "Mentions of Apple Pay or Google Pay tripled over the quarter, mostly from mobile buyers. Two enterprise renewals lost last month both listed payment options among their reasons. Mobile users who reach the card form leave at twice the desktop rate.",
+    sources: ["app-store-reviews", "salesforce", "mixpanel"],
+    evidence: [
+      { source: "app-store-reviews", summary: "12 reviews this month ask for Apple Pay (4 last quarter)" },
+      { source: "salesforce", summary: "2 lost renewals cite payment options" },
+      { source: "mixpanel", summary: "Mobile drop-off at the card form: 34% (desktop 17%)" },
+    ],
+    agentId: "voc",
+    initiativeId: "checkout-wallets",
+    found: "Found last week",
+  },
+  {
+    id: "power-filters",
+    tone: "positive",
+    category: "Product usage",
+    title: "Power users rebuild the same filters daily",
+    body: "The most active 10% of users apply the same three filters about four times a day.",
+    detail:
+      "Heavy users spend an average of 6 minutes a day re-creating identical filter combinations. Saved searches is the most-voted request on the feedback board this quarter, and these users account for 44% of expansion revenue.",
+    sources: ["fullstory", "productboard"],
+    evidence: [
+      { source: "fullstory", summary: "Top 10% of users apply the same 3 filters ~4× a day" },
+      { source: "productboard", summary: "Saved searches: 212 votes, most-voted this quarter" },
+    ],
+    agentId: "kpi",
+    initiativeId: "saved-searches",
+    found: "Found last week",
+  },
+  {
+    id: "sso-blocker",
+    tone: "warning",
+    category: "Revenue",
+    title: "SSO setup is stalling enterprise trials",
+    body: "Nine enterprise deals list SSO as a blocker; trials wait an average of 6 days for support to configure it.",
+    detail:
+      "Enterprise trials that need SSO convert at half the rate of those that don't, and almost all of the gap is time spent waiting for support. The self-serve SSO prototype tested well: 4 of 5 admins completed setup without help.",
+    sources: ["salesforce", "zendesk", "figma"],
+    evidence: [
+      { source: "salesforce", summary: "9 open enterprise deals list SSO as a blocker" },
+      { source: "zendesk", summary: "Average wait for SSO configuration: 6 days" },
+      { source: "figma", summary: "Self-serve prototype: 4 of 5 admins finished setup unaided" },
+    ],
+    agentId: "research",
+    initiativeId: "sso-setup",
+    found: "Found 2 weeks ago",
+  },
+  {
+    id: "activation-up",
+    tone: "positive",
+    category: "Product usage",
+    title: "First-week activation is climbing",
+    body: "Activation rose 1.8 points this month, the fourth monthly rise in a row.",
+    detail:
+      "The gains come mostly from accounts that started with a template, which now activate at 52% compared with 36% for blank workspaces. Templates are shown to only a third of new accounts today.",
+    sources: ["amplitude"],
+    evidence: [
+      { source: "amplitude", summary: "First-week activation 41% (+1.8 pts month on month)" },
+      { source: "amplitude", summary: "Template starts activate at 52% vs 36% for blank workspaces" },
+    ],
+    impact: { label: "First-week activation", value: "41%", delta: "+1.8 pts month on month", trend: "up", series: [36, 37, 37, 38, 38, 39, 38, 39, 40, 40, 41, 41] },
+    agentId: "kpi",
+    found: "Found 3 days ago",
+  },
+  {
+    id: "competitor-annual",
+    tone: "info",
+    category: "Market",
+    title: "A competitor cut annual pricing by 20%",
+    body: "A direct competitor dropped its annual plan price and now highlights it against ours.",
+    detail:
+      "The change went live two weeks ago, together with a comparison page naming our product. Sales has logged three conversations this month where the price gap came up. Win rate against this competitor hasn't changed yet.",
+    sources: ["notion", "salesforce"],
+    evidence: [
+      { source: "notion", summary: "Competitor changelog: annual plan −20%, new comparison page" },
+      { source: "salesforce", summary: "3 deals this month mention the price gap" },
+    ],
+    agentId: "competitors",
+    found: "Found 2 weeks ago",
   },
 ];
 
@@ -503,6 +669,39 @@ export const START_STARTERS: Starter[] = [
   },
 ];
 
+export const CREATE_STARTERS: Starter[] = [
+  {
+    label: "Turn an insight into an initiative",
+    prompt: "Turn the insight [insight] into an initiative: the problem, who it affects, the evidence behind it, and a first success metric.",
+    icon: Lightbulb,
+  },
+  {
+    label: "Draft a brief from Jira epics",
+    prompt: "Draft an initiative brief from the Jira epic [epic key]: summarize the scope, the open questions and the evidence behind it.",
+    icon: { source: "jira" },
+  },
+  {
+    label: "Plan a prototype in Figma",
+    prompt: "Plan a Figma prototype for [initiative]: the key flows, the screens for each step, and what to test with users.",
+    icon: { source: "figma" },
+  },
+  {
+    label: "Compare two initiative options",
+    prompt: "Compare [option A] and [option B]: expected impact, effort, risks and the evidence for each. Recommend one and say why.",
+    icon: GitCompareArrows,
+  },
+  {
+    label: "Plan an experiment to validate",
+    prompt: "Plan an experiment to validate [initiative]: hypothesis, variants, primary and guardrail metrics, audience, and how long to run it.",
+    icon: FlaskConical,
+  },
+  {
+    label: "Write a stakeholder update",
+    prompt: "Write a stakeholder update on [initiative]: progress, evidence so far, decisions needed and next steps.",
+    icon: Megaphone,
+  },
+];
+
 export const SEARCH_STARTERS: Starter[] = [
   { label: "Find past decisions on a topic", prompt: "What decisions have we made about [topic], when, and why? Link the tickets, docs or meeting notes behind each one.", icon: History },
   { label: "Summarize recent customer feedback", prompt: "Summarize what customers have said about [feature or area] in the last 3 months, grouped into themes with quotes.", icon: MessagesSquare },
@@ -512,7 +711,7 @@ export const SEARCH_STARTERS: Starter[] = [
 
 // ── Chats ───────────────────────────────────────────────────────────────────
 
-export type ContextRef = { id: string; label: string; kind: "initiative" | "metric" | "signal" | "template" | "agent" };
+export type ContextRef = { id: string; label: string; kind: "initiative" | "metric" | "signal" | "template" | "agent" | "file" };
 
 export type Message = {
   id: string;
@@ -522,6 +721,8 @@ export type Message = {
   context?: ContextRef[];
   /** A canned reply generated in the browser, not by a model. */
   demo?: boolean;
+  /** Work items (./artifactData.ts) this message produced or shared. */
+  artifacts?: string[];
 };
 
 export type Chat = { id: string; title: string; updated: string; messages: Message[] };
@@ -538,6 +739,7 @@ export const INITIAL_CHATS: Chat[] = [
         role: "assistant",
         text: "Mobile checkout conversion fell from 58% to 52% over six weeks. 34% of mobile users who start checkout leave at the card form — twice the desktop rate. App store reviews this month mention Apple Pay 12 times, and the card form's autofill broke in release 4.18 (JIRA CHK-221, fixed in 4.19).",
         sources: ["mixpanel", "app-store-reviews", "jira"],
+        artifacts: ["a-checkout-funnel", "a-chk-221"],
       },
       { id: "m3", role: "user", text: "Draft an initiative brief for adding wallet payments." },
       {
@@ -545,6 +747,15 @@ export const INITIAL_CHATS: Chat[] = [
         role: "assistant",
         text: "Brief drafted: “Add wallet payments to checkout”. Problem: card entry is the biggest mobile drop-off point. Goal: lift mobile checkout conversion back to 58%. Evidence: funnel data, 12 reviews, 2 lost enterprise renewals citing payment options. Open question: does the payments provider support wallets in all 4 regions?",
         sources: ["mixpanel", "app-store-reviews", "salesforce"],
+        artifacts: ["a-wallet-brief"],
+      },
+      { id: "m5", role: "user", text: "Find the latest checkout designs and turn the brief into a short deck for the leadership sync." },
+      {
+        id: "m6",
+        role: "assistant",
+        text: "The latest designs are in “Checkout v3 — wallet buttons”: wallets shown first, with the card form as a fallback. I've turned the brief into a 4-slide readout — problem, what customers say, and the ask.",
+        sources: ["figma"],
+        artifacts: ["a-wallet-figma", "a-wallet-deck"],
       },
     ],
   },
@@ -559,6 +770,7 @@ export const INITIAL_CHATS: Chat[] = [
         role: "assistant",
         text: "“Setup-first Sam” — an ops lead who is handed the tool, not the one who bought it. Goal: get the team working within a week. Pain points: unclear first steps, permissions jargon, no way to preview what teammates will see. Quote: “I didn't know what I was supposed to set up first.” Based on 6 interviews and 41 onboarding tickets.",
         sources: ["dovetail", "zendesk"],
+        artifacts: ["a-persona-doc", "a-onboarding-figma"],
       },
     ],
   },
@@ -573,6 +785,7 @@ export const INITIAL_CHATS: Chat[] = [
         role: "assistant",
         text: "The top three pre-sales questions are: whether seats can be mixed across plans (31%), what happens to data on downgrade (22%), and how prorated upgrades are billed (18%). None of them are answered on the pricing page today.",
         sources: ["intercom", "hubspot"],
+        artifacts: ["a-presales-chart", "a-pricing-jira"],
       },
     ],
   },

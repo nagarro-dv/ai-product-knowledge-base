@@ -1,0 +1,922 @@
+/* Chat artifacts: thumbnails, inline cards, the peeking stack and the drawer. */
+
+/* ── Thumbnails ───────────────────────────────────────────────────────────── */
+
+/* Drawn miniatures; every size is relative to the box, so the same thumb
+   works in a 72px card and a 140px stack. */
+.kb2Thumb {
+  --kb2-thumb-accent: #6d3fe8;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6%;
+  width: 100%;
+  height: 100%;
+  padding: 10%;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.kb2Thumb__title,
+.kb2Thumb__line {
+  display: block;
+  flex-shrink: 0;
+  height: 5%;
+  min-height: 2px;
+  border-radius: 99px;
+  background: #e4e1da;
+}
+
+.kb2Thumb__title {
+  width: 62%;
+  height: 8%;
+  min-height: 3px;
+  background: #2b2723;
+}
+
+.kb2Thumb__line {
+  width: 100%;
+}
+
+.kb2Thumb__line--h2 {
+  width: 40%;
+  margin-top: 4%;
+  background: #8c8577;
+}
+
+.kb2Thumb__line--li {
+  width: 78%;
+  margin-left: 8%;
+}
+
+.kb2Thumb__line--short {
+  width: 55%;
+}
+
+/* Slide */
+.kb2Thumb--deck {
+  justify-content: center;
+  padding: 8%;
+  background: #efecfb;
+}
+
+.kb2Thumb__slide {
+  display: flex;
+  flex-direction: column;
+  gap: 8%;
+  aspect-ratio: 16 / 10;
+  padding: 10%;
+  border-radius: 4px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 12%);
+  box-sizing: border-box;
+}
+
+.kb2Thumb__accent {
+  display: block;
+  width: 18%;
+  height: 7%;
+  min-height: 2px;
+  border-radius: 99px;
+  background: var(--kb2-thumb-accent);
+}
+
+/* Chart */
+.kb2Thumb__bars {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: flex-end;
+  gap: 8%;
+  padding-top: 6%;
+  border-bottom: 1px solid #e4e1da;
+}
+
+.kb2Thumb__bars > span {
+  flex: 1 1 0;
+  border-radius: 2px 2px 0 0;
+  background: var(--kb2-thumb-accent);
+  opacity: 0.85;
+}
+
+.kb2Thumb__bars > span:nth-child(4) {
+  background: #e5484d;
+}
+
+/* Figma canvas with mini phone frames */
+.kb2Thumb--figma {
+  flex-direction: row;
+  align-items: center;
+  gap: 6%;
+  padding: 10% 8%;
+  background: #2c2c2c;
+}
+
+.kb2Thumb__frame {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  gap: 8%;
+  height: 100%;
+  padding: 8%;
+  border-radius: 3px;
+  box-sizing: border-box;
+  background: #ffffff;
+}
+
+.kb2Thumb__frameBar {
+  display: block;
+  height: 14%;
+  min-height: 3px;
+  margin: -8% -8% 4%;
+  border-radius: 3px 3px 0 0;
+  background: var(--kb2-thumb-accent);
+}
+
+.kb2Thumb__button {
+  display: block;
+  height: 12%;
+  min-height: 3px;
+  margin-top: auto;
+  border-radius: 99px;
+  background: var(--kb2-thumb-accent);
+}
+
+/* Jira card */
+.kb2Thumb--jira {
+  background: #f7f8f9;
+}
+
+.kb2Thumb__jiraHead {
+  display: flex;
+  align-items: center;
+  gap: 6%;
+}
+
+.kb2Thumb__issueIcon {
+  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  background: #4bade8;
+}
+
+.kb2Thumb__issueIcon--bug {
+  background: #e5493a;
+}
+
+.kb2Thumb__issueIcon--story {
+  background: #63ba3c;
+}
+
+.kb2Thumb__issueIcon--epic {
+  background: #904ee2;
+}
+
+.kb2Thumb .kb2Thumb__issueIcon {
+  width: 16%;
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.kb2Thumb__key {
+  color: #44546f;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.kb2Thumb__status {
+  display: block;
+  width: 36%;
+  height: 12%;
+  min-height: 4px;
+  margin-top: auto;
+  border-radius: 3px;
+  background: #dcdfe4;
+}
+
+.kb2Thumb__status--done {
+  background: #94c748;
+}
+
+.kb2Thumb__status--progress {
+  background: #579dff;
+}
+
+/* ── Inline card ──────────────────────────────────────────────────────────── */
+
+.kb2Message__artifacts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-sm);
+}
+
+.kb2ArtifactCard {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  width: min(100%, 340px);
+  padding: 6px;
+  padding-right: var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-background);
+  color: var(--ds-general-color-foreground);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    box-shadow var(--dur-fast) var(--ease-standard);
+}
+
+.kb2ArtifactCard:hover {
+  border-color: var(--ds-general-color-muted-foreground);
+  box-shadow: var(--elev-xs);
+}
+
+.kb2ArtifactCard:focus-visible,
+.kb2DrawerItem:focus-visible,
+.kb2Peek:focus-visible,
+.kb2Deck__mini:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.kb2ArtifactCard__thumb,
+.kb2DrawerItem__thumb {
+  display: flex;
+  flex-shrink: 0;
+  width: 64px;
+  height: 48px;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  overflow: hidden;
+}
+
+.kb2ArtifactCard__text,
+.kb2DrawerItem__text {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.kb2ArtifactCard__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2ArtifactCard__meta svg {
+  flex-shrink: 0;
+}
+
+.kb2ArtifactCard__action {
+  flex-shrink: 0;
+  color: var(--kb2-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Peeking stack ────────────────────────────────────────────────────────── */
+
+/* Sits on the right edge of the chat, cards half off-screen. Hover slides
+   them a little further out and fans them like a hand of cards, pivoting on the
+   bottom-right corner: the front card stays upright and each one behind it
+   tilts further left, so a slice of every thumbnail shows. Poses come from
+   --i (0 = front). */
+.kb2Peek {
+  position: absolute;
+  z-index: 6;
+  top: 96px;
+  right: 0;
+  width: 168px;
+  height: 200px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.kb2Peek__card {
+  --rest-x: calc(64px + var(--i) * 10px);
+  --rest-y: calc(var(--i) * -12px);
+  --rest-r: calc(-6deg + var(--i) * 8deg);
+  position: absolute;
+  z-index: calc(3 - var(--i));
+  top: 24px;
+  right: 0;
+  display: flex;
+  width: 132px;
+  height: 104px;
+  border: 3px solid #ffffff;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow:
+    0 2px 6px rgb(0 0 0 / 10%),
+    0 10px 24px rgb(0 0 0 / 10%);
+  transform-origin: 100% 100%;
+  transform: translate(var(--rest-x), var(--rest-y)) rotate(var(--rest-r));
+  transition: transform 420ms cubic-bezier(0.34, 1.3, 0.64, 1);
+}
+
+.kb2Peek:hover .kb2Peek__card,
+.kb2Peek:focus-visible .kb2Peek__card {
+  /* Hover only nudges the stack ~30px further in — the cards stay partly
+     off the right edge, just peeking out more than at rest — while they fan. */
+  --fan-x: calc(34px - var(--i) * 6px);
+  --fan-y: calc(36px + var(--i) * 4px);
+  --fan-r: calc(-3deg - var(--i) * 15deg);
+  transform: translate(var(--fan-x), var(--fan-y)) rotate(var(--fan-r));
+}
+
+/* The front card lifts a little more, the back ones follow a beat later. */
+.kb2Peek__card:nth-child(2) {
+  transition-delay: 30ms;
+}
+
+.kb2Peek__card:nth-child(3) {
+  transition-delay: 60ms;
+}
+
+/* Sits just above the fanned cards. The front card is always the highest
+   one (the cards behind it tilt down from their bottom-right corner), so
+   this spot works for any number of files. */
+.kb2Peek__count {
+  position: absolute;
+  z-index: 4;
+  top: 26px;
+  right: 20px;
+  padding: 3px 10px;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-foreground);
+  color: var(--ds-general-color-canvas);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(6px);
+  transition:
+    opacity 160ms ease-out,
+    transform 160ms ease-out;
+}
+
+.kb2Peek:hover .kb2Peek__count,
+.kb2Peek:focus-visible .kb2Peek__count {
+  opacity: 1;
+  transform: none;
+}
+
+/* ── Drawer ───────────────────────────────────────────────────────────────── */
+
+/* Slides in from the right over everything — full viewport height, above
+   the app topbar (z-index 1000). The list is a narrow column; a file opens at
+   ~60% of the screen, the width easing between the two. */
+.kb2Drawer {
+  position: fixed;
+  z-index: 1100;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  max-width: 100%;
+  border-left: 1px solid rgb(0 0 0 / 8%);
+  background: var(--ds-general-color-canvas);
+  box-shadow: -12px 0 40px rgb(0 0 0 / 8%);
+  transform: translateX(100%);
+  /* A long ease-out that decelerates gently into place (the curve iOS uses
+     for sheets). Keep the duration in sync with SLIDE_MS in Artifacts.tsx. */
+  transition:
+    transform 420ms cubic-bezier(0.32, 0.72, 0, 1),
+    width 420ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform;
+}
+
+.kb2Drawer[data-open="true"] {
+  transform: none;
+}
+
+.kb2DrawerScrim {
+  position: fixed;
+  z-index: 1099;
+  inset: 0;
+  background: rgb(20 18 14 / 12%);
+  opacity: 0;
+  transition: opacity 420ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+.kb2DrawerScrim[data-open="true"] {
+  opacity: 1;
+}
+
+/* Swapping between the list and a file fades the new content in. */
+.kb2Drawer__content {
+  animation: kb2DrawerContentIn 260ms ease-out both;
+}
+
+@keyframes kb2DrawerContentIn {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+.kb2Drawer--view {
+  width: max(560px, 60%);
+  max-width: calc(100% - 240px);
+}
+
+.kb2Drawer__header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-lg) var(--ds-general-padding-md);
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2Drawer__heading {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kb2Drawer__heading h2 {
+  margin: 0;
+}
+
+.kb2Drawer__kind {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2Drawer__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.kb2Drawer__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  margin: 0;
+  padding: var(--ds-general-padding-md);
+  list-style: none;
+}
+
+.kb2DrawerItem {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  padding: var(--ds-general-padding-sm);
+  border: 1px solid transparent;
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: none;
+  color: var(--ds-general-color-foreground);
+  text-align: left;
+  cursor: pointer;
+}
+
+.kb2DrawerItem:hover {
+  border-color: var(--ds-general-color-border);
+  background: var(--ds-general-color-background);
+}
+
+.kb2DrawerItem__thumb {
+  width: 96px;
+  height: 72px;
+}
+
+.kb2DrawerItem__preview {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+/* Document */
+.kb2Doc {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.kb2Doc__toolbar {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-xl);
+  background: color-mix(in srgb, var(--ds-general-color-canvas) 92%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.kb2Doc__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2Doc__page {
+  width: min(100%, 680px);
+  margin: 0 auto;
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-3xl) var(--ds-general-padding-4xl);
+  box-sizing: border-box;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.kb2Doc__title {
+  margin: 0 0 var(--ds-general-gap-lg);
+  font-family: var(--ds-general-typography-font-family-heading, inherit);
+  font-size: 26px;
+  line-height: 1.25;
+}
+
+.kb2Doc__page h2 {
+  margin: 1.4em 0 0.3em;
+  font-size: 17px;
+}
+
+.kb2Doc__page p {
+  margin: 0 0 0.6em;
+}
+
+.kb2Doc__page ul {
+  margin: 0 0 0.6em;
+  padding-left: 1.3em;
+}
+
+.kb2Doc__page [contenteditable] {
+  border-radius: 4px;
+  outline: none;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.kb2Doc__page [contenteditable]:hover {
+  background: color-mix(in srgb, var(--ds-general-color-muted) 60%, transparent);
+}
+
+.kb2Doc__page [contenteditable]:focus {
+  background: color-mix(in srgb, var(--kb2-accent) 6%, transparent);
+}
+
+.kb2Doc__page [contenteditable]:empty::before {
+  content: attr(data-placeholder);
+  color: var(--ds-general-color-muted-foreground);
+  pointer-events: none;
+}
+
+/* Deck */
+.kb2Deck {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-padding-xl);
+}
+
+.kb2Deck__stage {
+  padding: var(--ds-general-padding-xl);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: #efecfb;
+}
+
+.kb2Deck__slide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  aspect-ratio: 16 / 9;
+  padding: 6% 7%;
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: #ffffff;
+  box-shadow: 0 2px 10px rgb(0 0 0 / 10%);
+  box-sizing: border-box;
+  animation: kb2FadeIn 200ms ease-out;
+}
+
+.kb2Deck__accent {
+  width: 48px;
+  height: 5px;
+  border-radius: 99px;
+  background: var(--kb2-accent);
+}
+
+.kb2Deck__slide h3 {
+  margin: 0;
+  font-family: var(--ds-general-typography-font-family-heading, inherit);
+  font-size: clamp(18px, 2.4vw, 30px);
+  line-height: 1.2;
+}
+
+.kb2Deck__slide ul {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: clamp(13px, 1.4vw, 18px);
+  line-height: 1.6;
+}
+
+.kb2Deck__slide [contenteditable] {
+  border-radius: 4px;
+  outline: none;
+}
+
+.kb2Deck__slide [contenteditable]:hover {
+  background: color-mix(in srgb, var(--ds-general-color-muted) 60%, transparent);
+}
+
+.kb2Deck__slide [contenteditable]:focus {
+  background: color-mix(in srgb, var(--kb2-accent) 6%, transparent);
+}
+
+.kb2Deck__nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.kb2Deck__strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: var(--ds-general-gap-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kb2Deck__mini {
+  display: flex;
+  align-items: flex-end;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 8px;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: #ffffff;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.kb2Deck__mini[aria-current="true"] {
+  border-color: var(--kb2-accent);
+  box-shadow: 0 0 0 1px var(--kb2-accent);
+}
+
+.kb2Deck__miniTitle {
+  overflow: hidden;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Chart */
+.kb2ChartView {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
+  padding: var(--ds-general-padding-xl) var(--ds-general-padding-2xl);
+}
+
+.kb2ChartView__plot {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--ds-general-gap-lg);
+  height: 320px;
+  padding: var(--ds-general-padding-lg);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: var(--ds-general-color-background);
+}
+
+.kb2ChartView__col {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
+  height: 100%;
+}
+
+.kb2ChartView__bar {
+  width: 100%;
+  max-width: 72px;
+  border-radius: 6px 6px 0 0;
+  background: var(--kb2-accent);
+  transform-origin: bottom;
+  animation: kb2Grow 420ms cubic-bezier(0.2, 0, 0, 1);
+}
+
+@keyframes kb2Grow {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+.kb2ChartView__value {
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb2ChartView__label {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+  text-align: center;
+}
+
+/* External previews */
+.kb2External {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
+  padding: var(--ds-general-padding-xl) var(--ds-general-padding-2xl);
+}
+
+.kb2External__out {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.kb2External__out a {
+  text-decoration: none;
+}
+
+.kb2External__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ds-general-gap-2xl);
+  margin: 0;
+}
+
+.kb2External__meta dt {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2External__meta dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.kb2FigmaCanvas {
+  --kb2-thumb-accent: #6d3fe8;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: var(--ds-general-gap-xl);
+  padding: var(--ds-general-padding-2xl);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: #2c2c2c;
+}
+
+.kb2FigmaCanvas__frame {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.kb2FigmaCanvas__frame figcaption {
+  overflow: hidden;
+  color: #b3b3b3;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kb2FigmaCanvas__screen {
+  display: flex;
+  flex-direction: column;
+  gap: 8%;
+  aspect-ratio: 9 / 16;
+  padding: 10%;
+  border-radius: 6px;
+  background: #ffffff;
+  box-sizing: border-box;
+}
+
+.kb2FigmaCanvas__screen .kb2Thumb__line {
+  height: 3%;
+}
+
+.kb2JiraCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-xl);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: #ffffff;
+}
+
+.kb2JiraCard h3 {
+  margin: 0;
+}
+
+.kb2JiraCard__head {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+}
+
+.kb2JiraCard__key {
+  color: #44546f;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.kb2JiraCard__status {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: #dcdfe4;
+  color: #172b4d;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.kb2JiraCard__status--done {
+  background: #dcfff1;
+  color: #216e4e;
+}
+
+.kb2JiraCard__status--progress {
+  background: #e9f2ff;
+  color: #0055cc;
+}
+
+.kb2JiraCard__summary {
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+@media (max-width: 860px) {
+  .kb2Drawer,
+  .kb2Drawer--view {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .kb2Peek {
+    top: 64px;
+    transform: scale(0.8);
+    transform-origin: top right;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb2Peek__card,
+  .kb2Peek__count,
+  .kb2ArtifactCard {
+    transition: none;
+  }
+
+  /* No slide: fade the drawer and backdrop instead. */
+  .kb2Drawer {
+    transform: none;
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+  }
+
+  .kb2Drawer[data-open="true"] {
+    opacity: 1;
+  }
+
+  .kb2Drawer__content {
+    animation: none;
+  }
+
+  .kb2Deck__slide,
+  .kb2ChartView__bar {
+    animation: none;
+  }
+}
