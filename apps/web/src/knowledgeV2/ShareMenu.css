@@ -1,0 +1,486 @@
+/* Sharing (ShareMenu.tsx) and RICE scores (RiceScore.tsx). The menus,
+   dialog, breakdown and toasts are portalled to <body>; their --kb2-*
+   colours come from the shared selector at the top of KnowledgeV2.css. */
+
+.kb2ShareActions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+/* ── Menu ─────────────────────────────────────────────────────────────────── */
+
+.kb2Menu2 {
+  position: fixed;
+  z-index: 1250;
+  display: flex;
+  flex-direction: column;
+  width: 260px;
+  padding: 4px;
+  overflow-y: auto;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 6%),
+    0 12px 32px rgb(0 0 0 / 12%);
+  animation: kb2MenuIn 140ms ease-out;
+}
+
+.kb2Menu2[data-placement="above"] {
+  animation-name: kb2MenuInAbove;
+}
+
+@keyframes kb2MenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes kb2MenuInAbove {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.kb2Menu2__item {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: none;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.kb2Menu2__item:hover,
+.kb2Menu2__item:focus-visible {
+  outline: none;
+  background: var(--ds-general-color-muted);
+}
+
+.kb2Menu2__icon {
+  display: inline-flex;
+  flex-shrink: 0;
+  width: 16px;
+  justify-content: center;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.kb2Menu2__label {
+  flex: 1 1 auto;
+}
+
+.kb2Menu2__hint {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2Menu2__divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--ds-general-color-border);
+}
+
+/* ── Product Discovery chip ───────────────────────────────────────────────── */
+
+.kb2JpdChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+.kb2JpdChip:hover {
+  border-color: rgb(0 0 0 / 10%);
+  background: var(--ds-general-color-background);
+}
+
+.kb2JpdChip--action {
+  border-color: color-mix(in srgb, #0c66e4 30%, transparent);
+  color: #0c66e4;
+}
+
+.kb2JpdChip--action:hover {
+  border-color: #0c66e4;
+  background: color-mix(in srgb, #0c66e4 6%, var(--ds-general-color-canvas));
+}
+
+.kb2JpdChip:focus-visible,
+.kb2Rice:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+/* ── Compose dialog ───────────────────────────────────────────────────────── */
+
+.kb2DialogScrim {
+  position: fixed;
+  z-index: 1300;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(20 18 14 / 28%);
+  animation: kb2FadeIn 160ms ease-out;
+}
+
+.kb2Dialog {
+  display: flex;
+  flex-direction: column;
+  width: min(100%, 560px);
+  max-height: calc(100dvh - 48px);
+  border-radius: var(--ds-general-radius-rounded-xl);
+  background: var(--ds-general-color-canvas);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 22%);
+  overflow: hidden;
+  animation: kb2DialogIn 220ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes kb2DialogIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+}
+
+.kb2Dialog__header {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-xl);
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2Dialog__header > div {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.kb2Dialog__title {
+  margin: 0;
+}
+
+.kb2Dialog__logo {
+  display: inline-flex;
+  padding: 8px;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+}
+
+.kb2Dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-lg);
+  padding: var(--ds-general-padding-xl);
+  overflow-y: auto;
+}
+
+.kb2Dialog__note {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2Dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg) var(--ds-general-padding-xl);
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2Field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.kb2Field__label {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kb2Field__control {
+  padding: 8px 10px;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 14px;
+}
+
+.kb2Field__control:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 1px;
+}
+
+.kb2Field__control--area {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.kb2JpdFields {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  overflow: hidden;
+}
+
+.kb2JpdFields__row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-lg);
+  padding: 8px 12px;
+  font-size: 13px;
+}
+
+.kb2JpdFields__row + .kb2JpdFields__row {
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2JpdFields__row > span {
+  flex-shrink: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.kb2JpdFields__row > strong {
+  text-align: right;
+}
+
+.kb2JpdFields__row--score {
+  background: var(--kb2-accent-soft);
+}
+
+.kb2JpdFields__row--score > strong {
+  color: var(--kb2-accent);
+}
+
+/* ── Toasts ───────────────────────────────────────────────────────────────── */
+
+.kb2Toasts {
+  position: fixed;
+  z-index: 1400;
+  top: 16px;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.kb2Toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 16px;
+  border-radius: var(--ds-general-radius-full);
+  background: var(--ds-general-color-foreground);
+  color: var(--ds-general-color-canvas);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 13px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 18%);
+  animation: kb2ToastIn 200ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@keyframes kb2ToastIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+/* ── RICE score ───────────────────────────────────────────────────────────── */
+
+.kb2Rice {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 10px;
+  border: 1px solid color-mix(in srgb, var(--kb2-accent) 25%, transparent);
+  border-radius: var(--ds-general-radius-full);
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.kb2Rice:hover {
+  border-color: var(--kb2-accent);
+}
+
+.kb2Rice__score {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb2Rice__confidence {
+  color: color-mix(in srgb, var(--kb2-accent) 75%, var(--ds-general-color-foreground));
+}
+
+.kb2Rice__confidence::before {
+  content: "· ";
+}
+
+.kb2Rice--sm {
+  padding: 1px 6px 1px 8px;
+  font-size: 11px;
+}
+
+.kb2RiceBreakdown {
+  position: fixed;
+  z-index: 1250;
+  display: flex;
+  flex-direction: column;
+  width: min(380px, calc(100vw - 16px));
+  overflow-y: auto;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 6%),
+    0 16px 40px rgb(0 0 0 / 14%);
+  font-family: var(--ds-general-typography-font-family-body);
+  animation: kb2MenuIn 140ms ease-out;
+}
+
+.kb2RiceBreakdown[data-placement="above"] {
+  animation-name: kb2MenuInAbove;
+}
+
+.kb2RiceBreakdown__head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2RiceBreakdown__head h3 {
+  margin: 0;
+}
+
+.kb2RiceBreakdown__formula {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+}
+
+.kb2RiceBreakdown__equation {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border-radius: var(--ds-general-radius-rounded-sm);
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+  font-size: 13px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb2RiceBreakdown__factors {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 4px 16px;
+}
+
+.kb2RiceBreakdown__factors > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 10px 0;
+}
+
+.kb2RiceBreakdown__factors > div + div {
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2RiceBreakdown__factors dt {
+  font-size: 13px;
+}
+
+.kb2RiceBreakdown__factors dt strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.kb2RiceBreakdown__factors dd {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.kb2RiceBreakdown__okr {
+  align-self: flex-start;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-foreground);
+  font-weight: 600;
+}
+
+.kb2RiceBreakdown__evidence {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.kb2RiceBreakdown__rule {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+}
+
+.kb2RiceBreakdown__foot {
+  padding: 10px 16px;
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 11px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kb2Menu2,
+  .kb2DialogScrim,
+  .kb2Dialog,
+  .kb2Toast,
+  .kb2RiceBreakdown {
+    animation: none;
+  }
+}

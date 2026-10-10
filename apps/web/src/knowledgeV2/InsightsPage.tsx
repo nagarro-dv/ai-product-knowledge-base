@@ -5,6 +5,9 @@ import { SourceMark } from "../knowledge/SourceMark";
 import { sourceById } from "../knowledge/sources";
 import { SourceStack, Sparkline } from "./Composer";
 import { SIGNALS, SIGNAL_TONES, STAGES, agentById, type ContextRef, type Initiative, type Signal } from "./data";
+import { RiceScore } from "./RiceScore";
+import { SendToJpdButton, ShareActions } from "./ShareMenu";
+import { shareInitiative, shareSignal } from "./sharing";
 
 export type InsightActions = {
   addContext: (ref: ContextRef) => void;
@@ -194,7 +197,11 @@ function InsightDetail({ signal, initiatives, actions }: { signal: Signal; initi
                 {linked.title}
               </DsTypography>
               <span className="kb2Muted kb2Small">
-                {stage?.label} · {linked.confidence}% confidence · {linked.theme}
+                {stage?.label} · {linked.theme}
+              </span>
+              <span className="kb2Meta kb2LinkedInitiative__score">
+                <RiceScore initiative={linked} />
+                <SendToJpdButton item={shareInitiative(linked)} sentKey={linked.jpdKey} />
               </span>
             </span>
             <button
@@ -220,8 +227,8 @@ function InsightDetail({ signal, initiatives, actions }: { signal: Signal; initi
           <Plus size={14} aria-hidden />
           Add to prompt
         </button>
-        <span className="kb2Muted kb2Small kb2InsightDetail__sources">
-          From <SourceStack ids={signal.sources} size={13} />
+        <span className="kb2Card__actionsEnd">
+          <ShareActions item={shareSignal(signal)} />
         </span>
       </div>
     </article>

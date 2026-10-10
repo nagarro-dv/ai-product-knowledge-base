@@ -8,6 +8,9 @@ import { ArtifactCard } from "./Artifacts";
 import type { Artifact } from "./artifactData";
 import { Carousel } from "./Carousel";
 import { SourceStack } from "./Composer";
+import { RiceScore } from "./RiceScore";
+import { SendToJpdButton, ShareActions } from "./ShareMenu";
+import { shareInitiative } from "./sharing";
 import { Tip } from "./Tip";
 import {
   AGENTS,
@@ -220,6 +223,11 @@ export function CreatePage({
                         {initiative.updated}
                       </span>
                     </button>
+                    <div className="kb2PipelineCard__score">
+                      <RiceScore initiative={initiative} size="sm" />
+                      <ShareActions item={shareInitiative(initiative)} variant="compact" />
+                    </div>
+                    <SendToJpdButton item={shareInitiative(initiative)} sentKey={initiative.jpdKey} size="sm" />
                     {stage.action ? (
                       <button
                         type="button"

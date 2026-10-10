@@ -1,10 +1,14 @@
 /* Product Knowledge Base v2. Builds on the shared canvas + composer styles
    (DsAcceleratorTool.css, SlotIntake.css); everything here is kb2-prefixed. */
 
-/* v2's own colours. Also set on the slot chip menu, which is portalled to
-   <body> and so sits outside .kb2. */
+/* v2's own colours. Also set on the menus, dialogs and popovers that are
+   portalled to <body> and so sit outside .kb2. */
 .kb2,
-.kb2SlotPicker {
+.kb2SlotPicker,
+.kb2Menu2,
+.kb2DialogScrim,
+.kb2RiceBreakdown,
+.kb2Toasts {
   --kb2-accent: #6d3fe8;
   --kb2-accent-soft: color-mix(in srgb, var(--kb2-accent) 10%, var(--ds-general-color-canvas));
   --kb2-up: var(--ds-general-color-success-foreground);
@@ -740,22 +744,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.kb2Confidence {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--ds-general-color-muted-foreground);
-}
-
-.kb2Confidence__bar {
-  width: 48px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--ds-general-color-muted);
-  overflow: hidden;
-}
-
-.kb2Confidence__bar > span,
 .kb2Progress > span {
   display: block;
   height: 100%;
@@ -1236,6 +1224,33 @@ button.kb2Timeline__item:hover {
     transform: translateY(-4px);
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--kb2-accent) 25%, transparent);
   }
+}
+
+.kb2PipelineCard__score {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-sm);
+}
+
+.kb2PipelineCard .kb2JpdChip {
+  align-self: flex-start;
+}
+
+/* Pushes share icons to the far end of an actions row. */
+.kb2Card__actionsEnd {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+.kb2Signal__icons {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.kb2LinkedInitiative__score {
+  margin-top: 6px;
 }
 
 .kb2PipelineCard__main {

@@ -126,11 +126,46 @@ export type Initiative = {
   origin: string;
   /** Roadmap theme it lines up with. */
   theme: string;
-  /** 0–100: how strongly the evidence supports it. */
-  confidence: number;
+  /** RICE inputs — see rice.ts. Confidence isn't stored: it's derived from `evidence`. */
+  rice: RiceInputs;
   evidence: Evidence[];
   updated: string;
+  /** Set once the initiative is sent to Jira Product Discovery, e.g. "PD-142". */
+  jpdKey?: string;
 };
+
+/** The parts of a RICE score a person estimates; each carries its reasoning. */
+export type RiceInputs = {
+  /** People or accounts affected per quarter. */
+  reach: number;
+  reachUnit: string;
+  reachNote: string;
+  /** RICE's impact scale: 3 massive, 2 high, 1 medium, 0.5 low, 0.25 minimal. */
+  impact: 3 | 2 | 1 | 0.5 | 0.25;
+  /** The key result it moves (see OKRS). */
+  okr: string;
+  impactNote: string;
+  /** Person-weeks. */
+  effort: number;
+  effortNote: string;
+};
+
+// ── OKRs ────────────────────────────────────────────────────────────────────
+
+export type KeyResult = { id: string; objective: string; text: string };
+
+/** The company's current objectives and key results; impact is judged against these. */
+export const OKRS: KeyResult[] = [
+  { id: "KR 1.1", objective: "Grow revenue from existing customers", text: "Upgrade completion back to 70% (now 62%)" },
+  { id: "KR 1.2", objective: "Grow revenue from existing customers", text: "Net revenue retention at 110%" },
+  { id: "KR 2.1", objective: "Customers trust us with billing", text: "Customer satisfaction back to 4.4 / 5" },
+  { id: "KR 3.1", objective: "New teams get value in week one", text: "First-week activation at 45%" },
+  { id: "KR 4.1", objective: "Win more enterprise customers", text: "Close the 9 deals blocked on SSO" },
+];
+
+export function keyResult(id: string): KeyResult | undefined {
+  return OKRS.find((kr) => kr.id === id);
+}
 
 export const INITIAL_INITIATIVES: Initiative[] = [
   {
@@ -141,7 +176,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "proposed",
     origin: "Roadmap alignment agent",
     theme: "Monetization",
-    confidence: 82,
+    rice: {
+      reach: 2300,
+      reachUnit: "accounts a quarter",
+      reachNote: "Accounts that changed plan mid-cycle last quarter (Mixpanel).",
+      impact: 2,
+      okr: "KR 1.1",
+      impactNote: "Removes the step where upgrade completion drops — moves KR 1.1 directly.",
+      effort: 6,
+      effortNote: "Billing squad: proration explainer, invoice preview and copy changes (~3 people × 2 weeks).",
+    },
     evidence: [
       { source: "zendesk", summary: "148 tickets mention prorated charges (+63%)" },
       { source: "mixpanel", summary: "Upgrade completion 71% → 62% in 30 days" },
@@ -158,7 +202,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "proposed",
     origin: "Voice of customer agent",
     theme: "Customer trust",
-    confidence: 74,
+    rice: {
+      reach: 4100,
+      reachUnit: "customers a quarter",
+      reachNote: "Customers who contacted support about billing last quarter (Zendesk, Intercom).",
+      impact: 1,
+      okr: "KR 2.1",
+      impactNote: "Billing is the main drag on satisfaction — a medium lift towards KR 2.1.",
+      effort: 8,
+      effortNote: "Support tooling, macros and a billing triage rota (~2 people × 4 weeks).",
+    },
     evidence: [
       { source: "zendesk", summary: "Billing CSAT 3.2 vs 4.3 for other topics" },
       { source: "intercom", summary: "First response on billing: 9h (target 2h)" },
@@ -174,7 +227,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "proposed",
     origin: "KPI watcher agent",
     theme: "Monetization",
-    confidence: 61,
+    rice: {
+      reach: 3600,
+      reachUnit: "trial starts a quarter",
+      reachNote: "Visitors who reach the pricing page and then start a trial (Google Analytics).",
+      impact: 0.5,
+      okr: "KR 1.1",
+      impactNote: "Clearer plan differences help buyers choose — an indirect, low lift to KR 1.1.",
+      effort: 3,
+      effortNote: "Pricing page comparison and FAQ updates (~1 designer + 1 engineer × 1.5 weeks).",
+    },
     evidence: [
       { source: "hotjar", summary: "38% of sessions scroll back to the plan table 3+ times" },
       { source: "google-analytics", summary: "Pricing exit rate up from 41% to 47%" },
@@ -188,7 +250,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "exploring",
     origin: "You",
     theme: "Activation",
-    confidence: 68,
+    rice: {
+      reach: 1400,
+      reachUnit: "new accounts a quarter",
+      reachNote: "New accounts created last quarter (Amplitude).",
+      impact: 2,
+      okr: "KR 3.1",
+      impactNote: "Targets the three actions that best predict retention — a high lift to KR 3.1.",
+      effort: 5,
+      effortNote: "Checklist component, tracking and in-app copy (~2 people × 2.5 weeks).",
+    },
     evidence: [
       { source: "amplitude", summary: "Users who invite a teammate in week 1 retain 2.3× better" },
       { source: "dovetail", summary: "New admins don't know what to set up first" },
@@ -202,7 +273,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "brief",
     origin: "KPI watcher agent",
     theme: "Conversion",
-    confidence: 77,
+    rice: {
+      reach: 2600,
+      reachUnit: "mobile buyers a quarter",
+      reachNote: "Mobile sessions that reach the card form each quarter (Mixpanel).",
+      impact: 1,
+      okr: "KR 1.2",
+      impactNote: "Recovers part of the mobile checkout drop — a medium lift to KR 1.2.",
+      effort: 7,
+      effortNote: "Payment provider integration for Apple Pay and Google Pay (~2 people × 3.5 weeks).",
+    },
     evidence: [
       { source: "mixpanel", summary: "Mobile drop-off at card entry: 34%" },
       { source: "app-store-reviews", summary: "12 reviews this month ask for Apple Pay" },
@@ -216,7 +296,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "prototype",
     origin: "You",
     theme: "Retention",
-    confidence: 70,
+    rice: {
+      reach: 900,
+      reachUnit: "power users a quarter",
+      reachNote: "The most active 10% of users (FullStory).",
+      impact: 1,
+      okr: "KR 1.2",
+      impactNote: "Saves heavy users daily repeat work; they drive 44% of expansion revenue.",
+      effort: 4,
+      effortNote: "Saved filters, naming and sharing (~2 people × 2 weeks).",
+    },
     evidence: [
       { source: "fullstory", summary: "Top 10% of users apply the same 3 filters 4× a day" },
       { source: "productboard", summary: "Most-voted feature request this quarter (212 votes)" },
@@ -230,7 +319,16 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "validating",
     origin: "Research synthesizer agent",
     theme: "Enterprise",
-    confidence: 80,
+    rice: {
+      reach: 120,
+      reachUnit: "enterprise trials a quarter",
+      reachNote: "Enterprise trials that need SSO (Salesforce).",
+      impact: 3,
+      okr: "KR 4.1",
+      impactNote: "Unblocks deals that can't close without it — massive for KR 4.1.",
+      effort: 6,
+      effortNote: "Self-serve SAML setup and verification flow (~2 people × 3 weeks).",
+    },
     evidence: [
       { source: "salesforce", summary: "9 enterprise deals list SSO as a blocker" },
       { source: "figma", summary: "Prototype v2 tested with 5 admins — 4 completed setup" },

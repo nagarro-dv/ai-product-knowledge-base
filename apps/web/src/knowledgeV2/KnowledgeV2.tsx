@@ -22,6 +22,7 @@ import {
 } from "./data";
 import { InsightsPage } from "./InsightsPage";
 import { AgentsPage, ChatPage, CreatePage, SearchPage } from "./OtherPages";
+import { ShareProvider } from "./ShareMenu";
 import { StartPage, type StartActions } from "./StartPage";
 // Same canvas, composer and source chips as v1 — v2 changes what surrounds them.
 import "../accelerator/DsAcceleratorTool.css";
@@ -218,146 +219,153 @@ export function KnowledgeV2() {
   const scopedSourceIds = new Set(attachments.filter((a) => a.kind === "source").map((a) => a.id));
 
   return (
-    <main className="accelerator kb2" aria-label="Product Knowledge Base v2">
-      <nav className="kb2Sidebar" aria-label="Knowledge base">
-        <ul className="kb2Nav">
-          {NAV.map((item) => {
-            const Icon = item.icon;
-            const active = page.kind === item.kind;
-            return (
-              <li key={item.kind}>
+    <ShareProvider
+      onSentToJpd={(item, key) => {
+        if (item.kind !== "initiative") return;
+        setInitiatives((current) => current.map((i) => (i.id === item.id ? { ...i, jpdKey: key } : i)));
+      }}
+    >
+      <main className="accelerator kb2" aria-label="Product Knowledge Base v2">
+        <nav className="kb2Sidebar" aria-label="Knowledge base">
+          <ul className="kb2Nav">
+            {NAV.map((item) => {
+              const Icon = item.icon;
+              const active = page.kind === item.kind;
+              return (
+                <li key={item.kind}>
+                  <button
+                    type="button"
+                    className="kb2Nav__item"
+                    aria-current={active ? "page" : undefined}
+                    onClick={() => go({ kind: item.kind })}
+                  >
+                    {item.label}
+                    <Icon size={16} strokeWidth={1.9} aria-hidden />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+          <div className="kb2Sidebar__divider" />
+          <span className="kb2Eyebrow kb2Sidebar__label">History</span>
+          <ul className="kb2Nav kb2Nav--history">
+            {chats.map((chat) => (
+              <li key={chat.id}>
                 <button
                   type="button"
                   className="kb2Nav__item"
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => go({ kind: item.kind })}
+                  aria-current={page.kind === "chat" && page.id === chat.id ? "page" : undefined}
+                  onClick={() => go({ kind: "chat", id: chat.id })}
+                  title={chat.title}
                 >
-                  {item.label}
-                  <Icon size={16} strokeWidth={1.9} aria-hidden />
+                  <span className="kb2Ellipsis">{chat.title}</span>
                 </button>
               </li>
-            );
-          })}
-        </ul>
-        <div className="kb2Sidebar__divider" />
-        <span className="kb2Eyebrow kb2Sidebar__label">History</span>
-        <ul className="kb2Nav kb2Nav--history">
-          {chats.map((chat) => (
-            <li key={chat.id}>
-              <button
-                type="button"
-                className="kb2Nav__item"
-                aria-current={page.kind === "chat" && page.id === chat.id ? "page" : undefined}
-                onClick={() => go({ kind: "chat", id: chat.id })}
-                title={chat.title}
-              >
-                <span className="kb2Ellipsis">{chat.title}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </nav>
+            ))}
+          </ul>
+        </nav>
 
-      <div className="kb2Main" ref={mainRef} data-scrolled={scrolled}>
-        <div className={`kb2Main__inner kb2Main__inner--${page.kind}`}>
-          {page.kind === "start" ? (
-            <StartPage
-              initiatives={initiatives}
-              trackedMetricIds={trackedMetricIds}
-              onTrackedMetricsChange={setTrackedMetricIds}
-              actions={startActions}
-            />
-          ) : page.kind === "search" ? (
-            <SearchPage
-              scopedSourceIds={scopedSourceIds}
-              onToggleSource={toggleSource}
-              onSearchTopic={(topic) => prefill(`What's new about ${topic.toLowerCase()} this week? Group what you find by source.`)}
-            />
-          ) : page.kind === "create" ? (
-            <CreatePage
-              initiatives={initiatives}
-              onAdvance={advance}
-              onExplore={(initiative) =>
-                prefill(`Summarize where “${initiative.title}” stands and what the next step should be.`, {
-                  id: `initiative:${initiative.id}`,
-                  label: initiative.title,
-                  kind: "initiative",
-                })
-              }
-              onPickTemplate={(template) =>
-                prefill(template.prompt, { id: `template:${template.id}`, label: template.label, kind: "template" })
-              }
-            />
-          ) : page.kind === "insights" ? (
-            <InsightsPage
-              initiatives={initiatives}
-              selectedId={page.id}
-              // Selecting within the page shouldn't scroll back to the top.
-              onSelect={(id) => setPage({ kind: "insights", id })}
-              onBack={() => go({ kind: "start" })}
-              actions={startActions}
-            />
-          ) : page.kind === "agents" ? (
-            <AgentsPage onBack={() => go({ kind: "start" })} onOpenCreate={() => go({ kind: "create" })} />
-          ) : activeChat ? (
-            <ChatPage
-              chat={activeChat}
-              pending={pendingChatId === activeChat.id}
-              artifacts={chatArtifacts}
-              onOpenArtifact={(id) => setDrawer({ mode: "view", id, fromList: false })}
-            />
-          ) : (
-            <DsTypography as="p" variant="paragraph-small">
-              That chat no longer exists.
-            </DsTypography>
-          )}
+        <div className="kb2Main" ref={mainRef} data-scrolled={scrolled}>
+          <div className={`kb2Main__inner kb2Main__inner--${page.kind}`}>
+            {page.kind === "start" ? (
+              <StartPage
+                initiatives={initiatives}
+                trackedMetricIds={trackedMetricIds}
+                onTrackedMetricsChange={setTrackedMetricIds}
+                actions={startActions}
+              />
+            ) : page.kind === "search" ? (
+              <SearchPage
+                scopedSourceIds={scopedSourceIds}
+                onToggleSource={toggleSource}
+                onSearchTopic={(topic) => prefill(`What's new about ${topic.toLowerCase()} this week? Group what you find by source.`)}
+              />
+            ) : page.kind === "create" ? (
+              <CreatePage
+                initiatives={initiatives}
+                onAdvance={advance}
+                onExplore={(initiative) =>
+                  prefill(`Summarize where “${initiative.title}” stands and what the next step should be.`, {
+                    id: `initiative:${initiative.id}`,
+                    label: initiative.title,
+                    kind: "initiative",
+                  })
+                }
+                onPickTemplate={(template) =>
+                  prefill(template.prompt, { id: `template:${template.id}`, label: template.label, kind: "template" })
+                }
+              />
+            ) : page.kind === "insights" ? (
+              <InsightsPage
+                initiatives={initiatives}
+                selectedId={page.id}
+                // Selecting within the page shouldn't scroll back to the top.
+                onSelect={(id) => setPage({ kind: "insights", id })}
+                onBack={() => go({ kind: "start" })}
+                actions={startActions}
+              />
+            ) : page.kind === "agents" ? (
+              <AgentsPage onBack={() => go({ kind: "start" })} onOpenCreate={() => go({ kind: "create" })} />
+            ) : activeChat ? (
+              <ChatPage
+                chat={activeChat}
+                pending={pendingChatId === activeChat.id}
+                artifacts={chatArtifacts}
+                onOpenArtifact={(id) => setDrawer({ mode: "view", id, fromList: false })}
+              />
+            ) : (
+              <DsTypography as="p" variant="paragraph-small">
+                That chat no longer exists.
+              </DsTypography>
+            )}
 
-          {/* Landing pages: clear space between the content and the prompt box
-              once it settles at the bottom of the page. */}
-          {page.kind === "start" || page.kind === "search" || page.kind === "create" ? (
-            <div className="kb2LandingGap" aria-hidden />
-          ) : null}
-          <div ref={contentEndRef} className="kb2ContentEnd" aria-hidden />
-          <div ref={dockRef} className={`kb2ComposerDock${overContent ? " kb2ComposerDock--floating" : ""}`}>
-            <Composer
-              ref={composerRef}
-              compact={compact}
-              onFocusWithinChange={setComposerFocused}
-              value={draft}
-              onChange={setDraft}
-              initiatives={initiatives}
-              attachments={attachments}
-              onAttachmentsChange={setAttachments}
-              onSubmit={send}
-              placeholder={PLACEHOLDERS[page.kind]}
-              label="Prompt"
-            />
-          </div>
-
-          {/* Landing pages end with room below the prompt box, so scrolling to
-              the bottom leaves it in the middle of the screen. */}
-          {page.kind === "start" || page.kind === "search" || page.kind === "create" ? (
-            <div className="kb2Tail">
-              {page.kind === "start" ? <Starters starters={START_STARTERS} onPick={pickStarter} /> : null}
-              {page.kind === "search" ? <Starters starters={SEARCH_STARTERS} onPick={pickStarter} /> : null}
-              {page.kind === "create" ? <Starters starters={CREATE_STARTERS} onPick={pickStarter} /> : null}
+            {/* Landing pages: clear space between the content and the prompt box
+                once it settles at the bottom of the page. */}
+            {page.kind === "start" || page.kind === "search" || page.kind === "create" ? (
+              <div className="kb2LandingGap" aria-hidden />
+            ) : null}
+            <div ref={contentEndRef} className="kb2ContentEnd" aria-hidden />
+            <div ref={dockRef} className={`kb2ComposerDock${overContent ? " kb2ComposerDock--floating" : ""}`}>
+              <Composer
+                ref={composerRef}
+                compact={compact}
+                onFocusWithinChange={setComposerFocused}
+                value={draft}
+                onChange={setDraft}
+                initiatives={initiatives}
+                attachments={attachments}
+                onAttachmentsChange={setAttachments}
+                onSubmit={send}
+                placeholder={PLACEHOLDERS[page.kind]}
+                label="Prompt"
+              />
             </div>
-          ) : null}
-        </div>
-      </div>
 
-      {activeChat && !drawer ? <ArtifactPeek artifacts={chatArtifacts} onOpen={() => setDrawer({ mode: "list" })} /> : null}
-      <ArtifactDrawer
-        state={activeChat ? drawer : null}
-        artifacts={chatArtifacts}
-        onStateChange={setDrawer}
-        onClose={closeDrawer}
-        onChange={(next) => setArtifacts((current) => current.map((a) => (a.id === next.id ? next : a)))}
-        onAddToPrompt={(artifact) =>
-          addContext({ id: `file:${artifact.id}`, label: `${artifact.title} (${KIND_LABELS[artifact.kind]})`, kind: "file" })
-        }
-      />
-    </main>
+            {/* Landing pages end with room below the prompt box, so scrolling to
+                the bottom leaves it in the middle of the screen. */}
+            {page.kind === "start" || page.kind === "search" || page.kind === "create" ? (
+              <div className="kb2Tail">
+                {page.kind === "start" ? <Starters starters={START_STARTERS} onPick={pickStarter} /> : null}
+                {page.kind === "search" ? <Starters starters={SEARCH_STARTERS} onPick={pickStarter} /> : null}
+                {page.kind === "create" ? <Starters starters={CREATE_STARTERS} onPick={pickStarter} /> : null}
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {activeChat && !drawer ? <ArtifactPeek artifacts={chatArtifacts} onOpen={() => setDrawer({ mode: "list" })} /> : null}
+        <ArtifactDrawer
+          state={activeChat ? drawer : null}
+          artifacts={chatArtifacts}
+          onStateChange={setDrawer}
+          onClose={closeDrawer}
+          onChange={(next) => setArtifacts((current) => current.map((a) => (a.id === next.id ? next : a)))}
+          onAddToPrompt={(artifact) =>
+            addContext({ id: `file:${artifact.id}`, label: `${artifact.title} (${KIND_LABELS[artifact.kind]})`, kind: "file" })
+          }
+        />
+      </main>
+    </ShareProvider>
   );
 }
 

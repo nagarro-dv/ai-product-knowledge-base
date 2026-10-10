@@ -8,7 +8,6 @@ import {
   Frame,
   MessageSquare,
   NotebookText,
-  Plus,
   Settings2,
   FileText,
   TrendingDown,
@@ -19,6 +18,10 @@ import { DsTypography } from "../components/ds/DsTypography";
 import { SourceMark } from "../knowledge/SourceMark";
 import { sourceById } from "../knowledge/sources";
 import { SourceStack, Sparkline } from "./Composer";
+import { riceFor } from "./rice";
+import { RiceScore } from "./RiceScore";
+import { SendToJpdButton, ShareActions } from "./ShareMenu";
+import { shareInitiative, shareMetric, shareSignal } from "./sharing";
 import { Tip } from "./Tip";
 import {
   AGENT_RUNS,
@@ -62,7 +65,8 @@ export function StartPage({
   onTrackedMetricsChange: (ids: string[]) => void;
   actions: StartActions;
 }) {
-  const proposed = initiatives.filter((i) => i.stage === "proposed");
+  // Highest RICE score first.
+  const proposed = initiatives.filter((i) => i.stage === "proposed").sort((a, b) => riceFor(b).score - riceFor(a).score);
   return (
     <div className="kb2Start">
       <header className="kb2PageHeader">
@@ -162,7 +166,7 @@ function ProposalCard({ proposals, actions }: { proposals: Initiative[]; actions
         </DsTypography>
         <div className="kb2Meta">
           <span className="kb2Tag">{initiative.theme}</span>
-          <ConfidenceMeter value={initiative.confidence} />
+          <RiceScore initiative={initiative} />
         </div>
         <div className="kb2Meta">
           <SourceStack ids={initiative.evidence.map((e) => e.source)} />
@@ -170,19 +174,21 @@ function ProposalCard({ proposals, actions }: { proposals: Initiative[]; actions
             {initiative.evidence.length} sources · by {initiative.origin}
           </span>
         </div>
+        <div className="kb2Meta">
+          <SendToJpdButton item={shareInitiative(initiative)} sentKey={initiative.jpdKey} />
+        </div>
       </div>
 
       <div className="kb2Card__actions">
         <button type="button" className="kb2Button kb2Button--primary" onClick={() => actions.startInitiative(initiative.id)}>
           Start initiative
         </button>
-        <button
-          type="button"
-          className="kb2Button"
-          onClick={() => actions.explore(`What's the full evidence behind “${initiative.title}”, and what would we need to validate first?`, ref)}
-        >
-          Learn more
+        <button type="button" className="kb2Button" onClick={() => actions.addContext(ref)}>
+          Add to prompt
         </button>
+        <span className="kb2Card__actionsEnd">
+          <ShareActions item={shareInitiative(initiative)} variant="icons" />
+        </span>
       </div>
     </article>
   );
@@ -250,17 +256,13 @@ function MetricsCard({
             <button
               type="button"
               className="kb2Button"
-              onClick={() =>
-                actions.explore(`Why did ${focus.label.toLowerCase()} change ${focus.delta} ${focus.period}? What's driving it?`, {
-                  id: `metric:${focus.id}`,
-                  label: focus.label,
-                  kind: "metric",
-                })
-              }
+              onClick={() => actions.addContext({ id: `metric:${focus.id}`, label: focus.label, kind: "metric" })}
             >
-              Learn more
+              Add to prompt
             </button>
-            <AddToPromptButton onClick={() => actions.addContext({ id: `metric:${focus.id}`, label: focus.label, kind: "metric" })} />
+            <span className="kb2Card__actionsEnd">
+              <ShareActions item={shareMetric(focus)} variant="icons" />
+            </span>
           </div>
         </>
       ) : (
@@ -361,7 +363,10 @@ function SignalsCard({ initiatives, actions }: { initiatives: Initiative[]; acti
                     {linked.stage === "proposed" ? "Plan an initiative" : "View initiative"} <ArrowRight size={14} aria-hidden />
                   </button>
                 ) : null}
-                <AddToPromptButton compact onClick={() => actions.addContext(ref)} />
+                <span className="kb2Signal__icons">
+                  <AddToPromptButton onClick={() => actions.addContext(ref)} />
+                  <ShareActions item={shareSignal(signal)} variant="compact" />
+                </span>
               </div>
             </li>
           );
@@ -482,32 +487,14 @@ export function AgentTimeline({ onOpenAgents, onOpenInitiative }: { onOpenAgents
 
 // ── Bits ────────────────────────────────────────────────────────────────────
 
-function AddToPromptButton({ onClick, compact }: { onClick: () => void; compact?: boolean }) {
-  if (compact) {
-    return (
-      <Tip label="Add to prompt">
-        <button type="button" className="kb2IconButton" onClick={onClick} aria-label="Add to prompt">
-          <CirclePlus size={15} aria-hidden />
-        </button>
-      </Tip>
-    );
-  }
+/** Icon-only "add to prompt", for the insight rows. */
+function AddToPromptButton({ onClick }: { onClick: () => void }) {
   return (
-    <button type="button" className="kb2Button kb2Button--ghost" onClick={onClick}>
-      <Plus size={14} aria-hidden />
-      Add to prompt
-    </button>
-  );
-}
-
-function ConfidenceMeter({ value }: { value: number }) {
-  return (
-    <span className="kb2Confidence" title="How strongly the evidence supports this">
-      <span className="kb2Confidence__bar" aria-hidden>
-        <span style={{ width: `${value}%` }} />
-      </span>
-      <span className="kb2Small">{value}% confidence</span>
-    </span>
+    <Tip label="Add to prompt">
+      <button type="button" className="kb2IconButton" onClick={onClick} aria-label="Add to prompt">
+        <CirclePlus size={15} aria-hidden />
+      </button>
+    </Tip>
   );
 }
 

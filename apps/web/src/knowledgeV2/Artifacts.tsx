@@ -27,6 +27,8 @@ import {
   type FigmaArtifact,
   type JiraArtifact,
 } from "./artifactData";
+import { ShareActions } from "./ShareMenu";
+import { shareArtifact } from "./sharing";
 import { Tip } from "./Tip";
 import "./Artifacts.css";
 
@@ -263,6 +265,7 @@ export function ArtifactDrawer({
               {viewing ? current.title : `Files in this chat (${artifacts.length})`}
             </DsTypography>
           </div>
+          {viewing ? <ShareActions item={shareArtifact(current)} variant="icons" /> : null}
           {viewing ? (
             <Tip label="Add to prompt">
               <button type="button" className="kb2IconButton" aria-label="Add to prompt" onClick={() => onAddToPrompt(current)}>
