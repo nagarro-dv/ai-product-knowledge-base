@@ -10,6 +10,7 @@ import { IntegrationsRouter } from './integrationsRouter.js';
 import { ProposalsRouter } from './proposalsRouter.js';
 import { StandardsRouter } from './standardsRouter.js';
 import { QaRouter } from './qaRouter.js';
+import { ProductDiscoveryRouter } from './productDiscoveryRouter.js';
 import {
   buildProvidersPayload,
   connectPersonalKey,
@@ -126,6 +127,8 @@ const proposals = new ProposalsRouter(repoRoot, integrations.getRepository());
 const standards = new StandardsRouter();
 // /api/agent/qa/static — QA mode's file-content checks, read from the connected repo.
 const qa = new QaRouter(() => integrations.resolveJobCwd());
+// /api/product-discovery/* — sends initiatives to Jira Product Discovery as ideas (JPD_* in .env).
+const productDiscovery = new ProductDiscoveryRouter([appEnvPath, repoEnvPath]);
 
 function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
   res.statusCode = statusCode;
@@ -405,6 +408,11 @@ async function bootstrap() {
 
     // QA mode's static file-content checks. Returns true once handled.
     if (await qa.handle(req, res, pathname, req.method)) {
+      return;
+    }
+
+    // Sending initiatives to Jira Product Discovery as ideas. Returns true once handled.
+    if (await productDiscovery.handle(req, res, pathname, req.method)) {
       return;
     }
 

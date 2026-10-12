@@ -1,4 +1,4 @@
-import { Check, Copy, Download, Ellipsis, FileText, Link2, Mail, Printer, Share, X, type LucideIcon } from "lucide-react";
+import { Check, Copy, Download, Ellipsis, ExternalLink, FileText, Link2, Mail, Printer, Share, X, type LucideIcon } from "lucide-react";
 import {
   createContext,
   useCallback,
@@ -15,8 +15,9 @@ import { computeAnchoredPosition, type PopoverPosition } from "../accelerator/po
 import { DsTypography } from "../components/ds/DsTypography";
 import { SourceMark } from "../knowledge/SourceMark";
 import { sourceById } from "../knowledge/sources";
-import { keyResult } from "./data";
-import { IMPACT_LABELS, riceFor } from "./rice";
+import { jpdFieldsFor, type JpdFieldValue } from "./jpdFields";
+import { createJpdIdea, fetchJpdConnection, type JpdConnection, type JpdIdea } from "./productDiscovery";
+import { riceFor } from "./rice";
 import { ImpactBadge } from "./RiceScore";
 import { slugify, toMarkdown, type Shareable } from "./sharing";
 import { Tip } from "./Tip";
@@ -25,9 +26,10 @@ import "./ShareMenu.css";
 /*
  * Sharing out of the knowledge base. A Share menu sends to Slack, Microsoft
  * Teams or Jira Product Discovery through a compose dialog; a ⋯ menu holds
- * the rest (copy, download, print/PDF, email, Confluence, Notion). Nothing
- * is really sent — the prototype has no integrations — but the dialog and
- * the summary it carries are the real thing, and downloads, copying and
+ * the rest (copy, download, print/PDF, email, Confluence, Notion). Sending
+ * to Product Discovery creates a real idea when the agent server has a Jira
+ * API token (productDiscovery.ts); everything else is a demo, but the dialog
+ * and the summary it carries are the real thing, and downloads, copying and
  * email do work.
  */
 
@@ -57,11 +59,13 @@ const DESTINATIONS: Record<Destination, { label: string; source: string; targets
   },
 };
 
-type Toast = { id: number; message: string };
+/** An optional link on a toast, e.g. to open what was just created. */
+type ToastAction = { label: string; href: string };
+type Toast = { id: number; message: string; action?: ToastAction };
 
 type ShareContextValue = {
   openDialog: (item: Shareable, destination: Destination) => void;
-  notify: (message: string) => void;
+  notify: (message: string, action?: ToastAction) => void;
 };
 
 const ShareContext = createContext<ShareContextValue | null>(null);
@@ -73,6 +77,8 @@ export function useShare(): ShareContextValue {
 }
 
 let nextKey = 142;
+/** Links to ideas really created in Product Discovery, by key (demo keys have none). */
+const jpdLinks = new Map<string, string>();
 let toastId = 0;
 
 /**
@@ -89,10 +95,11 @@ export function ShareProvider({
   const [dialog, setDialog] = useState<{ item: Shareable; destination: Destination } | null>(null);
   const [toasts, setToasts] = useState<Toast[]>([]);
 
-  const notify = useCallback((message: string) => {
+  const notify = useCallback((message: string, action?: ToastAction) => {
     const id = toastId++;
-    setToasts((current) => [...current, { id, message }]);
-    window.setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), 4200);
+    setToasts((current) => [...current, { id, message, action }]);
+    // Toasts with a link stay longer, so there's time to use it.
+    window.setTimeout(() => setToasts((current) => current.filter((t) => t.id !== id)), action ? 9000 : 4200);
   }, []);
 
   const value = useMemo<ShareContextValue>(
@@ -108,13 +115,19 @@ export function ShareProvider({
           item={dialog.item}
           destination={dialog.destination}
           onClose={() => setDialog(null)}
-          onSent={(target) => {
+          onSent={(target, idea) => {
             const { item, destination } = dialog;
             setDialog(null);
             if (destination === "jpd") {
-              const key = `PD-${nextKey++}`;
+              const key = idea?.key ?? `PD-${nextKey++}`;
+              if (idea) jpdLinks.set(idea.key, idea.url);
               onSentToJpd(item, key);
-              notify(`Created ${key} in ${target} — demo, nothing left this browser.`);
+              notify(
+                idea
+                  ? `Created ${key} in ${target}${idea.skipped.length ? ` — left out: ${idea.skipped.map((s) => s.name).join(", ")}` : ""}.`
+                  : `Created ${key} in ${target} — demo, nothing left this browser.`,
+                idea ? { label: "Open in Jira", href: idea.url } : undefined,
+              );
             } else {
               notify(`Shared to ${target} — demo, nothing left this browser.`);
             }
@@ -127,6 +140,12 @@ export function ShareProvider({
             <div key={toast.id} className="kb2Toast">
               <Check size={15} aria-hidden />
               {toast.message}
+              {toast.action ? (
+                <a className="kb2Toast__action" href={toast.action.href} target="_blank" rel="noopener noreferrer">
+                  {toast.action.label}
+                  <ExternalLink size={13} aria-hidden />
+                </a>
+              ) : null}
             </div>
           ))}
         </div>,
@@ -364,17 +383,37 @@ export function ShareActions({ item, variant = "full" }: { item: Shareable; vari
 export function JpdStatus({ sentKey, size = "md" }: { sentKey?: string; size?: "md" | "sm" }) {
   const { notify } = useShare();
   if (!sentKey) return null;
+  const url = jpdLinks.get(sentKey);
   return (
     <button
       type="button"
       className="kb2JpdChip"
-      onClick={() => notify(`${sentKey} would open in Jira Product Discovery — demo.`)}
+      onClick={() =>
+        url ? window.open(url, "_blank", "noopener,noreferrer") : notify(`${sentKey} would open in Jira Product Discovery — demo.`)
+      }
       title="Open in Jira Product Discovery"
     >
       <SourceMark source={sourceById("jira")} size={13} />
       {size === "sm" ? `Discovery · ${sentKey}` : `In Product Discovery · ${sentKey}`}
     </button>
   );
+}
+
+/** A Product Discovery field value as it'll read there: ratings as five dots, like JPD shows them. */
+function JpdFieldDisplay({ field }: { field: JpdFieldValue }) {
+  if (field.kind === "rating") {
+    const n = Number(field.value);
+    return (
+      <strong className="kb2JpdRating" aria-label={`${n} out of 5`}>
+        {[1, 2, 3, 4, 5].map((i) => (
+          <span key={i} data-on={i <= n} aria-hidden />
+        ))}
+        <span className="kb2Muted">{n} / 5</span>
+      </strong>
+    );
+  }
+  if (field.kind === "percent") return <strong>{field.value}%</strong>;
+  return <strong className="kb2JpdFields__text">{[field.value].flat().join(", ")}</strong>;
 }
 
 // ── Compose dialog ──────────────────────────────────────────────────────────
@@ -388,10 +427,17 @@ function ShareDialog({
   item: Shareable;
   destination: Destination;
   onClose: () => void;
-  onSent: (target: string) => void;
+  /** `idea` is set when it was really created in Product Discovery. */
+  onSent: (target: string, idea?: JpdIdea) => void;
 }) {
   const config = DESTINATIONS[destination];
   const [target, setTarget] = useState(config.targets[0]!);
+  // Product Discovery: whether the agent server can create real ideas (undefined while checking).
+  const [connection, setConnection] = useState<JpdConnection | null | undefined>(destination === "jpd" ? undefined : null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const live = destination === "jpd" && connection?.configured === true;
+  const liveTarget = live ? `${connection.projectName ?? connection.projectKey} (${connection.projectKey})` : null;
   const [message, setMessage] = useState(
     destination === "jpd" ? item.summary : `${item.label}: ${item.title}\n\n${item.summary}\n\n${item.link}`,
   );
@@ -406,8 +452,43 @@ function ShareDialog({
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  useEffect(() => {
+    if (destination !== "jpd") return;
+    let cancelled = false;
+    void fetchJpdConnection().then((result) => {
+      if (!cancelled) setConnection(result);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [destination]);
+
   const rice = item.initiative ? riceFor(item.initiative) : null;
-  const kr = item.initiative ? keyResult(item.initiative.rice.okr) : undefined;
+  // The idea's Product Discovery fields — only the ones that space has, once we know.
+  const available = connection?.fields ? new Set(connection.fields.map((f) => f.name.toLowerCase())) : null;
+  const jpdFields = item.initiative
+    ? jpdFieldsFor(item.initiative).filter((f) => !available || available.has(f.name.toLowerCase()))
+    : [];
+
+  const send = async () => {
+    if (!live) {
+      onSent(target);
+      return;
+    }
+    setSending(true);
+    setSendError(null);
+    try {
+      const idea = await createJpdIdea({
+        title: item.title,
+        description: message,
+        fields: jpdFields.map(({ name, value }) => ({ name, value })),
+      });
+      onSent(liveTarget!, idea);
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : "Couldn't create the idea.");
+      setSending(false);
+    }
+  };
 
   return createPortal(
     <div className="kb2DialogScrim" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
@@ -432,11 +513,17 @@ function ShareDialog({
         <div className="kb2Dialog__body">
           <label className="kb2Field">
             <span className="kb2Field__label">{config.targetLabel}</span>
-            <select value={target} onChange={(event) => setTarget(event.target.value)} className="kb2Field__control">
-              {config.targets.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
+            {liveTarget ? (
+              <select value={liveTarget} disabled className="kb2Field__control">
+                <option>{liveTarget}</option>
+              </select>
+            ) : (
+              <select value={target} onChange={(event) => setTarget(event.target.value)} className="kb2Field__control">
+                {config.targets.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            )}
           </label>
 
           {destination === "jpd" ? (
@@ -453,40 +540,12 @@ function ShareDialog({
                       <ImpactBadge score={rice.impactScore} /> / 100 · {rice.confidence.label} confidence
                     </strong>
                   </div>
-                  <div className="kb2JpdFields__row">
-                    <span>Reach</span>
-                    <strong>
-                      {rice.reach.toLocaleString("en-GB")} {item.initiative.rice.reachUnit}
-                    </strong>
-                  </div>
-                  <div className="kb2JpdFields__row">
-                    <span>Impact</span>
-                    <strong>
-                      {rice.impact} · {IMPACT_LABELS[item.initiative.rice.impact]}
-                    </strong>
-                  </div>
-                  <div className="kb2JpdFields__row">
-                    <span>Confidence</span>
-                    <strong>
-                      {rice.confidence.percent}% · {rice.confidence.label}
-                    </strong>
-                  </div>
-                  <div className="kb2JpdFields__row">
-                    <span>Effort</span>
-                    <strong>{rice.effort} person-weeks</strong>
-                  </div>
-                  <div className="kb2JpdFields__row">
-                    <span>RICE score</span>
-                    <strong>{rice.score.toLocaleString("en-GB")}</strong>
-                  </div>
-                  {kr ? (
-                    <div className="kb2JpdFields__row">
-                      <span>Goal</span>
-                      <strong>
-                        {kr.id} · {kr.text}
-                      </strong>
+                  {jpdFields.map((field) => (
+                    <div key={field.name} className="kb2JpdFields__row">
+                      <span>{field.name}</span>
+                      <JpdFieldDisplay field={field} />
                     </div>
-                  ) : null}
+                  ))}
                 </>
               ) : (
                 <div className="kb2JpdFields__row">
@@ -506,18 +565,43 @@ function ShareDialog({
               rows={destination === "jpd" ? 8 : 10}
             />
           </label>
-          <p className="kb2Dialog__note">
-            <FileText size={13} aria-hidden />
-            Demo: the message and fields are real, but nothing is sent from this prototype.
-          </p>
+          {destination === "jpd" && connection === undefined ? (
+            <p className="kb2Dialog__note">
+              <FileText size={13} aria-hidden />
+              Checking the connection to Product Discovery…
+            </p>
+          ) : live ? (
+            <p className="kb2Dialog__note kb2Dialog__note--live">
+              <Check size={13} aria-hidden />
+              Connected — this creates a real idea in {connection.projectName ?? connection.projectKey} on {connection.site}.
+            </p>
+          ) : (
+            <p className="kb2Dialog__note">
+              <FileText size={13} aria-hidden />
+              {destination === "jpd" && connection?.error
+                ? `Not connected: ${connection.error} Sending stays a demo until that's fixed.`
+                : "Demo: the message and fields are real, but nothing is sent from this prototype."}
+            </p>
+          )}
+          {sendError ? (
+            <p className="kb2Dialog__note kb2Dialog__note--error" role="alert">
+              <X size={13} aria-hidden />
+              {sendError}
+            </p>
+          ) : null}
         </div>
 
         <footer className="kb2Dialog__footer">
           <button type="button" className="kb2Button" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="kb2Button kb2Button--primary" onClick={() => onSent(target)}>
-            {config.send}
+          <button
+            type="button"
+            className="kb2Button kb2Button--primary"
+            disabled={sending || (destination === "jpd" && connection === undefined)}
+            onClick={() => void send()}
+          >
+            {sending ? "Sending…" : config.send}
           </button>
         </footer>
       </div>
