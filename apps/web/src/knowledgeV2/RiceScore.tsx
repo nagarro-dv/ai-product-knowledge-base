@@ -5,6 +5,7 @@ import { computeAnchoredPosition, type PopoverPosition } from "../accelerator/po
 import { DsTypography } from "../components/ds/DsTypography";
 import { SourceStack } from "./Composer";
 import { keyResult, type Initiative } from "./data";
+import { RollAlways, RollingNumber } from "./RollingNumber";
 import { IMPACT_LABELS, RICE_MIDPOINT, impactBand, riceEquation, riceFor } from "./rice";
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
@@ -38,9 +39,17 @@ export function RiceScore({ initiative, size = "md" }: { initiative: Initiative;
   );
 }
 
-/** The 0–100 impact score in Jira Product Discovery's colours (green 80+, yellow 50–79, grey below 50). */
+/**
+ * The 0–100 impact score in Jira Product Discovery's colours (green 80+,
+ * yellow 50–79, grey below 50). Its digits roll into place when it appears or
+ * changes, to show it's a live number (RollingNumber).
+ */
 export function ImpactBadge({ score }: { score: number }) {
-  return <span className={`kb2ImpactBadge kb2ImpactBadge--${impactBand(score)}`}>{score}</span>;
+  return (
+    <span className={`kb2ImpactBadge kb2ImpactBadge--${impactBand(score)}`}>
+      <RollingNumber value={score} />
+    </span>
+  );
 }
 
 function RiceBreakdown({ initiative, anchor, onClose }: { initiative: Initiative; anchor: HTMLElement; onClose: () => void }) {
@@ -87,7 +96,12 @@ function RiceBreakdown({ initiative, anchor, onClose }: { initiative: Initiative
         </DsTypography>
         <p className="kb2RiceBreakdown__impact">
           <span>
-            Impact score <ImpactBadge score={rice.impactScore} /> / 100
+            {/* Rolls every time the popover opens, even on a page whose scores have already rolled. */}
+            Impact score{" "}
+            <RollAlways>
+              <ImpactBadge score={rice.impactScore} />
+            </RollAlways>{" "}
+            / 100
           </span>
           <span className="kb2Muted">
             RICE {fmt(rice.score)} ÷ ({fmt(rice.score)} + {RICE_MIDPOINT}) × 100

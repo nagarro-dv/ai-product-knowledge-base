@@ -37,6 +37,8 @@ import {
 } from "./data";
 
 export type StartActions = {
+  /** Open an initiative's full details in the right-hand drawer. */
+  openInitiative: (id: string) => void;
   /** Put something from a card into the prompt box as context. */
   addContext: (ref: ContextRef) => void;
   /** Pre-fill the prompt box with a question about something, with it attached. */
@@ -159,7 +161,9 @@ function ProposalCard({ proposals, actions }: { proposals: Initiative[]; actions
 
       <div className="kb2Card__body">
         <DsTypography as="h3" variant="paragraph-bold" className="kb2Card__title">
-          {initiative.title}
+          <button type="button" className="kb2TitleLink" onClick={() => actions.openInitiative(initiative.id)}>
+            {initiative.title}
+          </button>
         </DsTypography>
         <DsTypography as="p" variant="paragraph-small" className="kb2Muted kb2Clamp3">
           {initiative.summary}

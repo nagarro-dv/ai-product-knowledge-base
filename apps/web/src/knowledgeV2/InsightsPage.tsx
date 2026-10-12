@@ -14,6 +14,8 @@ export type InsightActions = {
   explore: (prompt: string, ref: ContextRef) => void;
   startInitiative: (id: string) => void;
   openCreate: () => void;
+  /** Open an initiative's full details in the right-hand drawer. */
+  openInitiative: (id: string) => void;
 };
 
 function ToneIcon({ tone }: { tone: Signal["tone"] }) {
@@ -204,12 +206,8 @@ function InsightDetail({ signal, initiatives, actions }: { signal: Signal; initi
                 <JpdStatus sentKey={linked.jpdKey} />
               </span>
             </span>
-            <button
-              type="button"
-              className="kb2Button kb2Button--small"
-              onClick={() => (linked.stage === "proposed" ? actions.startInitiative(linked.id) : actions.openCreate())}
-            >
-              {linked.stage === "proposed" ? "Plan an initiative" : "View initiative"} <ArrowRight size={13} aria-hidden />
+            <button type="button" className="kb2Button kb2Button--small" onClick={() => actions.openInitiative(linked.id)}>
+              View initiative <ArrowRight size={13} aria-hidden />
             </button>
           </div>
         </section>

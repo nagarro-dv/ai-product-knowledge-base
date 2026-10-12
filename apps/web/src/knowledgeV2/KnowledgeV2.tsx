@@ -20,8 +20,10 @@ import {
   type Message,
   type Starter,
 } from "./data";
+import { InitiativeDrawer, type InitiativeDrawerActions } from "./InitiativeDrawer";
 import { InsightsPage } from "./InsightsPage";
 import { AgentsPage, ChatPage, CreatePage, SearchPage } from "./OtherPages";
+import { RollOnce } from "./RollingNumber";
 import { ShareProvider } from "./ShareMenu";
 import { StartPage, type StartActions } from "./StartPage";
 // Same canvas, composer and source chips as v1 — v2 changes what surrounds them.
@@ -84,6 +86,8 @@ export function KnowledgeV2() {
   const fullDockHeight = useRef(FALLBACK_DOCK_HEIGHT);
   const [artifacts, setArtifacts] = useState<Artifact[]>(INITIAL_ARTIFACTS);
   const [drawer, setDrawer] = useState<DrawerState | null>(null);
+  // The initiative open in the right-hand drawer, from Start, Create or Insights.
+  const [openInitiativeId, setOpenInitiativeId] = useState<string | null>(null);
   const [overContent, setOverContent] = useState(false);
   // Scrolled away from the top: content fades out under the top edge.
   const [scrolled, setScrolled] = useState(false);
@@ -104,6 +108,9 @@ export function KnowledgeV2() {
       const roomForFullBox = main.getBoundingClientRect().bottom - fullDockHeight.current;
       setOverContent(end.getBoundingClientRect().top > roomForFullBox + 1);
       setScrolled(main.scrollTop > 2);
+      // The bottom fade behind the box spans the whole main column.
+      const dock = dockRef.current;
+      if (dock) main.style.setProperty("--kb2-dock-bleed", `${Math.max(0, (main.clientWidth - dock.offsetWidth) / 2)}px`);
     };
     update();
     main.addEventListener("scroll", update, { passive: true });
@@ -124,6 +131,7 @@ export function KnowledgeV2() {
   const go = useCallback((next: Page) => {
     setPage(next);
     setDrawer(null);
+    setOpenInitiativeId(null);
     mainRef.current?.scrollTo({ top: 0 });
   }, []);
 
@@ -199,7 +207,39 @@ export function KnowledgeV2() {
     }, 900);
   };
 
+  const initiativeRef = (initiative: { id: string; title: string }): ContextRef => ({
+    id: `initiative:${initiative.id}`,
+    label: initiative.title,
+    kind: "initiative",
+  });
+
+  const initiativeActions: InitiativeDrawerActions = {
+    advance,
+    refine: (initiative) => {
+      setOpenInitiativeId(null);
+      prefill(
+        `Help me refine “${initiative.title}”: what's missing from the case for it, what would raise confidence, and what should the next step be?`,
+        initiativeRef(initiative),
+      );
+    },
+    askSource: (initiative, sourceId) => {
+      setOpenInitiativeId(null);
+      prefill(`What does ${sourceById(sourceId).label} tell us about “${initiative.title}”? Show the details behind it.`, initiativeRef(initiative));
+      setAttachments((current) =>
+        current.some((a) => a.kind === "source" && a.id === sourceId) ? current : [...current, { kind: "source", id: sourceId }],
+      );
+    },
+    openInsight: (id) => go({ kind: "insights", id }),
+    addNote: (id, text) =>
+      setInitiatives((current) =>
+        current.map((i) =>
+          i.id === id ? { ...i, updated: "Just now", notes: [...(i.notes ?? []), { id: uid("note"), text, added: "Just now" }] } : i,
+        ),
+      ),
+  };
+
   const startActions: StartActions = {
+    openInitiative: setOpenInitiativeId,
     addContext,
     explore: prefill,
     startInitiative: (id) => {
@@ -216,6 +256,7 @@ export function KnowledgeV2() {
   const activeChat = page.kind === "chat" ? chats.find((c) => c.id === page.id) : undefined;
   const chatArtifacts = activeChat ? artifacts.filter((a) => a.chatId === activeChat.id) : [];
   const closeDrawer = useCallback(() => setDrawer(null), []);
+  const closeInitiative = useCallback(() => setOpenInitiativeId(null), []);
   const scopedSourceIds = new Set(attachments.filter((a) => a.kind === "source").map((a) => a.id));
 
   return (
@@ -267,57 +308,54 @@ export function KnowledgeV2() {
 
         <div className="kb2Main" ref={mainRef} data-scrolled={scrolled}>
           <div className={`kb2Main__inner kb2Main__inner--${page.kind}`}>
-            {page.kind === "start" ? (
-              <StartPage
-                initiatives={initiatives}
-                trackedMetricIds={trackedMetricIds}
-                onTrackedMetricsChange={setTrackedMetricIds}
-                actions={startActions}
-              />
-            ) : page.kind === "search" ? (
-              <SearchPage
-                scopedSourceIds={scopedSourceIds}
-                onToggleSource={toggleSource}
-                onSearchTopic={(topic) => prefill(`What's new about ${topic.toLowerCase()} this week? Group what you find by source.`)}
-              />
-            ) : page.kind === "create" ? (
-              <CreatePage
-                initiatives={initiatives}
-                onAdvance={advance}
-                onExplore={(initiative) =>
-                  prefill(`Summarize where “${initiative.title}” stands and what the next step should be.`, {
-                    id: `initiative:${initiative.id}`,
-                    label: initiative.title,
-                    kind: "initiative",
-                  })
-                }
-                onPickTemplate={(template) =>
-                  prefill(template.prompt, { id: `template:${template.id}`, label: template.label, kind: "template" })
-                }
-              />
-            ) : page.kind === "insights" ? (
-              <InsightsPage
-                initiatives={initiatives}
-                selectedId={page.id}
-                // Selecting within the page shouldn't scroll back to the top.
-                onSelect={(id) => setPage({ kind: "insights", id })}
-                onBack={() => go({ kind: "start" })}
-                actions={startActions}
-              />
-            ) : page.kind === "agents" ? (
-              <AgentsPage onBack={() => go({ kind: "start" })} onOpenCreate={() => go({ kind: "create" })} />
-            ) : activeChat ? (
-              <ChatPage
-                chat={activeChat}
-                pending={pendingChatId === activeChat.id}
-                artifacts={chatArtifacts}
-                onOpenArtifact={(id) => setDrawer({ mode: "view", id, fromList: false })}
-              />
-            ) : (
-              <DsTypography as="p" variant="paragraph-small">
-                That chat no longer exists.
-              </DsTypography>
-            )}
+            {/* Impact scores roll in on a page's first visit only. */}
+            <RollOnce key={page.kind} scope={page.kind}>
+              {page.kind === "start" ? (
+                <StartPage
+                  initiatives={initiatives}
+                  trackedMetricIds={trackedMetricIds}
+                  onTrackedMetricsChange={setTrackedMetricIds}
+                  actions={startActions}
+                />
+              ) : page.kind === "search" ? (
+                <SearchPage
+                  scopedSourceIds={scopedSourceIds}
+                  onToggleSource={toggleSource}
+                  onSearchTopic={(topic) => prefill(`What's new about ${topic.toLowerCase()} this week? Group what you find by source.`)}
+                />
+              ) : page.kind === "create" ? (
+                <CreatePage
+                  initiatives={initiatives}
+                  onAdvance={advance}
+                  onOpen={(initiative) => setOpenInitiativeId(initiative.id)}
+                  onPickTemplate={(template) =>
+                    prefill(template.prompt, { id: `template:${template.id}`, label: template.label, kind: "template" })
+                  }
+                />
+              ) : page.kind === "insights" ? (
+                <InsightsPage
+                  initiatives={initiatives}
+                  selectedId={page.id}
+                  // Selecting within the page shouldn't scroll back to the top.
+                  onSelect={(id) => setPage({ kind: "insights", id })}
+                  onBack={() => go({ kind: "start" })}
+                  actions={startActions}
+                />
+              ) : page.kind === "agents" ? (
+                <AgentsPage onBack={() => go({ kind: "start" })} onOpenCreate={() => go({ kind: "create" })} />
+              ) : activeChat ? (
+                <ChatPage
+                  chat={activeChat}
+                  pending={pendingChatId === activeChat.id}
+                  artifacts={chatArtifacts}
+                  onOpenArtifact={(id) => setDrawer({ mode: "view", id, fromList: false })}
+                />
+              ) : (
+                <DsTypography as="p" variant="paragraph-small">
+                  That chat no longer exists.
+                </DsTypography>
+              )}
+            </RollOnce>
 
             {/* Landing pages: clear space between the content and the prompt box
                 once it settles at the bottom of the page. */}
@@ -354,6 +392,12 @@ export function KnowledgeV2() {
         </div>
 
         {activeChat && !drawer ? <ArtifactPeek artifacts={chatArtifacts} onOpen={() => setDrawer({ mode: "list" })} /> : null}
+        <InitiativeDrawer
+          initiativeId={openInitiativeId}
+          initiatives={initiatives}
+          onClose={closeInitiative}
+          actions={initiativeActions}
+        />
         <ArtifactDrawer
           state={activeChat ? drawer : null}
           artifacts={chatArtifacts}

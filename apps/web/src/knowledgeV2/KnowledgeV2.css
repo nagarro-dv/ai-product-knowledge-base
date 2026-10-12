@@ -175,6 +175,8 @@
   margin-top: auto;
   padding-bottom: 24px;
   background: linear-gradient(to top, var(--ds-general-color-background) 24px, transparent 24px);
+  /* Its own layer, so the fade behind (::before) stays under the box. */
+  isolation: isolate;
 }
 
 /* Zero-height marker where the page content ends; KnowledgeV2 watches it to
@@ -192,12 +194,35 @@
   transition: box-shadow var(--dur-fast) var(--ease-standard);
 }
 
-/* While floating over content: a wide background-coloured halo, so content
-   fades out as it passes under the box instead of being cut off at its edge. */
-.kb2ComposerDock--floating > .kb2Composer {
-  box-shadow:
-    0 0 48px 40px var(--ds-general-color-background),
-    var(--elev-xs);
+/* While content runs on below the fold, it fades into the background at the
+   bottom edge, mirroring the fade under the top edge: solid under the strip
+   below the box, easing out to nothing 72px above it. Drawn behind the box
+   across the whole main column (not just the content width), and only while
+   floating, so the settled box at the end of the page has nothing behind it. */
+.kb2ComposerDock::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  bottom: 0;
+  /* --kb2-dock-bleed (set by KnowledgeV2) is the gap from the box's column
+     to the main column's edges. */
+  right: calc(-1 * var(--kb2-dock-bleed, 0px));
+  left: calc(-1 * var(--kb2-dock-bleed, 0px));
+  height: calc(100% + 72px);
+  background: linear-gradient(
+    to top,
+    var(--ds-general-color-background) 24px,
+    color-mix(in srgb, var(--ds-general-color-background) 85%, transparent) 45%,
+    color-mix(in srgb, var(--ds-general-color-background) 40%, transparent) 75%,
+    transparent
+  );
+  opacity: 0;
+  transition: opacity 240ms ease-out;
+  pointer-events: none;
+}
+
+.kb2ComposerDock--floating::before {
+  opacity: 1;
 }
 
 /* Compact: one line, just the text and the send button. Same padding as the
@@ -484,6 +509,34 @@
 
 .kb2Tooltip--bottom[data-visible="true"] {
   transform: translate(-50%, 0);
+}
+
+.kb2Tooltip--right {
+  transform: translate(-8px, -50%);
+}
+
+.kb2Tooltip--right[data-visible="true"] {
+  transform: translate(0, -50%);
+}
+
+/* Several lines of explanation rather than a one-word name. */
+.kb2Tooltip--rich {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 320px;
+  padding: 8px 10px;
+  font-weight: 400;
+  line-height: 1.45;
+  white-space: normal;
+}
+
+.kb2Tooltip--rich strong {
+  font-weight: 600;
+}
+
+.kb2Tooltip__muted {
+  opacity: 0.7;
 }
 
 .kb2Trend--up {
@@ -1286,10 +1339,18 @@ button.kb2Timeline__item:hover {
 
 .kb2PipelineCard__main h3 {
   margin: 0;
+  text-decoration: underline transparent;
+  text-underline-offset: 3px;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    text-decoration-color var(--dur-fast) var(--ease-standard);
 }
 
+/* Same hover as the title on Start's suggested initiative (.kb2TitleLink):
+   accent colour and an underline. */
 .kb2PipelineCard__main:hover h3 {
   color: var(--kb2-accent);
+  text-decoration-color: currentColor;
 }
 
 /* Carousel (Carousel.tsx). The track bleeds out of the centred content

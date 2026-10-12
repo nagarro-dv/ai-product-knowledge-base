@@ -1,0 +1,40 @@
+/* RollingNumber (RollingNumber.tsx): each digit is a one-line window onto a
+   vertical strip of digits, which the component scrolls into place. */
+
+.kb2Rolling {
+  display: inline-block;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.kb2Rolling__digits {
+  display: inline-flex;
+}
+
+/* Exactly one line tall, so only the current digit shows. */
+.kb2Rolling__window {
+  display: inline-block;
+  overflow: hidden;
+  height: 1lh;
+  vertical-align: top;
+}
+
+.kb2Rolling__strip {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+}
+
+.kb2Rolling__strip > span {
+  height: 1lh;
+  text-align: center;
+}
+
+.kb2Rolling__sr {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

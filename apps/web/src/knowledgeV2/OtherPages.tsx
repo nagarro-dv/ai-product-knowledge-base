@@ -164,12 +164,13 @@ function useGridColumns(ref: React.RefObject<HTMLElement | null>): number {
 export function CreatePage({
   initiatives,
   onAdvance,
-  onExplore,
+  onOpen,
   onPickTemplate,
 }: {
   initiatives: Initiative[];
   onAdvance: (id: string) => void;
-  onExplore: (initiative: Initiative) => void;
+  /** Open its full details in the right-hand drawer. */
+  onOpen: (initiative: Initiative) => void;
   onPickTemplate: (template: Template) => void;
 }) {
   // Highlights the card that just moved so it can be found in its new column.
@@ -210,7 +211,7 @@ export function CreatePage({
                     key={initiative.id}
                     className={`kb2PipelineCard${justMoved === initiative.id ? " kb2PipelineCard--moved" : ""}`}
                   >
-                    <button type="button" className="kb2PipelineCard__main" onClick={() => onExplore(initiative)}>
+                    <button type="button" className="kb2PipelineCard__main" onClick={() => onOpen(initiative)}>
                       <DsTypography as="h3" variant="paragraph-small-bold">
                         {initiative.title}
                       </DsTypography>

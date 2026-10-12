@@ -8,13 +8,16 @@ const MIN_TOP_ROOM = 44;
 /** Keep in sync with the transition in KnowledgeV2.css. */
 const FADE_MS = 100;
 
-type Placement = { x: number; y: number; side: "top" | "bottom"; label: string };
+type Side = "top" | "bottom" | "right";
+type Placement = { x: number; y: number; side: Side; label: ReactNode; rich: boolean };
 
 /**
  * The tooltip machinery behind <Tip>, for triggers React doesn't render
  * itself (the prompt box's slot chips). `show(anchor, label)` places it above
- * the anchor (below when there's no room), fades it in while it moves 8px
- * outward, and `hide()` fades it back out. Render `tooltip` anywhere.
+ * the anchor (below when there's no room) — or to its right with
+ * `side: "right"` — fades it in while it moves 8px outward, and `hide()`
+ * fades it back out. Render `tooltip` anywhere. `rich` allows several lines
+ * of content (an explanation rather than a name).
  */
 export function useFloatingTip() {
   const [placement, setPlacement] = useState<Placement | null>(null);
@@ -30,11 +33,16 @@ export function useFloatingTip() {
     [],
   );
 
-  const show = useCallback((anchor: Element, label: string) => {
+  const show = useCallback((anchor: Element, label: ReactNode, options: { side?: "right"; rich?: boolean } = {}) => {
     window.clearTimeout(hideTimer.current);
     const rect = anchor.getBoundingClientRect();
-    const side = rect.top > MIN_TOP_ROOM ? "top" : "bottom";
-    setPlacement({ x: rect.left + rect.width / 2, y: side === "top" ? rect.top - GAP : rect.bottom + GAP, side, label });
+    const rich = options.rich ?? false;
+    if (options.side === "right") {
+      setPlacement({ x: rect.right + GAP, y: rect.top + rect.height / 2, side: "right", label, rich });
+    } else {
+      const side = rect.top > MIN_TOP_ROOM ? "top" : "bottom";
+      setPlacement({ x: rect.left + rect.width / 2, y: side === "top" ? rect.top - GAP : rect.bottom + GAP, side, label, rich });
+    }
     // Mount at the start position first, then flip to visible so it transitions.
     window.cancelAnimationFrame(showFrame.current ?? 0);
     showFrame.current = window.requestAnimationFrame(() => setVisible(true));
@@ -51,7 +59,7 @@ export function useFloatingTip() {
     ? createPortal(
         <span
           role="tooltip"
-          className={`kb2Tooltip kb2Tooltip--${placement.side}`}
+          className={`kb2Tooltip kb2Tooltip--${placement.side}${placement.rich ? " kb2Tooltip--rich" : ""}`}
           data-visible={visible}
           style={{ left: placement.x, top: placement.y }}
         >
@@ -71,7 +79,19 @@ export function useFloatingTip() {
  * can't clip it. It fades in while moving 8px away from the trigger — up when
  * it sits above, down when it flips below.
  */
-export function Tip({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
+export function Tip({
+  label,
+  children,
+  className,
+  side,
+  rich,
+}: {
+  label: ReactNode;
+  children: ReactNode;
+  className?: string;
+  side?: "right";
+  rich?: boolean;
+}) {
   const anchorRef = useRef<HTMLSpanElement | null>(null);
   const { show, hide, tooltip } = useFloatingTip();
 
@@ -79,7 +99,7 @@ export function Tip({ label, children, className }: { label: string; children: R
     const anchor = anchorRef.current;
     // Don't cover a menu the trigger has just opened.
     if (!anchor || anchor.querySelector('[aria-expanded="true"]')) return;
-    show(anchor, label);
+    show(anchor, label, { side, rich });
   };
 
   const onFocus = (event: FocusEvent) => {

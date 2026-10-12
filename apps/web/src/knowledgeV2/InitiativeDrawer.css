@@ -1,0 +1,726 @@
+/* ── Initiative drawer ────────────────────────────────────────────────────────
+   The wide drawer (.kb2Drawer--view, Artifacts.css) holding one initiative:
+   a readable column of sections, with the next steps pinned to the bottom. */
+
+/* Card titles that open the drawer: plain text until hovered. */
+.kb2TitleLink {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: underline transparent;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    text-decoration-color var(--dur-fast) var(--ease-standard);
+}
+
+/* Same hover as the Create pipeline card titles: accent colour and an underline. */
+.kb2TitleLink:hover {
+  color: var(--kb2-accent);
+  text-decoration-color: currentColor;
+}
+
+.kb2TitleLink:focus-visible {
+  border-radius: 3px;
+  outline: 2px solid var(--kb2-accent);
+  outline-offset: 2px;
+}
+
+/* One readable column. Sections are spaced well apart (48px) and have no
+   rules between them; space alone groups things, so each section reads as
+   one block. */
+.kb2Initiative {
+  display: flex;
+  flex-direction: column;
+  gap: 48px;
+  padding: 32px 24px 48px;
+  box-sizing: border-box;
+  color: var(--ds-general-color-foreground);
+  font-family: var(--ds-general-typography-font-family-body);
+}
+
+.kb2VisuallyHidden {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Hero: stage and area, the title, the summary, who and when ── */
+.kb2Initiative__hero {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.kb2Initiative__chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.kb2Initiative__title {
+  margin: 0;
+  font-family: var(--ds-general-typography-font-family-heading, inherit);
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  text-wrap: balance;
+}
+
+.kb2Initiative__summary {
+  max-width: 64ch;
+  margin: 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.kb2Initiative__byline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 13px;
+}
+
+.kb2Initiative__byline svg {
+  color: var(--kb2-accent);
+}
+
+/* Stage as a status pill: a dot that fills in as it moves along. */
+.kb2StageBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  padding: 0 10px 0 8px;
+  border-radius: 11px;
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kb2StageBadge__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.kb2StageBadge[data-stage="validating"] {
+  background: color-mix(in srgb, var(--kb2-up) 12%, var(--ds-general-color-canvas));
+  color: var(--kb2-up);
+}
+
+/* ── At a glance: impact score and stage, side by side ── */
+.kb2Initiative__keyFacts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: 14px;
+}
+
+.kb2Initiative__fact {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 24px;
+}
+
+.kb2Initiative__fact + .kb2Initiative__fact {
+  border-left: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+/* The ⓘ belongs to the small label, not the big number, so the two sit on
+   one line at the same size — no optical mismatch with the score. */
+.kb2Initiative__factLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.kb2Initiative__info {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: help;
+}
+
+.kb2Initiative__info:hover,
+.kb2Initiative__info:focus-visible {
+  color: var(--ds-general-color-foreground);
+}
+
+.kb2Initiative__score {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.kb2Initiative__score .kb2ImpactBadge {
+  padding: 2px 10px;
+  border-radius: 8px;
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.kb2Initiative__stageValue {
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.kb2Initiative__stageValue .kb2Muted {
+  font-size: 14px;
+  font-weight: 400;
+}
+
+/* Pipeline stages as a segmented track; done and current are filled. */
+.kb2Initiative__stages {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kb2Initiative__stages li {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ds-general-color-border);
+}
+
+.kb2Initiative__stages li[data-state="done"] {
+  background: color-mix(in srgb, var(--kb2-accent) 40%, var(--ds-general-color-canvas));
+}
+
+.kb2Initiative__stages li[data-state="current"] {
+  background: var(--kb2-accent);
+}
+
+/* ── Sections ── */
+.kb2Initiative__section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.kb2Initiative__sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.kb2Initiative__sectionTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* ── Goal and OKRs ── */
+.kb2Initiative__goal {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.kb2Initiative__goalIcon {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding: 7px;
+  border-radius: 10px;
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+}
+
+.kb2Initiative__krs {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.kb2Initiative__kr {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 20px;
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: 12px;
+}
+
+.kb2KeyResult {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.kb2KeyResult__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.kb2KeyResult__id {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--ds-general-color-muted);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+}
+
+.kb2KeyResult__text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.kb2KeyResult__progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.kb2KeyResult__bar {
+  position: relative;
+  flex: 1 1 auto;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--ds-general-color-muted);
+}
+
+.kb2KeyResult__fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #22a06b;
+}
+
+.kb2KeyResult__bar[data-status="at-risk"] .kb2KeyResult__fill {
+  background: #e2b203;
+}
+
+.kb2KeyResult__bar[data-status="off-track"] .kb2KeyResult__fill {
+  background: #e2483d;
+}
+
+.kb2KeyResult__bar[data-status="missed"] .kb2KeyResult__fill {
+  background: #8590a2;
+}
+
+/* Target marker: a short upright tick through the bar, with a wider
+   invisible hit area so it's easy to hover. */
+.kb2KeyResult__target {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.kb2KeyResult__marker {
+  position: relative;
+  display: block;
+  width: 12px;
+  height: 18px;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.kb2KeyResult__marker::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 50%;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--ds-general-color-foreground);
+  box-shadow: 0 0 0 2px var(--ds-general-color-canvas);
+  transform: translateX(-50%);
+  transition: transform var(--dur-fast) var(--ease-standard);
+}
+
+.kb2KeyResult__marker:hover::after,
+.kb2KeyResult__marker:focus-visible::after {
+  transform: translateX(-50%) scaleY(1.2);
+}
+
+.kb2KeyResult__marker:focus-visible {
+  box-shadow: 0 0 0 2px var(--kb2-accent);
+}
+
+.kb2KeyResult__numbers {
+  flex-shrink: 0;
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb2KeyResult__tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.kb2KeyResult__tag {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.kb2KeyResult__tag--accent {
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+  font-weight: 600;
+}
+
+/* Key result status, in Jira's lozenge colours. */
+.kb2OkrStatus {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.kb2OkrStatus[data-status="on-track"],
+.kb2OkrStatus[data-status="met"] {
+  background: #baf3db;
+  color: #164b35;
+}
+
+.kb2OkrStatus[data-status="at-risk"] {
+  background: #f8e6a0;
+  color: #533f04;
+}
+
+.kb2OkrStatus[data-status="off-track"] {
+  background: #ffd5d2;
+  color: #5d1f1a;
+}
+
+.kb2OkrStatus[data-status="missed"] {
+  background: #dcdfe4;
+  color: #2c3e5d;
+}
+
+/* ── All OKRs view ── */
+.kb2OkrQuarter {
+  padding: 1px 8px;
+  border-radius: 10px;
+  background: var(--ds-general-color-muted);
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 18px;
+}
+
+.kb2OkrQuarter[data-current="true"] {
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+  font-weight: 600;
+}
+
+.kb2Okr {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 20px;
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: 12px;
+}
+
+.kb2Okr__objective {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+/* ── Why it's valuable: numbered points, one per row ── */
+.kb2Initiative__value {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kb2Initiative__value li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--ds-general-color-border-alt-1);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.kb2Initiative__value li:first-child {
+  padding-top: 0;
+}
+
+.kb2Initiative__value li:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.kb2Initiative__valueNumber {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--kb2-accent-soft);
+  color: var(--kb2-accent);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── How it scores ── */
+.kb2Initiative__factors {
+  display: grid;
+  /* Always 2 × 2 (one column on narrow screens), never 3 + 1. One bordered
+     table split by hairlines, like the "at a glance" panel above. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: 14px;
+}
+
+.kb2Initiative__factors > div {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px 24px;
+}
+
+.kb2Initiative__factors > div:nth-child(odd) {
+  border-right: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2Initiative__factors > div:nth-child(n + 3) {
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+}
+
+.kb2Initiative__factors dt {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 16px;
+}
+
+.kb2Initiative__factors dd {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.kb2Initiative__factorValue {
+  font-size: 14px;
+}
+
+.kb2Initiative__factorValue strong {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kb2Initiative__factorNote {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ── Sources: the evidence list, each with a way into the prompt box ── */
+.kb2EvidenceList .kb2Initiative__source {
+  align-items: center;
+  padding: 14px 0;
+}
+
+.kb2Initiative__sourceText {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.kb2Initiative__source .kb2Button {
+  flex-shrink: 0;
+}
+
+/* Insights behind it */
+.kb2Initiative__insights {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kb2Initiative__insight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  padding: var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.kb2Initiative__insight:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.kb2Initiative__insight > span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.kb2Initiative__insight > svg {
+  flex-shrink: 0;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* Notes */
+.kb2Initiative__notes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kb2Initiative__notes li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border-left: 3px solid var(--kb2-accent);
+  background: var(--ds-general-color-muted);
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.kb2Initiative__noteForm {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--ds-general-gap-sm);
+}
+
+.kb2Initiative__noteInput {
+  width: 100%;
+  box-sizing: border-box;
+  padding: var(--ds-general-padding-sm) var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.kb2Initiative__noteInput:focus {
+  border-color: var(--kb2-accent);
+  outline: none;
+}
+
+/* Header lined up with the content's 24px edges. */
+.kb2InitiativeDrawer .kb2Drawer__header {
+  padding-inline: 24px 16px;
+}
+
+/* Next steps, always in reach at the bottom of the drawer. */
+.kb2InitiativeDrawer__footer {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-md) 24px;
+  border-top: 1px solid var(--ds-general-color-border-alt-1);
+  background: var(--ds-general-color-canvas);
+}
+
+.kb2InitiativeDrawer__footerEnd {
+  display: inline-flex;
+  margin-left: auto;
+}
+
+@media (max-width: 640px) {
+  .kb2Initiative__factors {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kb2Initiative__factors > div:nth-child(odd) {
+    border-right: 0;
+  }
+
+  .kb2Initiative__factors > div + div {
+    border-top: 1px solid var(--ds-general-color-border-alt-1);
+  }
+
+  .kb2Initiative__fact + .kb2Initiative__fact {
+    border-top: 1px solid var(--ds-general-color-border-alt-1);
+    border-left: 0;
+  }
+}

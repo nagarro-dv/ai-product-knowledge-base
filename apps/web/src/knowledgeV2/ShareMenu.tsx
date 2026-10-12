@@ -66,7 +66,7 @@ type ShareContextValue = {
 
 const ShareContext = createContext<ShareContextValue | null>(null);
 
-function useShare(): ShareContextValue {
+export function useShare(): ShareContextValue {
   const value = useContext(ShareContext);
   if (!value) throw new Error("Share actions need a <ShareProvider>.");
   return value;

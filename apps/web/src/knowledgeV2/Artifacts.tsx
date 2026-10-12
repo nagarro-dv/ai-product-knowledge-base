@@ -174,30 +174,12 @@ export type DrawerState = { mode: "list" } | { mode: "view"; id: string; fromLis
 const SLIDE_MS = 420;
 
 /**
- * Right-hand drawer. "list" is a narrow column of every file in the chat;
- * "view" widens to ~60% of the screen and opens one file — documents and
- * decks are editable in place, Figma and Jira items show a preview with a
- * way out to the real thing.
+ * Slide-in state for a right-hand drawer: `shown` keeps the last state
+ * mounted while the drawer slides out, `open` drives the slide itself.
  */
-export function ArtifactDrawer({
-  state,
-  artifacts,
-  onStateChange,
-  onClose,
-  onChange,
-  onAddToPrompt,
-}: {
-  state: DrawerState | null;
-  artifacts: Artifact[];
-  onStateChange: (state: DrawerState) => void;
-  onClose: () => void;
-  onChange: (artifact: Artifact) => void;
-  onAddToPrompt: (artifact: Artifact) => void;
-}) {
-  // Keep the last state mounted while the drawer slides out.
+export function useDrawerSlide<T>(state: T | null): { shown: T | null; open: boolean } {
   const [shown, setShown] = useState(state);
   const [open, setOpen] = useState(false);
-  const closeRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     if (state) {
@@ -220,6 +202,39 @@ export function ArtifactDrawer({
     return () => window.clearTimeout(timer);
   }, [state]);
 
+  return { shown, open };
+}
+
+/** Escape closes a drawer — unless a menu, popover or dialog on top of it is open, which Escape closes first. */
+export function drawerEscape(event: globalThis.KeyboardEvent): boolean {
+  if (event.key !== "Escape" || (event.target as HTMLElement).isContentEditable) return false;
+  return !document.querySelector(".kb2Menu2, .kb2DialogScrim, .kb2RiceBreakdown, .kb2SlotPicker");
+}
+
+/**
+ * Right-hand drawer. "list" is a narrow column of every file in the chat;
+ * "view" widens to ~60% of the screen and opens one file — documents and
+ * decks are editable in place, Figma and Jira items show a preview with a
+ * way out to the real thing.
+ */
+export function ArtifactDrawer({
+  state,
+  artifacts,
+  onStateChange,
+  onClose,
+  onChange,
+  onAddToPrompt,
+}: {
+  state: DrawerState | null;
+  artifacts: Artifact[];
+  onStateChange: (state: DrawerState) => void;
+  onClose: () => void;
+  onChange: (artifact: Artifact) => void;
+  onAddToPrompt: (artifact: Artifact) => void;
+}) {
+  const { shown, open } = useDrawerSlide(state);
+  const closeRef = useRef<HTMLButtonElement | null>(null);
+
   useEffect(() => {
     if (open) closeRef.current?.focus({ preventScroll: true });
   }, [open]);
@@ -227,7 +242,7 @@ export function ArtifactDrawer({
   useEffect(() => {
     if (!state) return;
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape" && !(event.target as HTMLElement).isContentEditable) onClose();
+      if (drawerEscape(event)) onClose();
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

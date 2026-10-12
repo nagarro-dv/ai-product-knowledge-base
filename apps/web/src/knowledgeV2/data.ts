@@ -124,8 +124,16 @@ export type Initiative = {
   stage: InitiativeStage;
   /** Which agent proposed it, or "You". */
   origin: string;
-  /** Roadmap theme it lines up with. */
+  /** Roadmap theme it lines up with — the area it adds value to. */
   theme: string;
+  /** The measurable outcome it's after. */
+  goal: string;
+  /** Why it's worth doing, point by point. */
+  value: string[];
+  /** Notes people have added while refining it. */
+  notes?: InitiativeNote[];
+  /** Other key results it helps, besides the one its impact is scored against (rice.okr). */
+  alsoSupports?: string[];
   /** RICE inputs — see rice.ts. Confidence isn't stored: it's derived from `evidence`. */
   rice: RiceInputs;
   evidence: Evidence[];
@@ -133,6 +141,8 @@ export type Initiative = {
   /** Set once the initiative is sent to Jira Product Discovery, e.g. "PD-142". */
   jpdKey?: string;
 };
+
+export type InitiativeNote = { id: string; text: string; added: string };
 
 /** The parts of a RICE score a person estimates; each carries its reasoning. */
 export type RiceInputs = {
@@ -152,19 +162,51 @@ export type RiceInputs = {
 
 // ── OKRs ────────────────────────────────────────────────────────────────────
 
-export type KeyResult = { id: string; objective: string; text: string };
+export type KeyResultStatus = "on-track" | "at-risk" | "off-track" | "met" | "missed";
 
-/** The company's current objectives and key results; impact is judged against these. */
+export type KeyResult = {
+  id: string;
+  objective: string;
+  text: string;
+  quarter: string;
+  /** Where it stands now, and where it needs to be by the end of the quarter. */
+  current: string;
+  target: string;
+  /** The same as numbers on one scale (0 to max), for the progress bar: the
+   *  fill is the current value, the marker is the target. */
+  value: number;
+  targetValue: number;
+  max: number;
+  status: KeyResultStatus;
+};
+
+export const CURRENT_QUARTER = "Q4 2026";
+
+/**
+ * The company's objectives and key results (OKRs) — this quarter's, which
+ * initiatives are judged against, and earlier quarters' with how they ended.
+ */
 export const OKRS: KeyResult[] = [
-  { id: "KR 1.1", objective: "Grow revenue from existing customers", text: "Upgrade completion back to 70% (now 62%)" },
-  { id: "KR 1.2", objective: "Grow revenue from existing customers", text: "Net revenue retention at 110%" },
-  { id: "KR 2.1", objective: "Customers trust us with billing", text: "Customer satisfaction back to 4.4 / 5" },
-  { id: "KR 3.1", objective: "New teams get value in week one", text: "First-week activation at 45%" },
-  { id: "KR 4.1", objective: "Win more enterprise customers", text: "Close the 9 deals blocked on SSO" },
+  { id: "KR 1.1", quarter: "Q4 2026", objective: "Grow revenue from existing customers", text: "Upgrade completion back to 70%", current: "62%", target: "70%", value: 62, targetValue: 70, max: 100, status: "at-risk" },
+  { id: "KR 1.2", quarter: "Q4 2026", objective: "Grow revenue from existing customers", text: "Net revenue retention at 110%", current: "104%", target: "110%", value: 104, targetValue: 110, max: 120, status: "on-track" },
+  { id: "KR 2.1", quarter: "Q4 2026", objective: "Customers trust us with billing", text: "Customer satisfaction back to 4.4 / 5", current: "3.9", target: "4.4", value: 3.9, targetValue: 4.4, max: 5, status: "off-track" },
+  { id: "KR 3.1", quarter: "Q4 2026", objective: "New teams get value in week one", text: "First-week activation at 45%", current: "41%", target: "45%", value: 41, targetValue: 45, max: 100, status: "on-track" },
+  { id: "KR 4.1", quarter: "Q4 2026", objective: "Win more enterprise customers", text: "Close the 9 deals blocked on SSO", current: "2 of 9", target: "9 of 9", value: 2, targetValue: 9, max: 9, status: "on-track" },
+  { id: "KR 1.1", quarter: "Q3 2026", objective: "Grow revenue from existing customers", text: "Net revenue retention at 105%", current: "104%", target: "105%", value: 104, targetValue: 105, max: 120, status: "missed" },
+  { id: "KR 2.1", quarter: "Q3 2026", objective: "Customers trust us with billing", text: "Billing tickets down 20%", current: "−24%", target: "−20%", value: 24, targetValue: 20, max: 30, status: "met" },
+  { id: "KR 2.2", quarter: "Q3 2026", objective: "Customers trust us with billing", text: "Customer satisfaction at 4.5 / 5", current: "4.3", target: "4.5", value: 4.3, targetValue: 4.5, max: 5, status: "missed" },
+  { id: "KR 3.1", quarter: "Q3 2026", objective: "New teams get value in week one", text: "First-week activation at 39%", current: "39%", target: "39%", value: 39, targetValue: 39, max: 100, status: "met" },
+  { id: "KR 4.1", quarter: "Q3 2026", objective: "Win more enterprise customers", text: "SSO prototype with 5 design partners", current: "5 of 5", target: "5 of 5", value: 5, targetValue: 5, max: 5, status: "met" },
 ];
 
+/** A key result from this quarter, by id. */
 export function keyResult(id: string): KeyResult | undefined {
-  return OKRS.find((kr) => kr.id === id);
+  return OKRS.find((kr) => kr.quarter === CURRENT_QUARTER && kr.id === id);
+}
+
+/** Every key result an initiative supports: the one its impact is scored against first. */
+export function alignedKeyResults(initiative: Initiative): KeyResult[] {
+  return [initiative.rice.okr, ...(initiative.alsoSupports ?? [])].flatMap((id) => keyResult(id) ?? []);
 }
 
 export const INITIAL_INITIATIVES: Initiative[] = [
@@ -176,6 +218,13 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "proposed",
     origin: "Roadmap alignment agent",
     theme: "Monetization",
+    goal: "Get upgrade completion back above 70% by making the prorated charge clear before customers confirm.",
+    value: [
+      "Upgrades are the cheapest revenue there is — these customers have already decided to pay more.",
+      "The fix is small and well understood: an invoice preview and a plain-language explanation of proration.",
+      "It also takes pressure off support, where prorated charges are the fastest-growing billing topic.",
+    ],
+    alsoSupports: ["KR 1.2"],
     rice: {
       reach: 2300,
       reachUnit: "accounts a quarter",
@@ -202,6 +251,13 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "proposed",
     origin: "Voice of customer agent",
     theme: "Customer trust",
+    goal: "Bring billing CSAT back in line with other topics and first response on billing under the 2h target.",
+    value: [
+      "Billing is the one topic dragging overall satisfaction down — fixing it moves the whole score.",
+      "Unhappy billing contacts are the customers most at risk of churning at renewal.",
+      "Most of the work is process and tooling, so it can start without waiting on a squad.",
+    ],
+    alsoSupports: ["KR 1.2"],
     rice: {
       reach: 4100,
       reachUnit: "customers a quarter",
@@ -227,6 +283,12 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "proposed",
     origin: "KPI watcher agent",
     theme: "Monetization",
+    goal: "Cut the pricing page exit rate back to 41% and send more visitors on to start a trial.",
+    value: [
+      "Every visitor who leaves the pricing page confused is a trial that never starts.",
+      "Heatmaps show exactly where people get stuck — the plan comparison table.",
+      "It's the cheapest change in the pipeline: content and layout, about a week of work.",
+    ],
     rice: {
       reach: 3600,
       reachUnit: "trial starts a quarter",
@@ -250,6 +312,13 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "exploring",
     origin: "You",
     theme: "Activation",
+    goal: "Raise first-week activation from 41% to 45% by steering new accounts to the actions that predict retention.",
+    value: [
+      "Inviting a teammate in week one is the strongest retention signal there is — users who do it retain 2.3× better.",
+      "New admins keep telling support and research that they don't know what to set up first.",
+      "A checklist turns what the best accounts already do into the default path for everyone.",
+    ],
+    alsoSupports: ["KR 1.2"],
     rice: {
       reach: 2800,
       reachUnit: "new accounts a quarter",
@@ -275,6 +344,13 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "brief",
     origin: "KPI watcher agent",
     theme: "Conversion",
+    goal: "Recover the 2.1-point drop in checkout conversion by letting mobile buyers skip the card form.",
+    value: [
+      "Mobile is 62% of checkout sessions, and a third of mobile buyers give up at card entry.",
+      "Apple Pay and Google Pay come with the payment provider's SDK, so most of the hard work is done.",
+      "Customers are asking for it directly in app store reviews.",
+    ],
+    alsoSupports: ["KR 1.1"],
     rice: {
       reach: 2600,
       reachUnit: "mobile buyers a quarter",
@@ -298,6 +374,12 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "prototype",
     origin: "You",
     theme: "Retention",
+    goal: "Save power users their daily repeat work, keeping the accounts that drive 44% of expansion revenue.",
+    value: [
+      "The most active 10% of users rebuild the same three filters four times a day.",
+      "It's the most-voted feature request this quarter, so the demand is proven.",
+      "Small reach, but these are the accounts that grow — losing them costs the most.",
+    ],
     rice: {
       reach: 900,
       reachUnit: "power users a quarter",
@@ -321,6 +403,12 @@ export const INITIAL_INITIATIVES: Initiative[] = [
     stage: "validating",
     origin: "Research synthesizer agent",
     theme: "Enterprise",
+    goal: "Let enterprise admins set up SSO themselves, unblocking the 9 deals waiting on it.",
+    value: [
+      "Nine enterprise deals list SSO as their blocker — this is revenue waiting to close.",
+      "Trials stall for days while support configures SSO by hand.",
+      "The prototype already works: 4 of 5 admins completed setup in testing.",
+    ],
     rice: {
       reach: 120,
       reachUnit: "enterprise trials a quarter",
