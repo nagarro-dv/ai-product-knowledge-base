@@ -1233,6 +1233,25 @@ button.kb2Timeline__item:hover {
   gap: var(--ds-general-gap-sm);
 }
 
+/* Wraps when a long step label and the ⋯ don't fit side by side; the ⋯ then
+   drops to its own line, still in the bottom-right corner. */
+.kb2PipelineCard__footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ds-general-gap-sm);
+}
+
+.kb2PipelineCard__footer > .kb2ShareActions {
+  margin-left: auto;
+}
+
+/* The small action button normally sits on its own line; in the footer it shares it. */
+.kb2PipelineCard__footer > .kb2Button--small {
+  align-self: center;
+}
+
 .kb2PipelineCard .kb2JpdChip {
   align-self: flex-start;
 }
@@ -2006,6 +2025,11 @@ button.kb2Timeline__item:hover {
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.kb2SlotPicker__create {
+  flex-shrink: 0;
+  color: var(--kb2-accent);
 }
 
 .kb2SlotPicker__check {

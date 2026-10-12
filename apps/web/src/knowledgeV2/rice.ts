@@ -74,6 +74,8 @@ export const IMPACT_LABELS: Record<Initiative["rice"]["impact"], string> = {
 
 export type RiceBreakdown = {
   score: number;
+  /** 0–100, see impactScore. */
+  impactScore: number;
   reach: number;
   impact: number;
   confidence: ConfidenceLevel;
@@ -83,7 +85,28 @@ export type RiceBreakdown = {
 export function riceFor(initiative: Initiative): RiceBreakdown {
   const { reach, impact, effort } = initiative.rice;
   const confidence = confidenceFor(initiative);
-  return { score: Math.round((reach * impact * (confidence.percent / 100)) / effort), reach, impact, confidence, effort };
+  const score = Math.round((reach * impact * (confidence.percent / 100)) / effort);
+  return { score, impactScore: impactScore(score), reach, impact, confidence, effort };
+}
+
+/**
+ * RICE has no upper limit, so for the 0–100 "impact score" shown on cards
+ * (and sent to Jira Product Discovery) it's eased onto a fixed scale:
+ * RICE ÷ (RICE + 250) × 100. A RICE of 250 scores 50; higher RICE gets ever
+ * closer to 100 without reaching it. Fixed, so a new idea doesn't change
+ * anyone else's score, and it keeps exactly the same order as RICE.
+ */
+export const RICE_MIDPOINT = 250;
+
+export function impactScore(rice: number): number {
+  return Math.round((100 * rice) / (rice + RICE_MIDPOINT));
+}
+
+/** Jira Product Discovery's colour bands for impact scores: green 80+, yellow 50–79, grey below 50. */
+export type ImpactBand = "high" | "medium" | "low";
+
+export function impactBand(score: number): ImpactBand {
+  return score >= 80 ? "high" : score >= 50 ? "medium" : "low";
 }
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
@@ -99,6 +122,7 @@ export function riceSummary(initiative: Initiative): string {
   const r = riceFor(initiative);
   const kr = keyResult(initiative.rice.okr);
   return [
+    `Impact score: ${r.impactScore} / 100  (from RICE ${fmt(r.score)}: ${fmt(r.score)} ÷ (${fmt(r.score)} + ${RICE_MIDPOINT}) × 100)`,
     `RICE score: ${fmt(r.score)}  (${riceEquation(initiative)})`,
     `• Reach: ${fmt(r.reach)} ${initiative.rice.reachUnit} — ${initiative.rice.reachNote}`,
     `• Impact: ${r.impact} (${IMPACT_LABELS[initiative.rice.impact]})${kr ? ` — ${kr.id}: ${kr.text}` : ""}. ${initiative.rice.impactNote}`,

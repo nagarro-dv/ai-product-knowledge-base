@@ -1,18 +1,19 @@
-import { ChevronDown, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { computeAnchoredPosition, type PopoverPosition } from "../accelerator/popoverPosition";
 import { DsTypography } from "../components/ds/DsTypography";
 import { SourceStack } from "./Composer";
 import { keyResult, type Initiative } from "./data";
-import { IMPACT_LABELS, riceEquation, riceFor } from "./rice";
+import { IMPACT_LABELS, RICE_MIDPOINT, impactBand, riceEquation, riceFor } from "./rice";
 
 const fmt = (n: number) => n.toLocaleString("en-GB");
 
 /**
- * "RICE 767 · High confidence" — and, on click, exactly how that number was
- * reached: the equation with the real values, and the reasoning and evidence
- * behind each factor, so anyone can check it and argue for it.
+ * "Impact score 82 ⓘ" — a 0–100 score anyone can read, tinted with its band,
+ * worked out from RICE (rice.ts). The ⓘ opens exactly how it was reached: the
+ * RICE equation with the real values, and the reasoning and evidence behind
+ * each factor, so anyone can check it and argue for it.
  */
 export function RiceScore({ initiative, size = "md" }: { initiative: Initiative; size?: "md" | "sm" }) {
   const rice = riceFor(initiative);
@@ -22,19 +23,24 @@ export function RiceScore({ initiative, size = "md" }: { initiative: Initiative;
     <>
       <button
         type="button"
-        className={`kb2Rice kb2Rice--${size}`}
+        className={`kb2Rice kb2Rice--${size} kb2Rice--${impactBand(rice.impactScore)}`}
         aria-haspopup="dialog"
         aria-expanded={anchor !== null}
+        aria-label={`Impact score ${rice.impactScore} out of 100, ${rice.confidence.label.toLowerCase()} confidence. How this is scored`}
         onClick={(event) => setAnchor(anchor ? null : event.currentTarget)}
-        title="How this is scored"
       >
-        <span className="kb2Rice__score">RICE {fmt(rice.score)}</span>
-        {size === "md" ? <span className="kb2Rice__confidence">{rice.confidence.label} confidence</span> : null}
-        <ChevronDown size={13} aria-hidden />
+        <span className="kb2Rice__label">{size === "md" ? "Impact score" : "Impact"}</span>
+        <ImpactBadge score={rice.impactScore} />
+        <Info size={13} aria-hidden className="kb2Rice__info" />
       </button>
       {anchor ? <RiceBreakdown initiative={initiative} anchor={anchor} onClose={() => setAnchor(null)} /> : null}
     </>
   );
+}
+
+/** The 0–100 impact score in Jira Product Discovery's colours (green 80+, yellow 50–79, grey below 50). */
+export function ImpactBadge({ score }: { score: number }) {
+  return <span className={`kb2ImpactBadge kb2ImpactBadge--${impactBand(score)}`}>{score}</span>;
 }
 
 function RiceBreakdown({ initiative, anchor, onClose }: { initiative: Initiative; anchor: HTMLElement; onClose: () => void }) {
@@ -79,7 +85,15 @@ function RiceBreakdown({ initiative, anchor, onClose }: { initiative: Initiative
         <DsTypography as="h3" variant="paragraph-small-bold">
           How this is scored
         </DsTypography>
-        <span className="kb2RiceBreakdown__formula">Reach × Impact × Confidence ÷ Effort</span>
+        <p className="kb2RiceBreakdown__impact">
+          <span>
+            Impact score <ImpactBadge score={rice.impactScore} /> / 100
+          </span>
+          <span className="kb2Muted">
+            RICE {fmt(rice.score)} ÷ ({fmt(rice.score)} + {RICE_MIDPOINT}) × 100
+          </span>
+        </p>
+        <span className="kb2RiceBreakdown__formula">RICE = Reach × Impact × Confidence ÷ Effort</span>
         <span className="kb2RiceBreakdown__equation">{riceEquation(initiative)}</span>
       </header>
 
@@ -128,7 +142,6 @@ function RiceBreakdown({ initiative, anchor, onClose }: { initiative: Initiative
         </div>
       </dl>
 
-      <footer className="kb2RiceBreakdown__foot">Same fields as Jira Product Discovery's RICE score.</footer>
     </div>,
     document.body,
   );

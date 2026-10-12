@@ -113,7 +113,8 @@ export function shareArtifact(artifact: Artifact): Shareable {
 
 /** The whole thing as Markdown, for downloads and copying. */
 export function toMarkdown(item: Shareable): string {
-  const extra = item.initiative ? `\n\n**RICE ${riceFor(item.initiative).score}**` : "";
+  const rice = item.initiative ? riceFor(item.initiative) : null;
+  const extra = rice ? `\n\n**Impact score ${rice.impactScore} / 100** · ${rice.confidence.label} confidence (RICE ${rice.score})` : "";
   return `# ${item.title}\n\n_${item.label}_${extra}\n\n${item.summary}\n\n[Open in the knowledge base](${item.link})\n`;
 }
 

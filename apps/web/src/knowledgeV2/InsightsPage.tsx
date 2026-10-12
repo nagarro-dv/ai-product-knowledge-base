@@ -6,8 +6,8 @@ import { sourceById } from "../knowledge/sources";
 import { SourceStack, Sparkline } from "./Composer";
 import { SIGNALS, SIGNAL_TONES, STAGES, agentById, type ContextRef, type Initiative, type Signal } from "./data";
 import { RiceScore } from "./RiceScore";
-import { SendToJpdButton, ShareActions } from "./ShareMenu";
-import { shareInitiative, shareSignal } from "./sharing";
+import { JpdStatus, ShareActions } from "./ShareMenu";
+import { shareSignal } from "./sharing";
 
 export type InsightActions = {
   addContext: (ref: ContextRef) => void;
@@ -201,7 +201,7 @@ function InsightDetail({ signal, initiatives, actions }: { signal: Signal; initi
               </span>
               <span className="kb2Meta kb2LinkedInitiative__score">
                 <RiceScore initiative={linked} />
-                <SendToJpdButton item={shareInitiative(linked)} sentKey={linked.jpdKey} />
+                <JpdStatus sentKey={linked.jpdKey} />
               </span>
             </span>
             <button

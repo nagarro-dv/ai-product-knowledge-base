@@ -116,16 +116,6 @@
   background: var(--ds-general-color-background);
 }
 
-.kb2JpdChip--action {
-  border-color: color-mix(in srgb, #0c66e4 30%, transparent);
-  color: #0c66e4;
-}
-
-.kb2JpdChip--action:hover {
-  border-color: #0c66e4;
-  background: color-mix(in srgb, #0c66e4 6%, var(--ds-general-color-canvas));
-}
-
 .kb2JpdChip:focus-visible,
 .kb2Rice:focus-visible {
   outline: 2px solid var(--ds-general-shadows-focus-ring);
@@ -277,11 +267,7 @@
 }
 
 .kb2JpdFields__row--score {
-  background: var(--kb2-accent-soft);
-}
-
-.kb2JpdFields__row--score > strong {
-  color: var(--kb2-accent);
+  background: var(--ds-general-color-background);
 }
 
 /* ── Toasts ───────────────────────────────────────────────────────────────── */
@@ -323,15 +309,16 @@
 
 /* ── RICE score ───────────────────────────────────────────────────────────── */
 
+/* Neutral chip so the coloured impact badge inside carries the meaning. */
 .kb2Rice {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 3px 8px 3px 10px;
-  border: 1px solid color-mix(in srgb, var(--kb2-accent) 25%, transparent);
+  padding: 2px 8px 2px 10px;
+  border: 1px solid var(--ds-general-color-border);
   border-radius: var(--ds-general-radius-full);
-  background: var(--kb2-accent-soft);
-  color: var(--kb2-accent);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
   font-family: var(--ds-general-typography-font-family-body);
   font-size: 12px;
   white-space: nowrap;
@@ -339,20 +326,65 @@
 }
 
 .kb2Rice:hover {
-  border-color: var(--kb2-accent);
+  border-color: rgb(0 0 0 / 10%);
 }
 
-.kb2Rice__score {
+.kb2Rice__label {
+  font-weight: 500;
+}
+
+.kb2Rice__info {
+  color: var(--ds-general-color-muted-foreground);
+}
+
+/* Impact score bands, in Jira Product Discovery's colours. */
+.kb2ImpactBadge {
+  display: inline-block;
+  min-width: 2ch;
+  padding: 1px 5px;
+  border-radius: 3px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
+  line-height: 1.35;
+  text-align: center;
 }
 
-.kb2Rice__confidence {
-  color: color-mix(in srgb, var(--kb2-accent) 75%, var(--ds-general-color-foreground));
+.kb2ImpactBadge--high {
+  background: #baf3db;
+  color: #164b35;
 }
 
-.kb2Rice__confidence::before {
-  content: "· ";
+.kb2ImpactBadge--medium {
+  background: #f8e6a0;
+  color: #533f04;
+}
+
+.kb2ImpactBadge--low {
+  background: #dcdfe4;
+  color: #2c3e5d;
+}
+
+/* The chip takes a faint wash of its band colour (the badge's own colour at
+   ~30% on white), so it draws the eye while the solid badge still stands out. */
+.kb2Rice--high {
+  border-color: color-mix(in srgb, #4bce97 45%, transparent);
+  background: color-mix(in srgb, #baf3db 30%, var(--ds-general-color-canvas));
+}
+
+.kb2Rice--medium {
+  border-color: color-mix(in srgb, #e2b203 40%, transparent);
+  background: color-mix(in srgb, #f8e6a0 30%, var(--ds-general-color-canvas));
+}
+
+.kb2Rice--low {
+  border-color: color-mix(in srgb, #8590a2 35%, transparent);
+  background: color-mix(in srgb, #dcdfe4 35%, var(--ds-general-color-canvas));
+}
+
+.kb2Rice--high:hover,
+.kb2Rice--medium:hover,
+.kb2Rice--low:hover {
+  filter: brightness(0.98);
 }
 
 .kb2Rice--sm {
@@ -391,6 +423,24 @@
 
 .kb2RiceBreakdown__head h3 {
   margin: 0;
+}
+
+.kb2RiceBreakdown__impact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  margin: 4px 0 2px;
+  font-size: 14px;
+}
+
+.kb2RiceBreakdown__impact .kb2ImpactBadge {
+  font-size: 16px;
+}
+
+.kb2RiceBreakdown__impact .kb2Muted {
+  font-size: 12px;
 }
 
 .kb2RiceBreakdown__formula {
@@ -468,12 +518,6 @@
   font-size: 11px;
 }
 
-.kb2RiceBreakdown__foot {
-  padding: 10px 16px;
-  border-top: 1px solid var(--ds-general-color-border-alt-1);
-  color: var(--ds-general-color-muted-foreground);
-  font-size: 11px;
-}
 
 @media (prefers-reduced-motion: reduce) {
   .kb2Menu2,

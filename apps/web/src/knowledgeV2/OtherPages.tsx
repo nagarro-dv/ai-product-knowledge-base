@@ -9,7 +9,7 @@ import type { Artifact } from "./artifactData";
 import { Carousel } from "./Carousel";
 import { SourceStack } from "./Composer";
 import { RiceScore } from "./RiceScore";
-import { SendToJpdButton, ShareActions } from "./ShareMenu";
+import { JpdStatus, ShareActions } from "./ShareMenu";
 import { shareInitiative } from "./sharing";
 import { Tip } from "./Tip";
 import {
@@ -218,28 +218,28 @@ export function CreatePage({
                         <span className="kb2Tag">{initiative.theme}</span>
                         <SourceStack ids={initiative.evidence.map((e) => e.source)} size={13} />
                       </span>
-                      <span className="kb2Muted kb2Small">
-                        {initiative.origin === "You" ? "Added by you" : <><Sparkles size={11} aria-hidden /> {initiative.origin}</>} ·{" "}
-                        {initiative.updated}
-                      </span>
+                      <span className="kb2Muted kb2Small">Updated {lowerFirst(initiative.updated)}</span>
                     </button>
                     <div className="kb2PipelineCard__score">
                       <RiceScore initiative={initiative} size="sm" />
+                    </div>
+                    <JpdStatus sentKey={initiative.jpdKey} size="sm" />
+                    {/* Next step on the left, ⋯ always in the bottom-right corner. */}
+                    <div className="kb2PipelineCard__footer">
+                      {stage.action ? (
+                        <button
+                          type="button"
+                          className="kb2Button kb2Button--small"
+                          onClick={() => {
+                            onAdvance(initiative.id);
+                            setJustMoved(initiative.id);
+                          }}
+                        >
+                          {stage.action} <ArrowRight size={13} aria-hidden />
+                        </button>
+                      ) : null}
                       <ShareActions item={shareInitiative(initiative)} variant="compact" />
                     </div>
-                    <SendToJpdButton item={shareInitiative(initiative)} sentKey={initiative.jpdKey} size="sm" />
-                    {stage.action ? (
-                      <button
-                        type="button"
-                        className="kb2Button kb2Button--small"
-                        onClick={() => {
-                          onAdvance(initiative.id);
-                          setJustMoved(initiative.id);
-                        }}
-                      >
-                        {stage.action} <ArrowRight size={13} aria-hidden />
-                      </button>
-                    ) : null}
                   </article>
                 ))}
                 {items.length === 0 ? <p className="kb2Pipeline__empty">Nothing here yet</p> : null}
@@ -279,6 +279,9 @@ export function CreatePage({
     </div>
   );
 }
+
+/** "Last week" → "last week", for "Updated last week". */
+const lowerFirst = (text: string) => text.charAt(0).toLowerCase() + text.slice(1);
 
 // ── Agents ──────────────────────────────────────────────────────────────────
 

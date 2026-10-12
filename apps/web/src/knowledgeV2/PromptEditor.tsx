@@ -1,4 +1,4 @@
-import { Check, Search, TrendingDown, TrendingUp } from "lucide-react";
+import { Check, Plus, Search, TrendingDown, TrendingUp } from "lucide-react";
 import {
   forwardRef,
   useEffect,
@@ -11,7 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { computeAnchoredPosition, type PopoverPosition } from "../accelerator/popoverPosition";
-import { slotTooltip, type PromptSegment, type SlotOption } from "./promptSlots";
+import { CREATED_GROUP, addCreatedValue, slotTooltip, type PromptSegment, type SlotOption } from "./promptSlots";
 import { useFloatingTip } from "./Tip";
 
 /** What a pick puts in a slot. */
@@ -282,7 +282,7 @@ export const PromptEditor = forwardRef<
 
 /** What a list item puts in its chip; typed-in values carry no group or detail. */
 function pickedFrom(item: SlotOption & { typed: boolean }): Picked {
-  if (item.typed) return { value: item.value };
+  if (item.typed) return { value: item.value, group: CREATED_GROUP };
   const hint = [item.hint, item.change?.delta].filter(Boolean).join(" · ") || undefined;
   return { value: item.value, group: item.group, hint };
 }
@@ -313,6 +313,11 @@ function SlotPicker({
     return q ? options.filter((o) => `${o.value} ${o.hint ?? ""}`.toLowerCase().includes(q)) : options;
   }, [options, query]);
   const typed = query.trim();
+  // A new value is saved to its list, so it can be picked again later.
+  const choose = (item: SlotOption & { typed: boolean }) => {
+    if (item.typed) addCreatedValue(label, item.value);
+    onPick(pickedFrom(item));
+  };
   const offerTyped = typed && !options.some((o) => o.value.toLowerCase() === typed.toLowerCase());
   const items = [...filtered.map((o) => ({ ...o, typed: false })), ...(offerTyped ? [{ value: typed, group: "", typed: true }] : [])];
 
@@ -349,7 +354,7 @@ function SlotPicker({
     } else if (event.key === "Enter") {
       event.preventDefault();
       const item = items[active];
-      if (item) onPick(pickedFrom(item));
+      if (item) choose(item);
     } else if (event.key === "Escape") {
       event.preventDefault();
       onClose();
@@ -373,7 +378,7 @@ function SlotPicker({
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           onKeyDown={onKeyDown}
-          placeholder={options.length ? `Search or type a ${label}…` : `Type a ${label}…`}
+          placeholder={options.length ? `Search or create a ${label}…` : `Create a ${label}…`}
           aria-label={`Choose ${label}`}
           aria-controls="kb2-slot-options"
           aria-activedescendant={items[active] ? `kb2-slot-option-${active}` : undefined}
@@ -382,7 +387,7 @@ function SlotPicker({
         />
       </div>
       <ul id="kb2-slot-options" role="listbox" aria-label={label} className="kb2SlotPicker__list">
-        {items.length === 0 ? <li className="kb2SlotPicker__empty">Start typing to add your own.</li> : null}
+        {items.length === 0 ? <li className="kb2SlotPicker__empty">Start typing to create one.</li> : null}
         {items.map((item, index) => {
           const header = !item.typed && item.group !== lastGroup ? item.group : null;
           lastGroup = item.typed ? lastGroup : item.group;
@@ -398,10 +403,11 @@ function SlotPicker({
                 className="kb2SlotPicker__option"
                 onMouseEnter={() => setActive(index)}
                 onClick={() =>
-                  onPick(pickedFrom(item))
+                  choose(item)
                 }
               >
-                <span className="kb2SlotPicker__value">{item.typed ? `Use “${item.value}”` : item.value}</span>
+                {item.typed ? <Plus size={14} className="kb2SlotPicker__create" aria-hidden /> : null}
+                <span className="kb2SlotPicker__value">{item.typed ? `Create “${item.value}”` : item.value}</span>
                 {/* Next to the name, so the right edge stays the details column. */}
                 {item.value === current ? <Check size={14} className="kb2SlotPicker__check" aria-hidden /> : null}
                 {"hint" in item && item.hint ? <span className="kb2SlotPicker__hint">{item.hint}</span> : null}

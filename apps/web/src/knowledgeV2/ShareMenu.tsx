@@ -17,6 +17,7 @@ import { SourceMark } from "../knowledge/SourceMark";
 import { sourceById } from "../knowledge/sources";
 import { keyResult } from "./data";
 import { IMPACT_LABELS, riceFor } from "./rice";
+import { ImpactBadge } from "./RiceScore";
 import { slugify, toMarkdown, type Shareable } from "./sharing";
 import { Tip } from "./Tip";
 import "./ShareMenu.css";
@@ -356,31 +357,22 @@ export function ShareActions({ item, variant = "full" }: { item: Shareable; vari
   );
 }
 
-/** The dedicated "Send to Product Discovery" for initiatives — or its idea key once sent. */
-export function SendToJpdButton({ item, sentKey, size = "md" }: { item: Shareable; sentKey?: string; size?: "md" | "sm" }) {
-  const { openDialog, notify } = useShare();
-  if (sentKey) {
-    return (
-      <button
-        type="button"
-        className="kb2JpdChip"
-        onClick={() => notify(`${sentKey} would open in Jira Product Discovery — demo.`)}
-        title="Open in Jira Product Discovery"
-      >
-        <SourceMark source={sourceById("jira")} size={13} />
-        {size === "sm" ? `Discovery · ${sentKey}` : `In Product Discovery · ${sentKey}`}
-      </button>
-    );
-  }
+/**
+ * Once an initiative has been sent to Jira Product Discovery (from the Share
+ * or ⋯ menu), its idea key — nothing before that.
+ */
+export function JpdStatus({ sentKey, size = "md" }: { sentKey?: string; size?: "md" | "sm" }) {
+  const { notify } = useShare();
+  if (!sentKey) return null;
   return (
     <button
       type="button"
-      className="kb2JpdChip kb2JpdChip--action"
-      onClick={() => openDialog(item, "jpd")}
-      aria-label="Send to Jira Product Discovery"
+      className="kb2JpdChip"
+      onClick={() => notify(`${sentKey} would open in Jira Product Discovery — demo.`)}
+      title="Open in Jira Product Discovery"
     >
       <SourceMark source={sourceById("jira")} size={13} />
-      {size === "sm" ? "Send to Discovery" : "Send to Product Discovery"}
+      {size === "sm" ? `Discovery · ${sentKey}` : `In Product Discovery · ${sentKey}`}
     </button>
   );
 }
@@ -455,6 +447,12 @@ function ShareDialog({
               </div>
               {rice && item.initiative ? (
                 <>
+                  <div className="kb2JpdFields__row kb2JpdFields__row--score">
+                    <span>Impact score</span>
+                    <strong>
+                      <ImpactBadge score={rice.impactScore} /> / 100 · {rice.confidence.label} confidence
+                    </strong>
+                  </div>
                   <div className="kb2JpdFields__row">
                     <span>Reach</span>
                     <strong>
@@ -477,7 +475,7 @@ function ShareDialog({
                     <span>Effort</span>
                     <strong>{rice.effort} person-weeks</strong>
                   </div>
-                  <div className="kb2JpdFields__row kb2JpdFields__row--score">
+                  <div className="kb2JpdFields__row">
                     <span>RICE score</span>
                     <strong>{rice.score.toLocaleString("en-GB")}</strong>
                   </div>
@@ -493,7 +491,7 @@ function ShareDialog({
               ) : (
                 <div className="kb2JpdFields__row">
                   <span>Scoring</span>
-                  <strong>Not scored yet — add RICE in Product Discovery</strong>
+                  <strong>Not scored yet — score it in Product Discovery</strong>
                 </div>
               )}
             </section>

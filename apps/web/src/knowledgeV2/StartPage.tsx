@@ -20,7 +20,7 @@ import { sourceById } from "../knowledge/sources";
 import { SourceStack, Sparkline } from "./Composer";
 import { riceFor } from "./rice";
 import { RiceScore } from "./RiceScore";
-import { SendToJpdButton, ShareActions } from "./ShareMenu";
+import { JpdStatus, ShareActions } from "./ShareMenu";
 import { shareInitiative, shareMetric, shareSignal } from "./sharing";
 import { Tip } from "./Tip";
 import {
@@ -174,9 +174,11 @@ function ProposalCard({ proposals, actions }: { proposals: Initiative[]; actions
             {initiative.evidence.length} sources · by {initiative.origin}
           </span>
         </div>
-        <div className="kb2Meta">
-          <SendToJpdButton item={shareInitiative(initiative)} sentKey={initiative.jpdKey} />
-        </div>
+        {initiative.jpdKey ? (
+          <div className="kb2Meta">
+            <JpdStatus sentKey={initiative.jpdKey} />
+          </div>
+        ) : null}
       </div>
 
       <div className="kb2Card__actions">

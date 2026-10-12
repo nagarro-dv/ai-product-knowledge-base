@@ -67,7 +67,12 @@ const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1
  */
 export function slotTooltip(slot: { label: string; value?: string; group?: string; hint?: string }): string {
   if (!slot.value) return `Choose a ${slot.label}`;
-  const kind = slot.group ? (GROUP_NAMES[slot.group] ?? slot.group) : `Your own ${slot.label}`;
+  const kind =
+    slot.group === CREATED_GROUP
+      ? `${slot.label} · added by your team`
+      : slot.group
+        ? (GROUP_NAMES[slot.group] ?? slot.group)
+        : `Your own ${slot.label}`;
   // "Initiative (option A)" — typed-in values already say "Your own option A".
   const role = slot.group && /^option /i.test(slot.label) ? ` (${slot.label})` : "";
   return [`${capitalize(kind)}${role}`, slot.hint].filter(Boolean).join(" · ");
@@ -122,7 +127,56 @@ const list = (values: string[], group: string): SlotOption[] => values.map((valu
  * The choices for a slot, grouped. Unknown labels return none — the picker
  * then just offers to use whatever the user types.
  */
+// ── Values people create ────────────────────────────────────────────────────
+
+/** The list group for values someone created from a chip's menu. */
+export const CREATED_GROUP = "Added by your team";
+
+const CREATED_KEY = "kb2:created-slot-values";
+
+/**
+ * Chips that pick from the same list share created values: an initiative
+ * created for "option A" is offered for "option B" and "initiative" too.
+ */
+function categoryOf(label: string): string {
+  const key = label.toLowerCase();
+  return key === "option a" || key === "option b" || key === "idea" ? "initiative" : key;
+}
+
+/*
+ * Created values live in this browser's storage — the prototype has no
+ * server, so colleagues won't see them yet. Swap these two functions for API
+ * calls to make the lists shared.
+ */
+function readCreated(): Record<string, string[]> {
+  try {
+    const raw = localStorage.getItem(CREATED_KEY);
+    return raw ? (JSON.parse(raw) as Record<string, string[]>) : {};
+  } catch {
+    return {};
+  }
+}
+
+export function addCreatedValue(label: string, value: string): void {
+  const all = readCreated();
+  const category = categoryOf(label);
+  const list = all[category] ?? [];
+  if (list.some((v) => v.toLowerCase() === value.toLowerCase())) return;
+  all[category] = [...list, value];
+  try {
+    localStorage.setItem(CREATED_KEY, JSON.stringify(all));
+  } catch {
+    // Storage blocked — the value still fills the chip, it just isn't remembered.
+  }
+}
+
+/** Everything a slot offers: the built-in list, then what people have created. */
 export function slotOptions(label: string, initiatives: Initiative[]): SlotOption[] {
+  const created = (readCreated()[categoryOf(label)] ?? []).map((value) => ({ value, group: CREATED_GROUP }));
+  return [...builtInOptions(label, initiatives), ...created];
+}
+
+function builtInOptions(label: string, initiatives: Initiative[]): SlotOption[] {
   const initiativeOptions = initiatives.map((i) => ({ value: i.title, group: "Initiatives", hint: i.theme }));
   const insightOptions = SIGNALS.map((s) => ({ value: s.title, group: "Insights", hint: s.category }));
   switch (label.toLowerCase()) {
