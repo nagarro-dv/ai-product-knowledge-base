@@ -757,6 +757,44 @@ export const CONNECTED_SOURCES: ConnectedSource[] = [
   { id: "github", items: "12 repos", synced: "8 min ago", highlight: "Checkout service had 14 merges this week" },
 ];
 
+/**
+ * Connected sources that need someone to act before they sync properly
+ * again — shown first in Settings › Sources, with the steps to fix them.
+ */
+export type SourceAttention = {
+  id: SourceId;
+  /** What went wrong, in a short line. */
+  reason: string;
+  /** What to do about it, step by step. */
+  steps: string[];
+  /** The button that finishes the fix. */
+  action: string;
+};
+
+export const SOURCE_ATTENTION: SourceAttention[] = [
+  {
+    id: "hotjar",
+    reason: "Sign-in expired 3 days ago — new recordings aren't being indexed.",
+    steps: ["Sign in to Hotjar again to renew access."],
+    action: "Reconnect",
+  },
+  {
+    id: "figma",
+    reason: "Access to the Design team's files is waiting for a Figma admin's approval.",
+    steps: [
+      "Ask a Figma admin to approve “Product Knowledge Base” in Admin settings › Connected apps.",
+      "Once it's approved, come back and verify.",
+    ],
+    action: "I've been approved — Verify",
+  },
+  {
+    id: "salesforce",
+    reason: "Permissions changed — it can no longer read Opportunities.",
+    steps: ["Review the permissions and grant read access to Opportunities again."],
+    action: "Review permissions",
+  },
+];
+
 /** How many sources are connected — used in copy across v2. */
 export const CONNECTED_COUNT = CONNECTED_SOURCES.length;
 

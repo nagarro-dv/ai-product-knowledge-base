@@ -1,0 +1,342 @@
+/* Settings › Sources (SourcesSettings.tsx). Rows share the look of the
+   rest of Settings: a bordered white list, logo tile, name, one detail line,
+   a status icon and small ghost actions on the right. */
+
+.sourcesSettings {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-xl);
+}
+
+.sourcesSettings p {
+  margin: 0;
+}
+
+.sourcesSettings__muted {
+  color: var(--ds-general-color-muted-foreground);
+  font-weight: 400;
+}
+
+.sourcesSettings__srOnly {
+  position: absolute;
+  overflow: hidden;
+  width: 1px;
+  height: 1px;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ── Search and filters ── */
+.sourcesSettings__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+/* Filters on the left; a compact search box on the right, the same
+   height as the filters so the row reads as one line. */
+.sourcesSettings__search {
+  display: flex;
+  flex: 0 1 300px;
+  align-items: center;
+  gap: var(--ds-general-gap-sm);
+  min-width: 0;
+  height: 32px;
+  margin-left: auto;
+  padding: 0 var(--ds-general-padding-md);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-muted-foreground);
+  transition: border-color var(--dur-fast) var(--ease-standard);
+}
+
+.sourcesSettings__search:focus-within {
+  border-color: var(--ds-general-color-foreground);
+}
+
+.sourcesSettings__search input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ds-general-color-foreground);
+  font: inherit;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  outline: none;
+}
+
+/* The clear button below replaces the browser's own. */
+.sourcesSettings__search input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.sourcesSettings__clear {
+  display: inline-flex;
+  padding: 2px;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.sourcesSettings__clear:hover {
+  color: var(--ds-general-color-foreground);
+}
+
+.sourcesSettings__filters {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.sourcesSettings__filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ds-general-radius-full);
+  background: none;
+  color: var(--ds-general-color-muted-foreground);
+  font: inherit;
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.sourcesSettings__filter:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.sourcesSettings__filter[aria-pressed="true"] {
+  border-color: var(--ds-general-color-border);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-foreground);
+}
+
+.sourcesSettings__filter:focus-visible,
+.sourcesSettings__clear:focus-visible,
+.sourcesSettings__link:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.sourcesSettings__count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--ds-general-color-muted);
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+
+.sourcesSettings__count[data-tone="warn"] {
+  background: var(--ds-general-color-warning-muted);
+  color: var(--ds-general-color-warning-foreground);
+}
+
+/* ── Sections and rows ── */
+.sourcesSettings__section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+}
+
+.sourcesSettings__sectionTitle {
+  margin: 0;
+  font-family: var(--ds-general-typography-font-family-body);
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  font-weight: 700;
+}
+
+.sourcesSettings__list {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-sm);
+}
+
+.sourcesSettings__list > * + * {
+  border-top: 1px solid var(--ds-general-color-border);
+}
+
+.sourcesSettings__row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-md);
+  padding: var(--ds-general-padding-md) var(--ds-general-padding-lg);
+}
+
+.sourcesSettings__rowMain {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+}
+
+.sourcesSettings__logo {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-canvas);
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourcesSettings__copy {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 2px;
+  min-width: 0;
+}
+
+.sourcesSettings__categoryTag {
+  margin-left: 8px;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 400;
+}
+
+.sourcesSettings__detail {
+  overflow: hidden;
+  color: var(--ds-general-color-muted-foreground);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourcesSettings__detail--warn {
+  color: var(--ds-general-color-warning-foreground);
+  white-space: normal;
+}
+
+.sourcesSettings__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sourcesSettings__okIcon {
+  flex-shrink: 0;
+  color: var(--ds-general-color-success-foreground);
+}
+
+.sourcesSettings__warnIcon {
+  flex-shrink: 0;
+  color: var(--ds-general-color-warning-foreground);
+}
+
+.sourcesSettings__actions {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+}
+
+.sourcesSettings__confirm {
+  margin-right: 4px;
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+  font-weight: 600;
+}
+
+/* The steps that fix a source, under its row — like Figma's setup guide. */
+.sourcesSettings__fix {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--ds-general-gap-md);
+  margin-left: calc(28px + var(--ds-general-gap-md));
+  padding: var(--ds-general-padding-md) var(--ds-general-padding-lg);
+  border: 1px solid var(--ds-general-color-border-alt-1);
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: var(--ds-general-color-background);
+}
+
+.sourcesSettings__steps {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 20px;
+  font-size: var(--ds-general-typography-paragraph-small-font-size);
+  line-height: 1.45;
+}
+
+/* "Available to connect": tiles, three across at full width — logo and
+   name, a one-line "what it brings", and Connect. */
+.sourcesSettings__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: var(--ds-general-gap-md);
+}
+
+.sourcesSettings__tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--ds-general-gap-sm);
+  padding: var(--ds-general-padding-lg);
+  border: 1px solid var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  background: var(--ds-general-color-canvas);
+  box-shadow: var(--elev-sm);
+}
+
+.sourcesSettings__tileHead {
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  min-width: 0;
+}
+
+.sourcesSettings__tileText {
+  flex: 1 1 auto;
+  color: var(--ds-general-color-muted-foreground);
+}
+
+.sourcesSettings__tileAction {
+  align-self: flex-start;
+  margin-top: var(--ds-general-gap-xs);
+}
+
+.sourcesSettings__empty {
+  display: grid;
+  gap: 4px;
+  padding: var(--ds-general-padding-2xl);
+  border: 1px dashed var(--ds-general-color-border);
+  border-radius: var(--ds-general-radius-rounded-lg);
+  text-align: center;
+}
+
+.sourcesSettings__note {
+  color: var(--ds-general-color-muted-foreground);
+  font-size: var(--ds-general-typography-paragraph-mini-font-size);
+}
+
+@media (max-width: 640px) {
+  .sourcesSettings__rowMain {
+    flex-wrap: wrap;
+  }
+
+  .sourcesSettings__categoryTag {
+    display: none;
+  }
+
+  .sourcesSettings__search {
+    flex-basis: 100%;
+  }
+}

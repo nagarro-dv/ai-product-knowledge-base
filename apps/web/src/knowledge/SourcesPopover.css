@@ -137,3 +137,47 @@
     transition: none;
   }
 }
+
+/* The list's last row, set off from the sources by a line. */
+.sourcesPopover__manage {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  width: 100%;
+  margin-top: 6px;
+  padding: 6px var(--ds-general-padding-sm);
+  border: none;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: transparent;
+  color: var(--ds-general-color-foreground);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+/* The dividing line, inset like the rows. */
+.sourcesPopover__manage::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  right: var(--ds-general-padding-sm);
+  left: var(--ds-general-padding-sm);
+  height: 1px;
+  background: var(--ds-general-color-border);
+}
+
+.sourcesPopover__manage:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.sourcesPopover__manage:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: -2px;
+}
+
+.sourcesPopover__manageArrow {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--ds-general-color-muted-foreground);
+}

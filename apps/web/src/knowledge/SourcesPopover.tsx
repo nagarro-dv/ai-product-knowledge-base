@@ -1,7 +1,8 @@
-import { Check, Plus, Search } from "lucide-react";
+import { ArrowRight, Check, Plus, Search, Settings2 } from "lucide-react";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { computeAnchoredPosition, type PopoverPosition } from "../accelerator/popoverPosition";
 import { DsTypography } from "../components/ds/DsTypography";
+import { openSettings } from "../navigationEvents";
 import { SourceMark } from "./SourceMark";
 import { SOURCE_GROUPS, UPLOAD_SOURCE_ID } from "./sources";
 import "./SourcesPopover.css";
@@ -11,7 +12,8 @@ import "./SourcesPopover.css";
  * Figma chips. Opens a grouped, searchable popover of every product-knowledge
  * source (file upload included), since there are far too many sources to keep
  * on screen. Stays open while the user picks
- * several; each pick toggles that source on the prompt.
+ * several; each pick toggles that source on the prompt. "Manage sources",
+ * the list's last row, opens Settings › Sources to connect or fix one.
  */
 export function SourcesPopover({
   selectedIds,
@@ -151,6 +153,23 @@ export function SourcesPopover({
                 })}
               </div>
             ))}
+            {/* Last in the list — reached by scrolling to the end, and shown under "no matches" too. */}
+            <button
+              type="button"
+              className="sourcesPopover__manage"
+              onClick={() => {
+                setOpen(false);
+                openSettings("workspace");
+              }}
+            >
+              <span className="sourcesPopover__rowIcon" aria-hidden>
+                <Settings2 size={14} />
+              </span>
+              <DsTypography as="span" variant="paragraph-small" className="sourcesPopover__rowLabel">
+                Manage sources
+              </DsTypography>
+              <ArrowRight size={14} aria-hidden className="sourcesPopover__manageArrow" />
+            </button>
           </div>
         </div>
       ) : null}

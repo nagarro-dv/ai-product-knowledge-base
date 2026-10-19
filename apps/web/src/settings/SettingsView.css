@@ -36,6 +36,20 @@
   margin: 0;
 }
 
+/* Right side of the title row: the open tab's "Checked …" + Refresh,
+   then the tabs. */
+.settingsView__headerEnd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--ds-general-gap-lg);
+}
+
+.settingsView__actions:empty {
+  display: none;
+}
+
 .settingsView__tabs {
   display: inline-flex;
   gap: 2px;
