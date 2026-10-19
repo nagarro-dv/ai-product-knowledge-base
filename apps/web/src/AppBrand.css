@@ -1,0 +1,59 @@
+/* The product's icon tile: a circuit brain on a deep indigo gradient. */
+.appBrand__logo {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--ds-general-radius-rounded-md);
+  background: linear-gradient(155deg, #7c5cf5 0%, #4f2bd8 100%);
+  color: #ffffff;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #000 12%, transparent);
+}
+
+.appBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ds-general-gap-md);
+  border: none;
+  background: transparent;
+  padding: var(--ds-general-gap-xs) var(--ds-general-gap-sm);
+  margin-left: calc(-1 * var(--ds-general-gap-sm));
+  border-radius: var(--ds-general-radius-rounded-md);
+  color: var(--ds-general-color-foreground);
+  cursor: pointer;
+  transition: background-color var(--dur-fast) var(--ease-standard);
+}
+
+.appBrand:hover {
+  background: var(--ds-general-color-muted);
+}
+
+.appBrand:focus-visible {
+  outline: 2px solid var(--ds-general-shadows-focus-ring);
+  outline-offset: 2px;
+}
+
+.appBrand__title {
+  font-family: var(--ds-general-typography-font-family-headings);
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ds-general-color-foreground);
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .appBrand__title {
+    max-width: 40vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .appBrand {
+    transition: none;
+  }
+}
