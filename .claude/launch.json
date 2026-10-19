@@ -2,33 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "ds-starter-kit-agent",
+      "name": "ai-kb-agent",
       "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:agent"
-      ],
+      "runtimeArgs": ["run", "dev:agent"],
       "port": 8787
     },
     {
-      "name": "ds-starter-kit-web",
+      "name": "ai-kb-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "dev:web"
-      ],
+      "runtimeArgs": ["run", "dev:web"],
       "port": 5173
-    },
-    {
-      "name": "ds-starter-kit-storybook",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": [
-        "run",
-        "storybook",
-        "-w",
-        "@ds-starter/web"
-      ],
-      "port": 6006
     }
   ]
 }

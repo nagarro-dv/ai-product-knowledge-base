@@ -1,21 +1,17 @@
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Check, History as HistoryIcon, Settings as SettingsIcon } from "lucide-react";
-import { DsAcceleratorTool } from "./accelerator/DsAcceleratorTool";
-import { ProductKnowledgeHome } from "./knowledge/ProductKnowledgeHome";
+import { AlertTriangle, Check, Settings as SettingsIcon } from "lucide-react";
+import { AppBrand } from "./AppBrand";
 import { KnowledgeV2 } from "./knowledgeV2/KnowledgeV2";
-import { ProductPicker } from "./ProductPicker";
-import { getInitialProduct, persistProduct, type ProductId } from "./products";
 import { SettingsView, type SettingsTab } from "./settings/SettingsView";
 import { JIRA_RETURN_TO_KEY } from "./integrations/jiraClient";
 import { GITHUB_RETURN_TO_KEY } from "./integrations/repositoryClient";
-import { openHistory, OPEN_SETTINGS_EVENT } from "./navigationEvents";
+import { OPEN_SETTINGS_EVENT } from "./navigationEvents";
 import { useTokenMode } from "./useTokenMode";
 import "./App.css";
 
 /**
- * The product is an empty shell around two surfaces: the Accelerator (the
- * workflow) and Settings (connections). The design system itself lives in the
- * team's connected Storybook — there is no built-in component browser.
+ * The app shell: the Product Knowledge Base and Settings (AI models and
+ * connections), under one topbar.
  */
 type Section = "tools" | "settings";
 
@@ -144,24 +140,7 @@ export default function App() {
   );
   const [jiraBanner, setJiraBanner] = useState(jiraCallback.banner);
   const [githubBanner, setGithubBanner] = useState(githubCallback.banner);
-  // A slot inside the topbar itself, not a second bar below it — DsAcceleratorTool
-  // portals its "Start over" + stage tabs in here so the whole run's navigation
-  // (brand, run nav, History/Settings) reads as one bar, not two stacked ones.
-  const [runNavSlot, setRunNavSlot] = useState<HTMLDivElement | null>(null);
-  // A second topbar slot, right next to History/Settings rather than beside
-  // the brand — DsAcceleratorTool portals its "Design System: X" badge in
-  // here so it reads as one of the bar's actions, not part of the run nav.
-  const [dsStatusSlot, setDsStatusSlot] = useState<HTMLDivElement | null>(null);
-
-  const [product, setProduct] = useState<ProductId>(getInitialProduct);
-  // Run nav, the Design System badge and History all belong to DS Accelerator.
-  const showAcceleratorChrome = section === "tools" && product === "ds-accelerator";
-
-  const selectProduct = useCallback((next: ProductId) => {
-    setProduct(next);
-    persistProduct(next);
-    setSection("tools");
-  }, []);
+  const goHome = useCallback(() => setSection("tools"), []);
   const goSettings = useCallback(() => setSection("settings"), []);
 
   useEffect(() => {
@@ -191,18 +170,10 @@ export default function App() {
   }, []);
 
   return (
-    <div className={product === "knowledge-base-v2" && section !== "settings" ? "app-shell app-shell--kb2" : "app-shell"}>
+    <div className={section !== "settings" ? "app-shell app-shell--kb2" : "app-shell"}>
       <header className="app-topbar" aria-label="Top navigation">
-        <ProductPicker selected={product} onSelect={selectProduct} />
-        {showAcceleratorChrome ? <div className="app-topbar__runSlot" ref={setRunNavSlot} /> : null}
+        <AppBrand onHome={goHome} />
         <div className="app-topbar__actions">
-          {showAcceleratorChrome ? <div className="app-topbar__dsStatusSlot" ref={setDsStatusSlot} /> : null}
-          {showAcceleratorChrome ? (
-            <button type="button" className="app-topbar__settings" onClick={() => openHistory()}>
-              <HistoryIcon size={16} strokeWidth={1.9} aria-hidden />
-              History
-            </button>
-          ) : null}
           <button
             type="button"
             className={section === "settings" ? "app-topbar__settings is-active" : "app-topbar__settings"}
@@ -219,7 +190,7 @@ export default function App() {
         {/* v2 owns its own sidebar and scroll areas, so it sits edge to edge. */}
         <div
           className={
-            section !== "settings" && product === "knowledge-base-v2"
+            section !== "settings"
               ? "app-main-column app-main-column--flowsFull"
               : "app-main-column"
           }
@@ -258,12 +229,8 @@ export default function App() {
 
           {section === "settings" ? (
             <SettingsView activeTab={settingsTab} onTabChange={setSettingsTab} />
-          ) : product === "knowledge-base" ? (
-            <ProductKnowledgeHome />
-          ) : product === "knowledge-base-v2" ? (
-            <KnowledgeV2 />
           ) : (
-            <DsAcceleratorTool runNavSlot={runNavSlot} dsStatusSlot={dsStatusSlot} />
+            <KnowledgeV2 />
           )}
         </div>
       </div>
