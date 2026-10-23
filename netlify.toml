@@ -1,0 +1,14 @@
+# Netlify: builds the web app from main on every push, and serves the Jira
+# Product Discovery routes from netlify/functions. Set JPD_SITE, JPD_EMAIL,
+# JPD_API_TOKEN and JPD_PROJECT_KEY in the site's environment variables.
+
+[build]
+  command = "npm run build:web"
+  publish = "apps/web/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
