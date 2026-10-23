@@ -1,6 +1,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { PasswordGate } from "./gate/PasswordGate";
 import "./index.css";
 
 // The brand stand-in (Plus Jakarta Sans — see index.css) is registered via
@@ -17,6 +18,9 @@ if (typeof document !== "undefined" && "fonts" in document) {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <App />
+    {/* On the hosted site, the app sits behind one shared password. */}
+    <PasswordGate>
+      <App />
+    </PasswordGate>
   </StrictMode>,
 );

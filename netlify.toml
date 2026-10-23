@@ -1,6 +1,7 @@
 # Netlify: builds the web app from main on every push, and serves the Jira
-# Product Discovery routes from netlify/functions. Set JPD_SITE, JPD_EMAIL,
-# JPD_API_TOKEN and JPD_PROJECT_KEY in the site's environment variables.
+# Product Discovery routes and the password gate from netlify/functions. Set
+# APP_PASSWORD, JPD_SITE, JPD_EMAIL, JPD_API_TOKEN and JPD_PROJECT_KEY in the
+# site's environment variables.
 
 [build]
   command = "npm run build:web"
@@ -12,3 +13,17 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+# Unknown /api paths (the local agent server's routes, which aren't hosted)
+# stay 404s, so the app falls back to demo mode instead of getting a page.
+# Functions answer their own /api routes before any of these rules apply.
+[[redirects]]
+  from = "/api/*"
+  to = "/index.html"
+  status = 404
+
+# Any other URL opens the app (and so its password screen), not a 404.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
