@@ -1,14 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import dotenv from 'dotenv';
+import { ProductDiscoveryClient, jpdConfigFrom, type JpdReply } from './productDiscovery.js';
 
-function sendJson(res: ServerResponse, statusCode: number, payload: unknown) {
-  res.statusCode = statusCode;
+function sendJson(res: ServerResponse, { status, body }: JpdReply) {
+  res.statusCode = status;
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.end(JSON.stringify(payload));
+  res.end(JSON.stringify(body));
 }
 
 function readJsonBody<T = unknown>(req: IncomingMessage): Promise<T> {
@@ -31,114 +32,19 @@ function readJsonBody<T = unknown>(req: IncomingMessage): Promise<T> {
   });
 }
 
-type JpdConfig = { site: string; email: string; token: string; projectKey: string };
-
-/** A field on the project's idea create screen, as Jira describes it. */
-type IdeaField = { id: string; name: string; type: string; custom: string; allowed: string[] };
-
-/** A field value the app wants set, by the field's display name ("Theme", "Impact"…). */
-type FieldValue = { name: string; value: string | number | string[] };
-
-/** Turns an app value into what Jira's API takes for that field, or explains why it can't. */
-function toJiraValue(field: IdeaField, value: FieldValue['value']): { value: unknown } | { skip: string } {
-  const pick = (v: string) => field.allowed.find((option) => option.toLowerCase() === v.trim().toLowerCase());
-  if (field.id === 'labels') {
-    return { value: [value].flat().map((v) => String(v).trim().replace(/\s+/g, '-')).filter(Boolean) };
-  }
-  if (field.type === 'array' && field.allowed.length) {
-    const options = [value].flat().map((v) => pick(String(v)));
-    if (options.some((o) => !o)) return { skip: `not one of: ${field.allowed.join(', ')}` };
-    return { value: options.map((o) => ({ value: o })) };
-  }
-  if (field.type === 'option') {
-    const option = pick(String(value));
-    return option ? { value: { value: option } } : { skip: `not one of: ${field.allowed.join(', ')}` };
-  }
-  if (field.type === 'number') {
-    const n = Number(value);
-    return Number.isFinite(n) ? { value: n } : { skip: 'not a number' };
-  }
-  if (field.type === 'string') return { value: String(value).slice(0, 255) };
-  return { skip: `can't be set (${field.custom || field.type})` };
-}
-
-const PLACEHOLDER_TOKEN = 'paste-your-api-token-here';
-
-/** An Atlassian Document Format node — the rich-text format Jira's v3 API takes for descriptions. */
-type AdfNode = { type: string; content?: AdfNode[]; text?: string; attrs?: Record<string, unknown> };
-
 /**
- * Plain text → ADF: blank lines separate blocks, runs of "• " lines become a
- * bullet list, and other lines in a block are kept as line breaks.
- */
-export function textToAdf(text: string): { type: 'doc'; version: 1; content: AdfNode[] } {
-  const content: AdfNode[] = [];
-  for (const block of text.replace(/\r\n/g, '\n').split(/\n\s*\n/)) {
-    const lines = block.split('\n').filter((line) => line.trim());
-    let paragraph: string[] = [];
-    let bullets: string[] = [];
-    const flushParagraph = () => {
-      if (!paragraph.length) return;
-      content.push({
-        type: 'paragraph',
-        content: paragraph.flatMap((line, i) => [
-          ...(i > 0 ? [{ type: 'hardBreak' }] : []),
-          { type: 'text', text: line },
-        ]),
-      });
-      paragraph = [];
-    };
-    const flushBullets = () => {
-      if (!bullets.length) return;
-      content.push({
-        type: 'bulletList',
-        content: bullets.map((item) => ({
-          type: 'listItem',
-          content: [{ type: 'paragraph', content: [{ type: 'text', text: item }] }],
-        })),
-      });
-      bullets = [];
-    };
-    for (const line of lines) {
-      const bullet = /^\s*[•\-*]\s+(.*)$/.exec(line);
-      if (bullet) {
-        flushParagraph();
-        bullets.push(bullet[1]!);
-      } else {
-        flushBullets();
-        paragraph.push(line.trim());
-      }
-    }
-    flushParagraph();
-    flushBullets();
-  }
-  return { type: 'doc', version: 1, content };
-}
-
-/**
- * `/api/product-discovery/*` — sends initiatives to a Jira Product Discovery
- * project as ideas, through the Jira Cloud REST API with the user's own API
- * token (basic auth against their *.atlassian.net site).
+ * `/api/product-discovery/*` on the local agent server — see
+ * productDiscovery.ts for what it does.
  *
- * Configured by JPD_SITE, JPD_EMAIL, JPD_API_TOKEN and JPD_PROJECT_KEY in
- * .env, which are re-read on every request, so pasting a token takes effect
- * without restarting. The token never leaves this server.
- *
- * Ideas carry more than a title: the app sends field values by display name
- * ("Theme", "Impact", "Roadmap"…) and they're matched to the project's own
- * fields and options, read from Jira's create metadata — so nothing here is
- * tied to one site's custom field ids.
- *
- *   GET  /api/product-discovery/status  → { configured, site?, projectKey?, projectName?, fields?, error? }
- *   POST /api/product-discovery/ideas   { title, description, fields?: [{ name, value }] } → { key, url, set, skipped }
+ * The JPD_* settings come from .env, re-read on every request, so pasting a
+ * token takes effect without restarting. The token never leaves this server.
  */
 export class ProductDiscoveryRouter {
-  /** The idea create screen's fields, cached for a few minutes. */
-  private ideaMeta: { at: number; key: string; issueTypeId: string; fields: IdeaField[] } | null = null;
+  private readonly client = new ProductDiscoveryClient();
 
   constructor(private readonly envPaths: string[]) {}
 
-  private async config(): Promise<JpdConfig | null> {
+  private async config() {
     const values: Record<string, string | undefined> = {};
     for (const file of this.envPaths) {
       try {
@@ -148,161 +54,25 @@ export class ProductDiscoveryRouter {
         // no file — fine
       }
     }
-    const read = (key: string) => (values[key] ?? process.env[key] ?? '').trim();
-    const config = {
-      site: read('JPD_SITE').replace(/^https?:\/\//, '').replace(/\/.*$/, ''),
-      email: read('JPD_EMAIL'),
-      token: read('JPD_API_TOKEN'),
-      projectKey: read('JPD_PROJECT_KEY'),
-    };
-    if (!config.site || !config.email || !config.token || config.token === PLACEHOLDER_TOKEN || !config.projectKey) {
-      return null;
-    }
-    return config;
-  }
-
-  private async jira(config: JpdConfig, path: string, init: RequestInit = {}): Promise<Response> {
-    return fetch(`https://${config.site}/rest/api/3${path}`, {
-      ...init,
-      headers: {
-        Authorization: `Basic ${Buffer.from(`${config.email}:${config.token}`).toString('base64')}`,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        ...init.headers,
-      },
-      signal: AbortSignal.timeout(15_000),
-    });
-  }
-
-  /** Which fields an idea in the project can be created with, and the values they allow. */
-  private async ideaFields(config: JpdConfig): Promise<{ issueTypeId: string; fields: IdeaField[] }> {
-    const key = `${config.site}/${config.projectKey}`;
-    if (this.ideaMeta && this.ideaMeta.key === key && Date.now() - this.ideaMeta.at < 5 * 60_000) return this.ideaMeta;
-    const project = encodeURIComponent(config.projectKey);
-    const typesResponse = await this.jira(config, `/issue/createmeta/${project}/issuetypes`);
-    if (!typesResponse.ok) throw new Error(`Couldn't read the project's idea fields (Jira answered ${typesResponse.status}).`);
-    const types = (await typesResponse.json()) as { issueTypes?: { id: string; name: string }[] };
-    const idea = types.issueTypes?.find((t) => /^idea$/i.test(t.name));
-    if (!idea) throw new Error(`${config.projectKey} has no Idea work type — is it a Product Discovery space?`);
-    const fieldsResponse = await this.jira(config, `/issue/createmeta/${project}/issuetypes/${idea.id}?maxResults=200`);
-    if (!fieldsResponse.ok) throw new Error(`Couldn't read the project's idea fields (Jira answered ${fieldsResponse.status}).`);
-    const meta = (await fieldsResponse.json()) as {
-      fields?: { fieldId: string; name: string; schema?: { type?: string; custom?: string }; allowedValues?: { value?: string; name?: string }[] }[];
-    };
-    const fields = (meta.fields ?? []).map((f) => ({
-      id: f.fieldId,
-      name: f.name,
-      type: f.schema?.type ?? '',
-      custom: f.schema?.custom?.split(':').pop() ?? '',
-      allowed: (f.allowedValues ?? []).flatMap((v) => v.value ?? v.name ?? []),
-    }));
-    this.ideaMeta = { at: Date.now(), key, issueTypeId: idea.id, fields };
-    return this.ideaMeta;
+    return jpdConfigFrom((key) => values[key] ?? process.env[key]);
   }
 
   async handle(req: IncomingMessage, res: ServerResponse, pathname: string, method: string): Promise<boolean> {
-    if (!pathname.startsWith('/api/product-discovery/')) return false;
-
     if (method === 'GET' && pathname === '/api/product-discovery/status') {
-      const config = await this.config();
-      if (!config) {
-        sendJson(res, 200, { configured: false });
-        return true;
-      }
-      try {
-        const response = await this.jira(config, `/project/${encodeURIComponent(config.projectKey)}`);
-        if (!response.ok) {
-          sendJson(res, 200, {
-            configured: false,
-            site: config.site,
-            projectKey: config.projectKey,
-            error:
-              response.status === 401
-                ? 'Jira rejected the email or API token.'
-                : response.status === 404
-                  ? `No project ${config.projectKey} on ${config.site}, or no access to it.`
-                  : `Jira answered ${response.status}.`,
-          });
-          return true;
-        }
-        const project = (await response.json()) as { name?: string };
-        const { fields } = await this.ideaFields(config);
-        sendJson(res, 200, {
-          configured: true,
-          site: config.site,
-          projectKey: config.projectKey,
-          projectName: project.name,
-          // The fields ideas there have, so the app only offers what exists.
-          fields: fields.map((f) => ({ name: f.name, allowed: f.allowed })),
-        });
-      } catch (error) {
-        sendJson(res, 200, { configured: false, error: error instanceof Error ? error.message : 'Could not reach Jira.' });
-      }
+      sendJson(res, await this.client.status(await this.config()));
       return true;
     }
-
     if (method === 'POST' && pathname === '/api/product-discovery/ideas') {
-      const config = await this.config();
-      if (!config) {
-        sendJson(res, 400, { error: 'Product Discovery is not set up — add JPD_* to .env.' });
+      let input;
+      try {
+        input = await readJsonBody<{ title?: string; description?: string; fields?: { name: string; value: string | number | string[] }[] }>(req);
+      } catch {
+        sendJson(res, { status: 400, body: { error: 'Invalid JSON body.' } });
         return true;
       }
-      try {
-        const body = await readJsonBody<{ title?: string; description?: string; fields?: FieldValue[] }>(req);
-        const title = body.title?.trim();
-        if (!title) {
-          sendJson(res, 400, { error: 'An idea needs a title.' });
-          return true;
-        }
-        const { issueTypeId, fields: ideaFields } = await this.ideaFields(config);
-        const base: Record<string, unknown> = {
-          project: { key: config.projectKey },
-          issuetype: { id: issueTypeId },
-          summary: title.slice(0, 255),
-          description: textToAdf(body.description ?? ''),
-        };
-        // Match the app's values to this project's fields by name; anything
-        // that doesn't exist or doesn't fit is left out and reported back.
-        const extra: Record<string, unknown> = {};
-        const set: string[] = [];
-        const skipped: { name: string; reason: string }[] = [];
-        for (const { name, value } of body.fields ?? []) {
-          const field = ideaFields.find((f) => f.name.toLowerCase() === name.trim().toLowerCase());
-          if (!field) {
-            skipped.push({ name, reason: 'no such field on ideas here' });
-            continue;
-          }
-          const converted = toJiraValue(field, value);
-          if ('skip' in converted) skipped.push({ name, reason: converted.skip });
-          else {
-            extra[field.id] = converted.value;
-            set.push(field.name);
-          }
-        }
-        const create = (fields: Record<string, unknown>) =>
-          this.jira(config, '/issue', { method: 'POST', body: JSON.stringify({ fields }) });
-
-        let response = await create({ ...base, ...extra });
-        // If Jira refuses one of the extra fields, still create the idea, without them.
-        if (!response.ok && response.status === 400 && set.length) {
-          const detail = (await response.json().catch(() => null)) as { errors?: Record<string, string> } | null;
-          for (const name of set.splice(0)) skipped.push({ name, reason: Object.values(detail?.errors ?? {}).join(' ') || 'refused by Jira' });
-          response = await create(base);
-        }
-        if (!response.ok) {
-          const detail = (await response.json().catch(() => null)) as { errorMessages?: string[]; errors?: Record<string, string> } | null;
-          const message = [...(detail?.errorMessages ?? []), ...Object.values(detail?.errors ?? {})].join(' ') || `Jira answered ${response.status}.`;
-          sendJson(res, 502, { error: message });
-          return true;
-        }
-        const created = (await response.json()) as { key: string };
-        sendJson(res, 201, { key: created.key, url: `https://${config.site}/browse/${created.key}`, set, skipped });
-      } catch (error) {
-        sendJson(res, 502, { error: error instanceof Error ? error.message : 'Could not reach Jira.' });
-      }
+      sendJson(res, await this.client.createIdea(await this.config(), input));
       return true;
     }
-
     return false;
   }
 }

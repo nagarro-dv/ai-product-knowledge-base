@@ -71,12 +71,23 @@ The web app works on its own; the agent server (port 8787) is what talks to Jira
 
 The token stays on the agent server — the browser never sees it. How initiatives map to Product Discovery fields is in `apps/web/src/knowledgeV2/jpdFields.ts`.
 
+## Host it on Netlify
+
+The repo is set up for [Netlify](https://www.netlify.com) (`netlify.toml`): every push to `main` rebuilds the public site, and pull requests get their own preview links. Sending to Product Discovery works on the hosted site too, through a Netlify Function (`netlify/functions/product-discovery.mts`).
+
+1. In Netlify, choose **Add new project → Import an existing project → GitHub**, and pick `nagarro-dv/ai-product-knowledge-base`. Netlify reads the build settings from `netlify.toml`, so leave them as they are. (Private repos owned by a GitHub organization need Netlify's Pro plan, and a nagarro-dv admin may need to approve Netlify's GitHub access.)
+2. Before the first deploy, or under **Project configuration → Environment variables** afterwards, add the same four settings as above: `JPD_SITE`, `JPD_EMAIL`, `JPD_API_TOKEN` and `JPD_PROJECT_KEY`. Mark `JPD_API_TOKEN` as a secret.
+3. Deploy. If you add or change the variables later, trigger a new deploy so the function picks them up.
+
+The site has no password: anyone with the link can use it, including creating ideas in your Product Discovery space with the token you set. Use a token you're comfortable sharing that way (an Atlassian service account is a good fit), and revoke it to cut off access. On the hosted site, chat replies and the AI model picker stay in demo mode — only the agent server can run real AI providers.
+
 ## Project layout
 
 | Folder | What's there |
 |--------|--------------|
 | `apps/web` | The web app (React, Vite, TypeScript). The knowledge base itself is in `src/knowledgeV2`. |
-| `apps/agent-orchestrator` | Local server for AI providers and Jira Product Discovery (`src/productDiscoveryRouter.ts`). |
+| `apps/agent-orchestrator` | Local server for AI providers and Jira Product Discovery. The Product Discovery logic is in `src/productDiscovery.ts`, shared with the hosted site. |
+| `netlify` | The hosted site's Product Discovery function (with `netlify.toml` at the root). |
 | `packages/tokens` | Design tokens and the CSS variables built from them. |
 
 Fixture data — initiatives, insights, metrics, OKRs, agents — lives in `apps/web/src/knowledgeV2/data.ts`.

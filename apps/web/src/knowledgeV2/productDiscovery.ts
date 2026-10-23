@@ -1,8 +1,9 @@
 /*
- * Talks to the agent server's /api/product-discovery routes, which create
- * real Jira Product Discovery ideas with the API token in its .env (the
- * token never reaches the browser). When it isn't set up or the server isn't
- * running, sending stays a demo.
+ * Talks to the /api/product-discovery routes, which create real Jira Product
+ * Discovery ideas with an API token kept on the server (it never reaches the
+ * browser): the local agent server in development, the site's own Netlify
+ * Function when hosted. When they aren't set up or can't be reached, sending
+ * stays a demo.
  */
 
 export type JpdConnection = {
@@ -24,14 +25,14 @@ export type JpdIdea = {
   skipped: { name: string; reason: string }[];
 };
 
+/** The local agent server in development; the site itself (same origin) when hosted. */
 function origin(): string {
   const envOrigin = import.meta.env.VITE_AGENT_API_ORIGIN?.trim().replace(/\/$/, "") ?? "";
   return envOrigin || (import.meta.env.DEV ? "http://127.0.0.1:8787" : "");
 }
 
-/** Null when the agent server can't be reached. */
+/** Null when the routes can't be reached. */
 export async function fetchJpdConnection(): Promise<JpdConnection | null> {
-  if (!origin()) return null;
   try {
     const res = await fetch(`${origin()}/api/product-discovery/status`, { signal: AbortSignal.timeout(8000) });
     return res.ok ? ((await res.json()) as JpdConnection) : null;
