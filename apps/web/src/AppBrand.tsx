@@ -8,10 +8,17 @@ import "./AppBrand.css";
 export function AppBrand({ onHome }: { onHome: () => void }) {
   return (
     <button type="button" className="appBrand" onClick={onHome} aria-label="Product Knowledge Base — home">
-      <span className="appBrand__logo" aria-hidden>
-        <BrainCircuit size={15} strokeWidth={2} />
-      </span>
+      <BrandLogo />
       <span className="appBrand__title">Product Knowledge Base</span>
     </button>
+  );
+}
+
+/** The product's icon tile: a circuit brain on a deep indigo gradient. */
+export function BrandLogo() {
+  return (
+    <span className="appBrand__logo" aria-hidden>
+      <BrainCircuit size={15} strokeWidth={2} />
+    </span>
   );
 }

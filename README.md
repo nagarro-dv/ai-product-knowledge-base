@@ -77,9 +77,10 @@ The repo is set up for [Netlify](https://www.netlify.com) (`netlify.toml`): ever
 
 1. In Netlify, choose **Add new project → Import an existing project → GitHub**, and pick `nagarro-dv/ai-product-knowledge-base`. Netlify reads the build settings from `netlify.toml`, so leave them as they are. (Private repos owned by a GitHub organization need Netlify's Pro plan, and a nagarro-dv admin may need to approve Netlify's GitHub access.)
 2. Before the first deploy, or under **Project configuration → Environment variables** afterwards, add the same four settings as above: `JPD_SITE`, `JPD_EMAIL`, `JPD_API_TOKEN` and `JPD_PROJECT_KEY`. Mark `JPD_API_TOKEN` as a secret.
-3. Deploy. If you add or change the variables later, trigger a new deploy so the function picks them up.
+3. Add `APP_PASSWORD`, the one password everyone enters to open the site (mark it as a secret too). Without it, nobody can get past the password screen.
+4. Deploy. If you add or change the variables later, trigger a new deploy so the functions pick them up.
 
-The site has no password: anyone with the link can use it, including creating ideas in your Product Discovery space with the token you set. Use a token you're comfortable sharing that way (an Atlassian service account is a good fit), and revoke it to cut off access. On the hosted site, chat replies and the AI model picker stay in demo mode — only the agent server can run real AI providers.
+The hosted site opens on a password screen, whatever URL you arrive on. The password is checked by a Netlify Function (`netlify/functions/auth.mts`) — it's never in the code — and unlocks the browser for 30 days with a secure cookie; the Product Discovery routes refuse anyone without it. Change `APP_PASSWORD` (and redeploy) to sign everyone out. Everyone with the password can create ideas in your Product Discovery space with the token you set, so use one you're comfortable sharing that way (an Atlassian service account is a good fit). `npm run dev` skips the password screen. On the hosted site, chat replies and the AI model picker stay in demo mode — only the agent server can run real AI providers.
 
 ## Project layout
 
